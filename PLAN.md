@@ -11,6 +11,8 @@ Read `SPEC.md` first (the product spec) and `CLAUDE.md` (the rules). This file s
 
 **Status:** P0 is done and deployed (scaffold, sign-in, PWA, hosting, theme, ASCII coin). Next up is P1.
 
+**P0.5 (done):** floating glass nav (active tab shows its label), directional page slide on phones, nav position setting (left/right/bottom at `lg`, kept in localStorage; move to `settings/main` in P1).
+
 **Assumed decisions** (the user hasn't confirmed these yet; change them here if they do):
 - Default categories. Expense: Food, Groceries, Transport, Bills, Rent, Shopping, Entertainment, Health, Subscriptions, Other. Income: Salary, Side income, Other.
 - Amount entry is **TNG-style (cash register)**: the phone's own number pad (`inputMode="numeric"`), and digits fill from the right: `0.00 → 0.01 → 0.12 → 1.23 → 12.34`. Backspace removes the last digit. There's no decimal key, so cents always have exactly 2 digits.

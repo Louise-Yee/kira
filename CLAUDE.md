@@ -29,7 +29,7 @@ Personal expense tracker PWA. Product spec: `SPEC.md`. Task list: `PLAN.md`. Do 
 ## Design
 - Use only the color tokens in `src/index.css`. No raw hex or Tailwind palette colors (`blue-500`) in components.
 - Text is 16px (`text-base`) or larger. Headings and big numbers use `font-heading` (Bricolage Grotesque).
-- Surfaces are flat with rounded pills; touch targets are 44px or more. Phones get a bottom tab bar; `lg` gets a sidebar.
+- Surfaces are flat with rounded pills (the nav is the one glass exception); touch targets are 44px or more. Phones/tablets get a floating glass pill nav at the bottom; at `lg` the user picks left, right or bottom (default left sidebar). Phone page changes slide horizontally by tab order.
 - Motion uses springs only, through the presets in `src/lib/motion.ts` (`pop`, `soft`, `press`); no linear or ease curves. `MotionConfig reducedMotion="user"` wraps the app, so canvas or JS animation must check `useReducedMotion()` itself.
 - The sign-in screen is always dark.
 
