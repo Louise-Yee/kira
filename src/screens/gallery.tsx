@@ -158,7 +158,7 @@ function ComponentGallery() {
         Manage categories
       </PillButton>
       <p data-testid="cats">
-        cats: {[...managed].sort((a, b) => a.order - b.order).filter((c) => c.kind === 'expense').map((c) => c.name).join(',')} |{' '}
+        cats: {[...managed].sort((a, b) => a.order - b.order).filter((c) => c.kind === 'expense').map((c) => c.name).join(', ')} |{' '}
         {managed.length}
       </p>
       <CategoriesManager
