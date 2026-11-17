@@ -247,3 +247,52 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 - Check there's no text under 16px, nothing scrolls horizontally at 360px wide, and touch targets are at least 44px.
 - Run Lighthouse PWA + performance on the deployed site, and fix anything red.
 - Fix the leftover oxlint warnings.
+
+---
+
+## P6 — Android app (Capacitor) and home-screen widget
+
+**Done when:** pushing a `v*` tag publishes a signed APK to GitHub Releases. The installed app signs in with Google and works offline, and a home-screen widget shows this month's numbers with a quick-add button.
+
+The web app and PWA stay as they are. The APK wraps the same `dist/` build. Android only.
+
+**Decisions** (confirmed by the user):
+- App ID `app.kira`, app name "kira".
+- The widget is 4×1 or 4×2. It shows "Left in {month}" (the same number as the hero card) plus In and Out, and has a "+" button that opens the app straight into the add-transaction sheet.
+- Releases are sideloaded from GitHub only (no Play Store). There's no auto-update: each release means a manual reinstall.
+
+### P6.1 Capacitor setup
+- `npm i @capacitor/core @capacitor/android @capacitor/app @capacitor/preferences` and `npm i -D @capacitor/cli`. Then `npx cap init kira app.kira --web-dir dist` and `npx cap add android`. Commit `android/`.
+- `vite-plugin-pwa`: **don't register the service worker inside the native app** (check `Capacitor.isNativePlatform()`). The assets are already bundled, and a service worker in the WebView only causes stale-cache bugs.
+- Add npm scripts: `"android": "npm run build && npx cap sync android && npx cap open android"`.
+- App icon and splash screen come from `public/icon.svg`, generated with `@capacitor/assets`. Use the dark splash background.
+- Safe areas: the WebView runs edge-to-edge, and the existing `env(safe-area-inset-*)` CSS must still apply. Test on a device with gesture navigation.
+
+### P6.2 Native Google sign-in
+*Read first:* `src/lib/firebase.ts`
+- Google blocks OAuth inside WebViews, so the popup and redirect flows won't work. Use `@capacitor-firebase/authentication` with `skipNativeAuth: true`: native Google sign-in returns an ID token, and then the JS SDK signs in with `signInWithCredential(auth, GoogleAuthProvider.credential(idToken))`. That way Firestore, `useUser()` and the rest of the app don't change.
+- `signIn()` picks the native path when `Capacitor.isNativePlatform()`, and keeps the current popup/redirect path otherwise. `logOut()` also signs out of the native layer.
+- `authDomain` on native: `${PROJECT}.firebaseapp.com`.
+- **Firebase console (a change to the project, so confirm with the user first):** add an Android app with package `app.kira` and the SHA-1 fingerprints of both the debug and the release keystore. Download `google-services.json` into `android/app/`. **Gitignore it.** CI writes it from the `GOOGLE_SERVICES_JSON` secret, the same way the keys go in `.env`.
+- The Android app registration is free on Spark; no Blaze needed.
+
+### P6.3 Widget
+*New:* `android/app/src/main/java/app/kira/KiraWidget.kt`, `res/layout/widget_kira.xml`, `res/xml/widget_kira_info.xml`, and a small Capacitor plugin `WidgetBridge`.
+- **Data flow:** the widget does **not** talk to Firestore. Whenever the current month's totals change (in `home.tsx`, through a `useEffect` on the totals), the app writes a summary to `@capacitor/preferences`: `{ ym, label, left, income, expense, updatedAt }`, with amounts in sen. It then calls `WidgetBridge.refresh()`, which broadcasts `ACTION_APPWIDGET_UPDATE`. This runs on native only and does nothing on the web.
+- `KiraWidget` is an `AppWidgetProvider` using `RemoteViews` (Glance would pull in Compose; that isn't worth it for one widget). It reads the JSON from the `CapacitorStorage` SharedPreferences and formats it as `RM 1,234.50` in Kotlin.
+  - If the stored `ym` isn't the current month, it shows "Open kira to update" instead of last month's numbers.
+- The "+" button is a `PendingIntent` that opens `kira://add`. In the app, listen with `App.addListener('appUrlOpen')` and open the transaction sheet. Tapping the rest of the widget opens Home.
+- Motion: widgets can't run custom animations (no springs or count-up; RemoteViews only renders static layouts). Use what Android gives for free: set the root view's id to `@android:id/background` so Android 12+ animates the widget expanding into the app on tap. Pressed-state ripples come from a `?android:attr/selectableItemBackground` foreground on the + button.
+- Style: a cobalt `#3563FF` rounded card, white text, Bricolage as a bundled font resource for the big number, and no ASCII texture (RemoteViews can't draw it cheaply).
+- Known limit: the widget only updates while the app is running. Recurring items post when the app opens, so the widget can lag until the next launch. That's acceptable for a personal app. A scheduled `WorkManager` refresh would need the native Firestore SDK; skip it.
+
+### P6.4 Signed release builds on GitHub
+*New:* `.github/workflows/release.yml`
+- Generate the release keystore once, locally: `keytool -genkeypair -v -keystore kira-release.jks -alias kira -keyalg RSA -keysize 2048 -validity 10000`. **Never commit it.** Store it as the base64 secret `ANDROID_KEYSTORE_BASE64`, plus `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Back up the `.jks` somewhere safe: if it's lost, future APKs can't install over existing ones.
+- Trigger: push a tag `v*` (e.g. `v1.0.0`).
+- Steps: checkout, setup-node 24, `npm ci`, `npm run build` (VITE env from secrets), `npx cap sync android`, setup-java 21 (temurin), write `google-services.json` and the keystore from secrets, `./gradlew assembleRelease`.
+  - `versionName` = the tag without the `v`; `versionCode` = `github.run_number`.
+  - Signing config reads env vars in `android/app/build.gradle`.
+- Publish with `gh release create $TAG android/app/build/outputs/apk/release/app-release.apk#kira-$TAG.apk --generate-notes`.
+- Cost: free (public repo, standard runner). A build takes about 5–8 minutes.
+- Update the README with how to install: download the APK from Releases and allow "install unknown apps" for the browser.
