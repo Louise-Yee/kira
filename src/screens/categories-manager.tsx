@@ -290,7 +290,7 @@ function DeleteFlow({ cat, targets, isUsed, onDelete, onArchive, onMove, onCance
 
       {usage === 'used' && (
         <>
-          <p className="text-base">Transactions use it. Move them to another category, or archive it.</p>
+          <p className="text-base">Transactions use it. Move them to another category, or archive it (hidden from pickers, kept on old transactions).</p>
           {targets.length > 0 ? (
             <>
               <CategoryPicker categories={targets} value={target} onChange={setTarget} />
@@ -327,7 +327,7 @@ function DeleteFlow({ cat, targets, isUsed, onDelete, onArchive, onMove, onCance
 function ArchiveButton({ onClick }: { onClick: () => void }) {
   return (
     <PillButton variant="secondary" onClick={onClick}>
-      Archive (hide from pickers, keep old transactions)
+      Archive instead
     </PillButton>
   )
 }
