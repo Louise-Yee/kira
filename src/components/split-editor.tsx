@@ -86,15 +86,24 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
     (form.mode !== 'exact' && form.charges.type === 'percent' && percent === null ? 'Enter a tax percentage from 0 to 100.' : null) ??
     (!categoryId ? 'Pick a category for your share.' : null)
 
-  const patch = (p: Partial<SplitForm>) => setForm((f) => ({ ...f, ...p }))
+  // Every update reads the latest form (not the one this render closed over), so two quick taps never lose one.
+  const patch = (p: Partial<SplitForm> | ((f: SplitForm) => Partial<SplitForm>)) =>
+    setForm((f) => ({ ...f, ...(typeof p === 'function' ? p(f) : p) }))
   const setItem = (i: number, p: Partial<SplitForm['items'][number]>) =>
-    patch({ items: form.items.map((item, j) => (j === i ? { ...item, ...p } : item)) })
+    patch((f) => ({ items: f.items.map((item, j) => (j === i ? { ...item, ...p } : item)) }))
   const togglePerson = (i: number, person: number) =>
-    setItem(i, {
-      people: form.items[i].people.includes(person)
-        ? form.items[i].people.filter((p) => p !== person)
-        : [...form.items[i].people, person].toSorted((a, b) => a - b),
-    })
+    patch((f) => ({
+      items: f.items.map((item, j) =>
+        j !== i
+          ? item
+          : {
+              ...item,
+              people: item.people.includes(person)
+                ? item.people.filter((p) => p !== person)
+                : [...item.people, person].toSorted((a, b) => a - b),
+            },
+      ),
+    }))
 
   const name = newName.trim()
   const nameTaken = form.people.some((p) => p.toLowerCase() === name.toLowerCase())
@@ -180,7 +189,7 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
                 <button
                   type="button"
                   aria-label="Remove item"
-                  onClick={() => patch({ items: form.items.filter((_, j) => j !== i) })}
+                  onClick={() => patch((f) => ({ items: f.items.filter((_, j) => j !== i) }))}
                   className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground"
                 >
                   <Trash2 className="size-5" aria-hidden />
@@ -212,7 +221,7 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
             variant="secondary"
             size="pill-sm"
             // A new item starts shared by everyone; tap names to take people off it.
-            onClick={() => patch({ items: [...form.items, { amount: 0, people: form.people.map((_, i) => i) }] })}
+            onClick={() => patch((f) => ({ items: [...f.items, { amount: 0, people: f.people.map((_, i) => i) }] }))}
           >
             Add item
           </PillButton>
@@ -233,7 +242,7 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
               <AmountInput
                 size="sm"
                 value={form.exact[i]}
-                onChange={(a) => patch({ exact: form.exact.map((x, j) => (j === i ? a : x)) })}
+                onChange={(a) => patch((f) => ({ exact: f.exact.map((x, j) => (j === i ? a : x)) }))}
                 className="justify-end"
               />
             </div>
