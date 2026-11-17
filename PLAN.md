@@ -9,9 +9,19 @@ Read `SPEC.md` first (the product spec) and `CLAUDE.md` (the rules). This file s
 4. Work on a branch named `feature/…`, `fix/…`, `chores/…` or `refactor/…` (kebab-case), and open a PR into `main`. The PR gets a preview URL, and merging deploys to the live site. If you changed `firestore.rules`, also run `firebase deploy --only firestore:rules`.
 5. Never commit or push unless the user asks.
 
-**Status:** P0 is done and deployed (scaffold, sign-in, PWA, hosting, theme, ASCII coin). Next up is P1.
+**Status:** P0 and P1 are done and deployed. Next up is P2.
 
-**P0.5 (done):** floating glass nav (active tab shows its label), directional page slide on phones, nav position setting (left/right/bottom at `lg`, kept in localStorage; move to `settings/main` in P1).
+**P0.5 (done):** floating glass nav (active tab shows its label), directional page slide on phones, nav position setting (left/right/bottom at `lg`, kept in localStorage).
+
+**What changed from the plan during P1** (the code is the source of truth; these are the deviations):
+- **Theme picker** (System / Light / Dark) added to Settings. The choice lives in localStorage (`kira.theme`) so the inline script in `index.html` can apply it before first paint. The nav position setting also stays in localStorage, so the planned move to `settings/main` is dropped, and `Settings` has no `theme` field.
+- **Colour tokens** `--cat-1..8` were added with the P1.3 display components, not P1.4. P1.4 only assigns them to the default categories.
+- **`useSyncStatus(uid, ym)`** takes the month being viewed (it lives in the shell) and also watches the categories. A pending write in a month you aren't viewing isn't seen.
+- **Seeding** asks the server (`getDocFromServer`) and skips when offline, instead of trusting the cache.
+- **Deleting a category** asks the server whether it is in use (never the cache). Offline, delete is blocked and archive is offered. Archived categories can be restored. Move-and-delete runs in chunked batches and only deletes after every batch is acked.
+- **Dev gallery** (`/?gallery`, `/?gallery=month`, dev builds only) is kept as a component playground that needs no sign-in. `?dev` skips sign-in but has no Firestore access.
+- **Extra pure logic:** `lib/month-summary.ts` and `lib/default-categories.ts`, each with a check script (`check-month.ts`, `check-seed.ts`).
+- **Branch rule:** merges into `main` go through a PR; a repository ruleset blocks direct updates.
 
 **Assumed decisions** (the user hasn't confirmed these yet; change them here if they do):
 - Default categories. Expense: Food, Groceries, Transport, Bills, Rent, Shopping, Entertainment, Health, Subscriptions, Other. Income: Salary, Side income, Other.
@@ -26,21 +36,35 @@ src/
   main.tsx, App.tsx          App.tsx only does the auth gate and the shell
   index.css                  tokens (don't add raw colors anywhere else)
   lib/
-    firebase.ts              auth + db (exists)
-    motion.ts                spring presets (exists)
-    coin.ts, coin3d.ts       ASCII coin math (exists)
+    firebase.ts              auth + Firestore instance
+    motion.ts                spring presets
+    coin.ts, coin3d.ts       ASCII coin math
     money.ts                 sen <-> text, formatting
-    date.ts                  local ISO dates, month ranges
-    db.ts                    types, collection refs, hooks, write helpers
+    date.ts                  local ISO dates, month ranges, day labels
+    db/                      Firestore access, import from '@/lib/db' (index.ts barrel)
+      types.ts               Category, Transaction, Settings, WithId, drafts, SyncStatus
+      core.ts                typed refs, newId, save/remove (never awaited)
+      use-docs.ts            generic live-query hook
+      categories.ts          categories hook + save, reorder, in-use check, delete, move
+      transactions.ts        month hook + save/delete
+      settings.ts, sync.ts   settings hook, offline/saving status
+    month-summary.ts         pure totals and day grouping
+    category-icons.ts        fixed icon list + colour token helper
+    default-categories.ts    seed data (pure)
+    seed.ts                  first sign-in seeding
+    theme.ts, nav.ts         theme and nav-position (localStorage)
     recurrence.ts            pure recurring-date logic        (P2)
     split.ts                 pure split math                  (P4)
     backup.ts                export/import                    (P5)
   components/
     ui/                      shadcn primitives (generated)
-    ascii.tsx                (exists)
-    ...shared components (see P1.3)
+    ascii.tsx, tab-bar.tsx   ASCII texture, bottom/side nav
+    ...shared components (see P1.3): sheet, amount-input, segmented, pill-button, text-field,
+      category-icon, category-picker, list-row, money, fab, empty-state, transaction-sheet, sync-pill
   screens/
-    sign-in.tsx, home.tsx, recurring.tsx, split.tsx, settings.tsx
+    sign-in.tsx, home.tsx, month-view.tsx, settings.tsx, recurring.tsx (P2), split.tsx (P4)
+    categories/              manager.tsx, category-form.tsx, delete-flow.tsx
+    gallery.tsx              dev-only component playground (stripped from production)
 scripts/
   check-*.ts                 self-checks, run with `node scripts/check-x.ts`
 ```
@@ -51,13 +75,13 @@ scripts/
 
 **Done when:** you can log spending offline on the phone and see it on desktop after it reconnects.
 
-### P1.0 Split App.tsx into screens
+### P1.0 Split App.tsx into screens (done)
 *Read first:* `src/App.tsx`
 - Move `SignIn` + `GoogleIcon` → `src/screens/sign-in.tsx`, `Home` → `src/screens/home.tsx`, `SettingsScreen` → `src/screens/settings.tsx`. Move the nav into `src/components/tab-bar.tsx`.
 - `App.tsx` keeps `App`, `Shell` and the `tabs` list.
 - This is a move only: no behavior or style changes.
 
-### P1.1 Money and dates
+### P1.1 Money and dates (done)
 *New:* `src/lib/money.ts`, `src/lib/date.ts`, `scripts/check-money.ts`
 - `digitsToSen(text): number`: strips every non-digit, drops leading zeros, caps the result at 9 digits (RM 9,999,999.99) and returns integer sen. `"123"` → 123 (RM 1.23); `""` → 0. This is the whole amount-entry model. There's no decimal parsing, so no float math is involved.
 - `formatRM(sen, { sign?: boolean }): string` gives `"RM 1,234.50"`. With `sign: true` it returns `"+RM 5.00"` / `"−RM 5.00"` (use the real minus sign U+2212).
@@ -65,9 +89,9 @@ scripts/
 - `monthRange('2026-11')` returns `{ start: '2026-11-01', end: '2026-12-01' }` (end exclusive). Also add `addMonths(ym, n)` and `monthLabel(ym)` → `"November 2026"`.
 - The check script asserts `digitsToSen` edge cases (`""`, `"0007"`, pasted `"RM 12.50"` → 1250, the 9-digit cap), `formatRM` (0, 5, 123456789, sign), the year rollover in `addMonths`, and `todayISO` against a fixed `Date`.
 
-### P1.2 Data layer
+### P1.2 Data layer (done)
 *Read first:* `src/lib/firebase.ts`, SPEC §4, §5.6
-*New:* `src/lib/db.ts`
+*New:* `src/lib/db/` (a folder behind an `index.ts` barrel; import from `@/lib/db`)
 - Types `Category`, `Transaction`, `Settings`, exactly as in SPEC §4 (`kind: 'expense' | 'income'`, `amount` in sen, `date` as a `YYYY-MM-DD` string).
 - Typed refs: `col(uid, 'transactions')` etc., using `withConverter` so reads come back typed. Add `newId(uid, name)` = `doc(collection(...)).id`.
 - Hooks, all built on `onSnapshot` (served from the cache instantly when offline):
@@ -77,7 +101,7 @@ scripts/
 - Writes go through `save(ref, data)` / `remove(ref)` helpers that call Firestore **without awaiting**: `void setDoc(...).catch(reportError)`. The UI never waits on a write.
 - `useSyncStatus()` returns `'offline' | 'saving' | 'synced'`. Base it on `navigator.onLine` plus `hasPendingWrites` from a metadata listener (`includeMetadataChanges: true`) on the current month query.
 
-### P1.3 Shared components
+### P1.3 Shared components (done)
 *Read first:* `src/lib/motion.ts`, `src/components/ui/button.tsx`, `src/index.css`, SPEC §6
 Build these in `src/components/`. **Every later screen must use them** instead of hand-rolling its own.
 - `sheet.tsx`, `<Sheet open onClose title>`: a bottom sheet on phones that slides up with the `pop` spring, has a drag handle, closes on backdrop tap or a downward drag past a threshold, and respects the safe area. At `lg` it becomes a centered dialog. Closes on Esc and traps focus (use the shadcn/radix Dialog underneath for accessibility; restyle it).
@@ -95,34 +119,34 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 - `empty-state.tsx`: an icon + one line + an optional action button.
 - `pill-button.tsx`, or variants added to `ui/button.tsx`: the primary (cobalt) and secondary (grey) 56px pill buttons already used in the sign-in and settings screens. Swap those existing buttons over to it.
 
-### P1.4 Seed categories
-*Read first:* `src/lib/db.ts`
+### P1.4 Seed categories (done)
+*Read first:* `src/lib/db/`
 - On sign-in, if `settings/main` doesn't exist, write the defaults (see *Assumed decisions*) plus `settings/main` in one `writeBatch`.
 - **Use deterministic IDs for the defaults** (`food`, `groceries`, `salary`, …). If two devices seed at the same time, they write the same documents instead of duplicates.
 - Give each default an icon from the `category-icon` list and a color from a fixed palette of about 8 OKLCH-matched hues. Put the palette in `index.css` as `--cat-1` to `--cat-8` and have categories store the token name, not a hex value.
 
-### P1.5 Add/edit transaction
-*Read first:* the P1.3 components, `src/lib/db.ts`
+### P1.5 Add/edit transaction (done)
+*Read first:* the P1.3 components, `src/lib/db/`
 - `src/components/transaction-sheet.tsx`, built from `Sheet` + `Segmented` (Expense/Income) + `AmountInput` + `CategoryPicker` + a date field (native `<input type="date">`, default today) + a note field.
 - Save is disabled until the amount is valid and a category is picked. When editing, it also offers Delete, behind a confirm step.
 - The FAB opens it empty; tapping a transaction row opens it filled in.
 - Transactions created by a recurring rule or a split show a small badge ("Recurring" / "Split") and still save normally.
 
-### P1.6 Month view (Home)
+### P1.6 Month view (Home) (done)
 *Read first:* `src/screens/home.tsx`
 - A month switcher (‹ November 2026 ›) at the top; no going past the current month.
 - The hero card shows "Left in {month}" = income − expense for the month, using `<Money countUp>`. Below it are two small stats: In and Out.
 - Under that, transactions grouped by day ("Today", "Yesterday", "Mon, 10 Nov"), each group with its day total. Rows pop in with a stagger.
 - If the month has no transactions, show `EmptyState` with an "Add expense" action.
 
-### P1.7 Categories manager
+### P1.7 Categories manager (done)
 *In:* `src/screens/settings.tsx` → a "Categories" row that opens a sheet
 - Expense/Income tabs (`Segmented`), a list of categories, add/rename, and icon + color pickers.
 - Reorder with up/down buttons. Skip drag-to-reorder for now.
 - Delete: if the category is unused, delete it. If it's in use, offer **Move transactions to…** (pick a category, then batch-update them) or **Archive** (hidden from the picker, still shown on old transactions).
 - The usage check needs a `where('categoryId', '==', id)` query with `limit(1)`.
 
-### P1.8 Sync indicator
+### P1.8 Sync indicator (done)
 - A small pill in the header: shows "Offline" (grey) or "Saving…" (cobalt pulse) and hides when synced. It pops in and out with the `pop` spring.
 
 ---
@@ -172,7 +196,7 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 ### P3.1 Charts
 *Read first:* SPEC §5.4, the shadcn chart docs
 - `npx shadcn@latest add chart` (adds Recharts). Colors come from `--chart-*` / `--cat-*` tokens only.
-- `useMonths(uid, fromYm, toYm)` in `db.ts`: one listener for the 6-month range. Don't open 6 listeners.
+- `useMonths(uid, fromYm, toYm)` in `src/lib/db/transactions.ts`: one listener for the 6-month range. Don't open 6 listeners.
 - **Spending by category:** horizontal bars sorted by amount, each with the category color, icon, amount and %. These read better on a phone than a donut. Bars grow in with a spring.
 - **6-month trend:** grouped bars for in vs out per month; tapping a month switches the month view to it.
 - Both go on Home below the hero card, and on desktop in a two-column grid.
