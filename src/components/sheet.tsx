@@ -3,14 +3,22 @@ import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { Dialog } from 'radix-ui'
 import { pop, soft } from '@/lib/motion'
 import { useMediaQuery } from '@/lib/use-media-query'
+import { cn } from '@/lib/utils'
 
-type Props = { open: boolean; onClose: () => void; title: string; children: ReactNode }
+type Props = {
+  open: boolean
+  onClose: () => void
+  title: string
+  children: ReactNode
+  /** Fill most of the screen height on phones (long forms) instead of shrinking to the content. */
+  tall?: boolean
+}
 
 const CLOSE_DISTANCE = 120
 const CLOSE_VELOCITY = 500
 
 /** Bottom sheet on phones (drag the handle down to close); centered dialog at lg. */
-export function Sheet({ open, onClose, title, children }: Props) {
+export function Sheet({ open, onClose, title, children, tall }: Props) {
   const lg = useMediaQuery('(min-width: 1024px)')
   const controls = useDragControls()
   return (
@@ -53,7 +61,7 @@ export function Sheet({ open, onClose, title, children }: Props) {
                 onDragEnd={(_, info) => {
                   if (info.offset.y > CLOSE_DISTANCE || info.velocity.y > CLOSE_VELOCITY) onClose()
                 }}
-                className="fixed inset-x-0 bottom-0 z-30 flex max-h-[90dvh] flex-col rounded-t-3xl bg-card pb-[max(1rem,env(safe-area-inset-bottom))] outline-none lg:inset-auto lg:top-1/2 lg:left-1/2 lg:w-md lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-3xl lg:pb-6"
+                className={cn('fixed inset-x-0 bottom-0 z-30 flex max-h-[90dvh] flex-col rounded-t-3xl bg-card pb-[max(1rem,env(safe-area-inset-bottom))] outline-none lg:inset-auto lg:top-1/2 lg:left-1/2 lg:w-md lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-3xl lg:pb-6', tall && 'h-[92dvh] lg:h-auto lg:max-h-[90dvh] lg:w-xl')}
               >
                 <div
                   onPointerDown={(e) => controls.start(e)}
