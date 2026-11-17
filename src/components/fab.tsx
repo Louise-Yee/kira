@@ -1,11 +1,18 @@
+import { createPortal } from 'react-dom'
 import { Plus } from 'lucide-react'
 import { PillButton } from '@/components/pill-button'
+import { useMediaQuery } from '@/lib/use-media-query'
 
 type Props = { label: string; onClick: () => void }
 
-/** Floating "+" above the tab bar on phones (thumb reach); inline with a label at lg. */
+/**
+ * Floating "+" above the tab bar on phones (thumb reach); inline with a label at lg.
+ * On phones it renders in a portal: the page wrapper slides with a transform while tabs change, and a
+ * transformed ancestor makes `fixed` relative to it, so the button would ride along and then jump.
+ */
 export function Fab({ label, onClick }: Props) {
-  return (
+  const lg = useMediaQuery('(min-width: 1024px)')
+  const button = (
     <PillButton
       onClick={onClick}
       aria-label={label}
@@ -15,4 +22,5 @@ export function Fab({ label, onClick }: Props) {
       <span className="hidden lg:inline">{label}</span>
     </PillButton>
   )
+  return lg ? button : createPortal(button, document.body)
 }
