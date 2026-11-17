@@ -8,6 +8,7 @@ import {
   query,
   setDoc,
   where,
+  writeBatch,
   type CollectionReference,
   type DocumentData,
   type DocumentReference,
@@ -100,6 +101,19 @@ export function saveTransaction(uid: string, draft: TransactionDraft, existing?:
 }
 
 export const deleteTransaction = (uid: string, id: string) => remove(doc(col(uid, 'transactions'), id))
+
+/** Create (no `id`) or overwrite a category. */
+export function saveCategory(uid: string, data: Category, id?: string) {
+  save(doc(col(uid, 'categories'), id ?? newId(uid, 'categories')), data)
+}
+
+/** Swap the sort positions of two categories in one batch, so a reorder is never half-applied. */
+export function swapCategoryOrder(uid: string, a: WithId<Category>, b: WithId<Category>) {
+  const batch = writeBatch(db)
+  batch.update(doc(col(uid, 'categories'), a.id), { order: b.order })
+  batch.update(doc(col(uid, 'categories'), b.id), { order: a.order })
+  void batch.commit().catch(reportError)
+}
 
 /** Live query results; undefined until the first snapshot (cache-first, so instant when offline). */
 function useDocs<T>(q: Query<T> | null): WithId<T>[] | undefined {

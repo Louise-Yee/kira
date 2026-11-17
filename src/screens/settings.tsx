@@ -1,9 +1,14 @@
 import { useState } from 'react'
+import { ChevronRight } from 'lucide-react'
+import { saveCategory, swapCategoryOrder, useCategories } from '@/lib/db'
 import { logOut, type AppUser } from '@/lib/firebase'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { readTheme, setTheme, type Theme } from '@/lib/theme'
+import { CategoryIcon } from '@/components/category-icon'
+import { ListRow } from '@/components/list-row'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
+import { CategoriesManager } from '@/screens/categories-manager'
 
 const themeOptions = [
   { value: 'system', label: 'System' },
@@ -13,6 +18,8 @@ const themeOptions = [
 
 export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navPos: NavPos; onNavPos: (p: NavPos) => void }) {
   const [theme, setThemeState] = useState<Theme>(readTheme)
+  const categories = useCategories(user.uid) ?? []
+  const [managing, setManaging] = useState(false)
   return (
     <div className="flex flex-col gap-5">
       <h1 className="font-heading text-3xl font-extrabold tracking-tight">Settings</h1>
@@ -34,6 +41,19 @@ export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navP
           }}
         />
       </div>
+      <ListRow
+        icon={<CategoryIcon name="other" color="cat-6" tile />}
+        title="Categories"
+        trailing={<ChevronRight className="size-5 text-muted-foreground" />}
+        onClick={() => setManaging(true)}
+      />
+      <CategoriesManager
+        open={managing}
+        onClose={() => setManaging(false)}
+        categories={categories}
+        onSave={(data, id) => saveCategory(user.uid, data, id)}
+        onSwap={(a, b) => swapCategoryOrder(user.uid, a, b)}
+      />
       {/* Only matters at lg: phones always use the floating bottom bar. */}
       <div className="hidden rounded-3xl bg-card p-5 lg:block">
         <p className="text-base font-semibold">Navigation position</p>

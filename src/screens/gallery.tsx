@@ -14,6 +14,7 @@ import { TransactionSheet } from '@/components/transaction-sheet'
 import { defaultCategories } from '@/lib/default-categories'
 import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
 import { categoryIconNames } from '@/lib/category-icons'
+import { CategoriesManager } from '@/screens/categories-manager'
 import { MonthView } from '@/screens/month-view'
 
 const cats = [
@@ -86,6 +87,8 @@ function ComponentGallery() {
   const [tx, setTx] = useState<'add' | 'edit' | null>(null)
   const [saved, setSaved] = useState<TransactionDraft | null>(null)
   const [deletes, setDeletes] = useState(0)
+  const [managing, setManaging] = useState(false)
+  const [managed, setManaged] = useState<WithId<Category>[]>(defaultCategories)
   return (
     <main className="mx-auto flex max-w-md flex-col gap-5 p-5 pb-40">
       <h1 className="font-heading text-3xl font-extrabold tracking-tight">Gallery</h1>
@@ -149,6 +152,23 @@ function ComponentGallery() {
         initial={tx === 'edit' ? editing : undefined}
         onSave={setSaved}
         onDelete={() => setDeletes((d) => d + 1)}
+      />
+
+      <PillButton variant="secondary" onClick={() => setManaging(true)}>
+        Manage categories
+      </PillButton>
+      <p data-testid="cats">
+        cats: {[...managed].sort((a, b) => a.order - b.order).filter((c) => c.kind === 'expense').map((c) => c.name).join(',')} |{' '}
+        {managed.length}
+      </p>
+      <CategoriesManager
+        open={managing}
+        onClose={() => setManaging(false)}
+        categories={[...managed].sort((a, b) => a.order - b.order)}
+        onSave={(data, id) =>
+          setManaged((cs) => (id ? cs.map((c) => (c.id === id ? { ...data, id } : c)) : [...cs, { ...data, id: `new-${cs.length}` }]))
+        }
+        onSwap={(a, b) => setManaged((cs) => cs.map((c) => (c.id === a.id ? { ...c, order: b.order } : c.id === b.id ? { ...c, order: a.order } : c)))}
       />
 
       <Fab label="Add" onClick={() => setOpen(true)} />
