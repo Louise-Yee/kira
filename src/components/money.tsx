@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { motion, useReducedMotion, useSpring, useTransform } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
+import { animate, useReducedMotion } from 'motion/react'
 import { formatRM } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
@@ -23,8 +23,19 @@ export function Money({ sen, sign, countUp, className }: Props) {
 }
 
 function CountUp({ sen, sign }: { sen: number; sign?: boolean }) {
-  const value = useSpring(0, { duration: 0.8, bounce: 0 })
-  useEffect(() => value.set(sen), [value, sen])
-  const text = useTransform(value, (v) => formatRM(Math.round(v), { sign }))
-  return <motion.span>{text}</motion.span>
+  const [shown, setShown] = useState(0)
+  const from = useRef(0)
+  useEffect(() => {
+    const anim = animate(from.current, sen, {
+      type: 'spring',
+      duration: 0.8,
+      bounce: 0,
+      onUpdate: (v) => {
+        from.current = v
+        setShown(Math.round(v))
+      },
+    })
+    return () => anim.stop()
+  }, [sen])
+  return formatRM(shown, { sign })
 }
