@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { onSnapshot } from 'firebase/firestore'
+import { deleteField, onSnapshot, setDoc } from 'firebase/firestore'
 import { reportError, settingsRef } from './core'
 import type { Settings } from './types'
 
@@ -11,4 +11,9 @@ export function useSettings(uid: string) {
     [uid],
   )
   return state?.uid === uid ? state.settings : undefined
+}
+
+/** Set the payment QR (a compressed data URL), or remove it with null. Never awaited, like every write. */
+export function setPaymentQr(uid: string, dataUrl: string | null) {
+  void setDoc(settingsRef(uid), { tngQr: dataUrl ?? deleteField() }, { merge: true }).catch(reportError)
 }

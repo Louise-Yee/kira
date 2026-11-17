@@ -17,5 +17,5 @@ export {
   saveRecurring,
   useRecurring,
 } from './recurring'
-export { useSettings } from './settings'
+export { setPaymentQr, useSettings } from './settings'
 export { useSyncStatus } from './sync'
