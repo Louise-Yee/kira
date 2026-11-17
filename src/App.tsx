@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/react'
 import { House, ReceiptText, Repeat, Settings } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
+import { useSyncStatus } from '@/lib/db'
+import { todayISO } from '@/lib/date'
 import { soft } from '@/lib/motion'
 import { useSeedDefaults } from '@/lib/seed'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
+import { SyncPill } from '@/components/sync-pill'
 import { TabBar, type TabItem } from '@/components/tab-bar'
 import { Gallery } from '@/screens/gallery'
 import { Home } from '@/screens/home'
@@ -68,6 +71,8 @@ function Shell({ user }: { user: AppUser }) {
   const [dir, setDir] = useState(1)
   const [navPos, setNavPos] = useState<NavPos>(readNavPos)
   const lg = useMediaQuery('(min-width: 1024px)')
+  const [ym, setYm] = useState(() => todayISO().slice(0, 7))
+  const sync = useSyncStatus(user.uid, ym)
   const side = navPos !== 'bottom'
   const slide: Slide = { dir, lg }
 
@@ -86,6 +91,7 @@ function Shell({ user }: { user: AppUser }) {
 
   return (
     <div className={cn('mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6', navPos === 'right' && 'lg:flex-row-reverse')}>
+      <SyncPill status={sync} />
       <TabBar tabs={tabs} active={tab} onChange={go} side={side} lg={lg} />
 
       <main className={cn('relative flex-1 overflow-x-clip px-5 pt-6 pb-32', side && 'lg:p-0')}>
@@ -99,7 +105,7 @@ function Shell({ user }: { user: AppUser }) {
             exit="exit"
             transition={soft}
           >
-            {tab === 'home' && <Home user={user} />}
+            {tab === 'home' && <Home user={user} ym={ym} onYm={setYm} />}
             {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} />}
             {(tab === 'recurring' || tab === 'split') && (
               <p className="pt-10 text-center text-lg text-muted-foreground">Coming soon</p>

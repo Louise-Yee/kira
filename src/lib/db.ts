@@ -163,8 +163,10 @@ function useDocs<T>(q: Query<T> | null): WithId<T>[] | undefined {
   return state?.q === q ? state.docs : undefined
 }
 
+const categoriesQuery = (uid: string) => query(col(uid, 'categories'), orderBy('order'))
+
 export function useCategories(uid: string) {
-  const q = useMemo(() => query(col(uid, 'categories'), orderBy('order')), [uid])
+  const q = useMemo(() => categoriesQuery(uid), [uid])
   return useDocs(q)
 }
 
@@ -193,11 +195,12 @@ export type SyncStatus = 'offline' | 'saving' | 'synced'
 
 /**
  * offline: the browser says so. saving: unsynced local writes. synced: otherwise.
- * Only watches the given month, so a pending write in another month isn't seen.
+ * Watches the given month plus the categories, so a pending write elsewhere (another month) isn't seen.
  */
 export function useSyncStatus(uid: string, ym: string): SyncStatus {
   const [online, setOnline] = useState(navigator.onLine)
-  const [pending, setPending] = useState(false)
+  const [txPending, setTxPending] = useState(false)
+  const [catPending, setCatPending] = useState(false)
   useEffect(() => {
     const on = () => setOnline(true)
     const off = () => setOnline(false)
@@ -211,8 +214,14 @@ export function useSyncStatus(uid: string, ym: string): SyncStatus {
   useEffect(
     // Same query as useMonth, so the SDK shares one watch target: no extra reads.
     () =>
-      onSnapshot(monthQuery(uid, ym), { includeMetadataChanges: true }, (s) => setPending(s.metadata.hasPendingWrites), reportError),
+      onSnapshot(monthQuery(uid, ym), { includeMetadataChanges: true }, (s) => setTxPending(s.metadata.hasPendingWrites), reportError),
     [uid, ym],
   )
-  return !online ? 'offline' : pending ? 'saving' : 'synced'
+  useEffect(
+    // Same query as useCategories.
+    () =>
+      onSnapshot(categoriesQuery(uid), { includeMetadataChanges: true }, (s) => setCatPending(s.metadata.hasPendingWrites), reportError),
+    [uid],
+  )
+  return !online ? 'offline' : txPending || catPending ? 'saving' : 'synced'
 }
