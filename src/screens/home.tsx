@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { motion } from 'motion/react'
+import { saveTransaction, useCategories } from '@/lib/db'
 import type { AppUser } from '@/lib/firebase'
 import { pop } from '@/lib/motion'
 import { Ascii } from '@/components/ascii'
+import { Fab } from '@/components/fab'
+import { TransactionSheet } from '@/components/transaction-sheet'
 import { coinField, type Field } from '@/lib/coin'
 
 // Coin peeking in from the right edge of the balance card; x scaled for the ~2.5:1 card.
@@ -9,6 +13,8 @@ const heroField: Field = (nx, ny) => coinField((nx - 0.8) * 1.5, ny * 0.6, 0)
 
 export function Home({ user }: { user: AppUser }) {
   const month = new Date().toLocaleString('en-MY', { month: 'long' })
+  const categories = useCategories(user.uid)
+  const [adding, setAdding] = useState(false)
   return (
     <div className="flex flex-col gap-5">
       <h1 className="font-heading text-3xl font-extrabold tracking-tight">
@@ -25,6 +31,13 @@ export function Home({ user }: { user: AppUser }) {
         <p className="relative text-base font-semibold opacity-85">Left in {month}</p>
         <p className="relative mt-1 font-heading text-5xl font-extrabold tracking-tight">RM 0.00</p>
       </motion.section>
+      <Fab label="Add" onClick={() => setAdding(true)} />
+      <TransactionSheet
+        open={adding}
+        onClose={() => setAdding(false)}
+        categories={categories ?? []}
+        onSave={(draft) => saveTransaction(user.uid, draft)}
+      />
     </div>
   )
 }

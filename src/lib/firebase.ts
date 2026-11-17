@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
 
-export type AppUser = Pick<User, 'displayName' | 'photoURL' | 'email'>
+export type AppUser = Pick<User, 'displayName' | 'photoURL' | 'email' | 'uid'>
 
 // Config comes from .env (see .env.example). Vite inlines it into the bundle at build time.
 const env = import.meta.env

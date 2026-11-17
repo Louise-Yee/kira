@@ -81,6 +81,26 @@ export function remove(ref: DocumentReference) {
   void deleteDoc(ref).catch(reportError)
 }
 
+/** What the add/edit form produces; ids and timestamps are added on save. */
+export type TransactionDraft = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'date' | 'note'>
+
+/** Create (no `existing`) or update a transaction. Keeps createdAt and the recurring/split links when editing. */
+export function saveTransaction(uid: string, draft: TransactionDraft, existing?: WithId<Transaction>) {
+  const now = Date.now()
+  const id = existing?.id ?? newId(uid, 'transactions')
+  save(doc(col(uid, 'transactions'), id), {
+    ...draft,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    // Firestore rejects undefined fields, so only carry links that exist.
+    ...(existing?.recurringId ? { recurringId: existing.recurringId } : {}),
+    ...(existing?.occurrence ? { occurrence: existing.occurrence } : {}),
+    ...(existing?.splitId ? { splitId: existing.splitId } : {}),
+  })
+}
+
+export const deleteTransaction = (uid: string, id: string) => remove(doc(col(uid, 'transactions'), id))
+
 /** Live query results; undefined until the first snapshot (cache-first, so instant when offline). */
 function useDocs<T>(q: Query<T> | null): WithId<T>[] | undefined {
   const [state, setState] = useState<{ q: Query<T>; docs: WithId<T>[] }>()
