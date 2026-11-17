@@ -1,8 +1,6 @@
-import { motion } from 'motion/react'
 import { logOut, type AppUser } from '@/lib/firebase'
-import { press } from '@/lib/motion'
 import { navPositions, type NavPos } from '@/lib/nav'
-import { cn } from '@/lib/utils'
+import { PillButton } from '@/components/pill-button'
 
 export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navPos: NavPos; onNavPos: (p: NavPos) => void }) {
   return (
@@ -20,27 +18,21 @@ export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navP
         <p className="text-base text-muted-foreground">On large screens. Phones always use the bottom bar.</p>
         <div className="mt-3 flex gap-2">
           {navPositions.map((p) => (
-            <motion.button
+            <PillButton
               key={p}
-              whileTap={press}
+              size="pill-sm"
+              variant={navPos === p ? 'default' : 'secondary'}
               onClick={() => onNavPos(p)}
-              className={cn(
-                'h-11 flex-1 rounded-full text-base font-semibold capitalize',
-                navPos === p ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground',
-              )}
+              className="flex-1 capitalize"
             >
               {p}
-            </motion.button>
+            </PillButton>
           ))}
         </div>
       </div>
-      <motion.button
-        whileTap={press}
-        onClick={logOut}
-        className="h-14 rounded-full bg-secondary text-base font-semibold"
-      >
+      <PillButton variant="secondary" onClick={logOut}>
         Sign out
-      </motion.button>
+      </PillButton>
     </div>
   )
 }

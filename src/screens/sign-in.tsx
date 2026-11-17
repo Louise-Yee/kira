@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
 import { signIn } from '@/lib/firebase'
-import { pop, press } from '@/lib/motion'
+import { pop } from '@/lib/motion'
 import { AsciiCoin } from '@/components/ascii'
+import { PillButton } from '@/components/pill-button'
 
 const rise = (i: number) => ({
   initial: { opacity: 0, y: 16, scale: 0.94 },
@@ -27,17 +28,17 @@ export function SignIn() {
       <motion.p {...rise(2)} className="mt-3 text-base text-muted-foreground">
         Every ringgit, accounted for.
       </motion.p>
-      <motion.button
+      <PillButton
         {...rise(3)}
-        whileTap={press}
+        variant="inverse"
         onClick={() =>
           signIn().catch((e: unknown) => setError(e instanceof Error ? e.message : 'Sign-in failed'))
         }
-        className="mt-10 flex h-14 items-center gap-3 rounded-full bg-foreground px-7 text-base font-semibold text-background"
+        className="mt-10"
       >
         <GoogleIcon />
         Continue with Google
-      </motion.button>
+      </PillButton>
       {error && <p className="mt-4 max-w-xs text-center text-base text-destructive">{error}</p>}
     </main>
   )
