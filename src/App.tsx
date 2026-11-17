@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { AnimatePresence, MotionConfig, motion } from 'motion/react'
+import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/react'
 import { House, ReceiptText, Repeat, Settings, type LucideIcon } from 'lucide-react'
 import type { User } from 'firebase/auth'
 import { logOut, signIn, useUser } from '@/lib/firebase'
-import { pop, press, soft } from '@/lib/motion'
+import { glide, pop, press, soft } from '@/lib/motion'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 import { Ascii, AsciiCoin } from '@/components/ascii'
 import { coinField, type Field } from '@/lib/coin'
@@ -79,46 +80,113 @@ const tabs = [
 
 type Tab = (typeof tabs)[number]['id']
 
+const navPositions = ['left', 'right', 'bottom'] as const
+type NavPos = (typeof navPositions)[number]
+const NAV_KEY = 'kira.navPos'
+
+function readNavPos(): NavPos {
+  try {
+    const v = localStorage.getItem(NAV_KEY)
+    return navPositions.find((p) => p === v) ?? 'left'
+  } catch {
+    return 'left'
+  }
+}
+
+type Slide = { dir: number; lg: boolean }
+
+// Phones: pages slide horizontally by tab order. lg (vertical nav): the old fade-up.
+const page: Variants = {
+  enter: ({ dir, lg }: Slide) => (lg ? { opacity: 0, y: 12 } : { x: `${dir * 100}%`, opacity: 0 }),
+  center: { x: 0, y: 0, opacity: 1 },
+  exit: ({ dir, lg }: Slide) => (lg ? { opacity: 0, y: -8 } : { x: `${-dir * 100}%`, opacity: 0 }),
+}
+
 function Shell({ user }: { user: User }) {
   const [tab, setTab] = useState<Tab>('home')
+  const [dir, setDir] = useState(1)
+  const [navPos, setNavPos] = useState<NavPos>(readNavPos)
+  const lg = useMediaQuery('(min-width: 1024px)')
+  const side = navPos !== 'bottom'
+  const slide: Slide = { dir, lg }
+
+  const go = (id: Tab) => {
+    setDir(Math.sign(tabs.findIndex((t) => t.id === id) - tabs.findIndex((t) => t.id === tab)) || 1)
+    setTab(id)
+  }
+  const changeNavPos = (p: NavPos) => {
+    setNavPos(p)
+    try {
+      localStorage.setItem(NAV_KEY, p)
+    } catch {
+      // storage blocked: the choice just won't persist
+    }
+  }
+
   return (
-    <div className="mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6">
+    <div className={cn('mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6', navPos === 'right' && 'lg:flex-row-reverse')}>
       <nav
         className={cn(
-          'fixed inset-x-0 bottom-0 z-10 flex justify-around border-t bg-background/90 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur',
-          'lg:sticky lg:top-6 lg:h-fit lg:w-56 lg:flex-col lg:justify-start lg:gap-1 lg:border-0 lg:bg-transparent lg:p-0',
+          // Floating glass pill, centered above the safe area.
+          'fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-0.5 rounded-full border border-glass-edge bg-glass p-1 shadow-lg backdrop-blur-xl backdrop-saturate-150',
+          // Sidebar at lg when the user picks left/right.
+          side &&
+            'lg:sticky lg:inset-x-auto lg:top-6 lg:bottom-auto lg:mx-0 lg:h-fit lg:w-56 lg:max-w-none lg:flex-col lg:items-stretch lg:gap-1 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none lg:backdrop-saturate-100',
         )}
       >
-        {tabs.map((t) => (
-          <motion.button
-            key={t.id}
-            whileTap={press}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              'relative flex flex-1 flex-col items-center gap-1 rounded-2xl py-2 text-xs font-semibold lg:flex-none lg:flex-row lg:gap-3 lg:px-4 lg:py-3 lg:text-base',
-              tab === t.id ? 'text-foreground' : 'text-muted-foreground',
-            )}
-          >
-            {tab === t.id && (
-              <motion.span layoutId="tab-pill" transition={pop} className="absolute inset-0 rounded-2xl bg-secondary" />
-            )}
-            <t.icon className="relative size-6 lg:size-5" />
-            <span className="relative">{t.label}</span>
-          </motion.button>
-        ))}
+        {tabs.map((t) => {
+          const active = tab === t.id
+          return (
+            <motion.button
+              key={t.id}
+              whileTap={press}
+              onClick={() => go(t.id)}
+              aria-label={t.label}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'relative flex h-11 items-center justify-center rounded-full px-2.5 text-base font-semibold',
+                active ? 'text-foreground' : 'text-muted-foreground',
+                side && 'lg:h-12 lg:justify-start lg:rounded-2xl lg:px-4',
+              )}
+            >
+              <motion.span
+                initial={false}
+                animate={{ opacity: active ? 1 : 0 }}
+                transition={glide}
+                className={cn('absolute inset-0 rounded-full bg-foreground/10', side && 'lg:rounded-2xl')}
+              />
+              <t.icon className="relative size-6 shrink-0 lg:size-5" />
+              <AnimatePresence initial={false}>
+                {(active || (side && lg)) && (
+                  <motion.span
+                    initial={{ width: 0, opacity: 0, x: -10 }}
+                    animate={{ width: 'auto', opacity: 1, x: 0 }}
+                    exit={{ width: 0, opacity: 0, x: -10 }}
+                    transition={glide}
+                    className="relative overflow-hidden whitespace-nowrap"
+                  >
+                    <span className={cn('block pl-2', side && 'lg:pl-3')}>{t.label}</span>
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          )
+        })}
       </nav>
 
-      <main className="flex-1 px-5 pt-6 pb-32 lg:p-0">
-        <AnimatePresence mode="wait" initial={false}>
+      <main className={cn('relative flex-1 overflow-x-clip px-5 pt-6 pb-32', side && 'lg:p-0')}>
+        <AnimatePresence mode="popLayout" initial={false} custom={slide}>
           <motion.div
             key={tab}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
+            custom={slide}
+            variants={page}
+            initial="enter"
+            animate="center"
+            exit="exit"
             transition={soft}
           >
             {tab === 'home' && <Home user={user} />}
-            {tab === 'settings' && <SettingsScreen user={user} />}
+            {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} />}
             {(tab === 'recurring' || tab === 'split') && (
               <p className="pt-10 text-center text-lg text-muted-foreground">Coming soon</p>
             )}
@@ -151,7 +219,7 @@ function Home({ user }: { user: User }) {
   )
 }
 
-function SettingsScreen({ user }: { user: User }) {
+function SettingsScreen({ user, navPos, onNavPos }: { user: User; navPos: NavPos; onNavPos: (p: NavPos) => void }) {
   return (
     <div className="flex flex-col gap-5">
       <h1 className="font-heading text-3xl font-extrabold tracking-tight">Settings</h1>
@@ -160,6 +228,25 @@ function SettingsScreen({ user }: { user: User }) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-semibold">{user.displayName}</p>
           <p className="truncate text-base text-muted-foreground">{user.email}</p>
+        </div>
+      </div>
+      <div className="rounded-3xl bg-card p-5">
+        <p className="text-base font-semibold">Navigation position</p>
+        <p className="text-base text-muted-foreground">On large screens. Phones always use the bottom bar.</p>
+        <div className="mt-3 flex gap-2">
+          {navPositions.map((p) => (
+            <motion.button
+              key={p}
+              whileTap={press}
+              onClick={() => onNavPos(p)}
+              className={cn(
+                'h-11 flex-1 rounded-full text-base font-semibold capitalize',
+                navPos === p ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground',
+              )}
+            >
+              {p}
+            </motion.button>
+          ))}
         </div>
       </div>
       <motion.button
