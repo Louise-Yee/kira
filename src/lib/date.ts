@@ -23,3 +23,17 @@ export function monthLabel(ym: string): string {
   const [y, m] = ym.split('-').map(Number)
   return `${MONTHS[m - 1]} ${y}`
 }
+
+/** "2026-11" -> "November". */
+export const monthName = (ym: string): string => MONTHS[Number(ym.split('-')[1]) - 1]
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+/** "Today", "Yesterday", else "Mon, 10 Nov". `today` is passed in so this stays pure. */
+export function dayLabel(iso: string, today: string): string {
+  if (iso === today) return 'Today'
+  const [y, m, d] = iso.split('-').map(Number)
+  const [ty, tm, td] = today.split('-').map(Number)
+  if (iso === todayISO(new Date(ty, tm - 1, td - 1))) return 'Yesterday'
+  return `${WEEKDAYS[new Date(y, m - 1, d).getDay()]}, ${d} ${MONTHS[m - 1].slice(0, 3)}`
+}
