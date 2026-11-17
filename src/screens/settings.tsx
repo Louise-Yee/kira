@@ -8,7 +8,7 @@ import { CategoryIcon } from '@/components/category-icon'
 import { ListRow } from '@/components/list-row'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
-import { CategoriesManager } from '@/screens/categories-manager'
+import { CategoriesManager } from '@/screens/categories/manager'
 
 const themeOptions = [
   { value: 'system', label: 'System' },
