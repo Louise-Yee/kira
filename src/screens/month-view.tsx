@@ -94,9 +94,19 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
       </div>
 
       {(breakdown.total > 0 || showTrend) && (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {breakdown.total > 0 && <CategoryBars breakdown={breakdown} categories={byId} />}
+        // The trend is first (left at lg) and each card keeps its own height, so nothing slides between
+        // columns or stretches when the month changes.
+        <div className="grid items-start gap-3 lg:grid-cols-2">
           {trend && showTrend && <TrendBars months={trend} selected={ym} onSelect={onMonthChange} />}
+          {breakdown.total > 0 ? (
+            <CategoryBars breakdown={breakdown} categories={byId} />
+          ) : (
+            // Keeps the second column occupied at lg; phones just skip it.
+            <section className="hidden rounded-2xl bg-card p-4 lg:block">
+              <h2 className="font-heading text-xl font-bold">Spending by category</h2>
+              <p className="mt-3 text-base text-muted-foreground">No spending in {monthName(ym)}.</p>
+            </section>
+          )}
         </div>
       )}
 

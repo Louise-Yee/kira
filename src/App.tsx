@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/react'
 import { House, ReceiptText, Repeat, Settings } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
@@ -78,6 +78,10 @@ function Shell({ user }: { user: AppUser }) {
   const [today] = useState(todayISO)
   const [ym, setYm] = useState(today.slice(0, 7))
   const sync = useSyncStatus(user.uid, ym, today.slice(0, 7))
+  // The floating Add button reads this to stay clear of a right-hand sidebar.
+  useEffect(() => {
+    document.documentElement.dataset.nav = navPos
+  }, [navPos])
   const side = navPos !== 'bottom'
   const slide: Slide = { dir, lg }
 
@@ -99,7 +103,7 @@ function Shell({ user }: { user: AppUser }) {
       <SyncPill status={sync} />
       <TabBar tabs={tabs} active={tab} onChange={go} side={side} lg={lg} />
 
-      <main className={cn('relative flex-1 overflow-x-clip px-5 pt-6 pb-32', side && 'lg:p-0')}>
+      <main className={cn('relative flex-1 overflow-x-clip px-5 pt-6 pb-32', side && 'lg:p-0 lg:pb-24')}>
         <AnimatePresence mode="popLayout" initial={false} custom={slide}>
           <motion.div
             key={tab}
