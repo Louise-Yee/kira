@@ -1,7 +1,7 @@
 // Self-check for money + date helpers: node scripts/check-money.ts
 import assert from 'node:assert/strict'
 import { digitsToSen, formatRM, formatSen } from '../src/lib/money.ts'
-import { addMonths, lastMonths, monthLabel, monthRange, monthsRange, todayISO } from '../src/lib/date.ts'
+import { addMonths, inTrendWindow, lastMonths, monthLabel, monthRange, monthsRange, todayISO, trendMonths } from '../src/lib/date.ts'
 
 // digitsToSen
 assert.equal(digitsToSen(''), 0)
@@ -39,5 +39,12 @@ assert.equal(monthLabel('2026-11'), 'November 2026')
 assert.deepEqual(monthsRange('2026-06', '2026-11'), { start: '2026-06-01', end: '2026-12-01' })
 assert.deepEqual(monthsRange('2026-12', '2026-12'), { start: '2026-12-01', end: '2027-01-01' })
 assert.deepEqual(lastMonths('2026-02', 4), ['2025-11', '2025-12', '2026-01', '2026-02'])
+
+// trend window: 6 months ending now
+assert.deepEqual(trendMonths('2026-02'), ['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02'])
+assert.equal(inTrendWindow('2026-02', '2026-02'), true)
+assert.equal(inTrendWindow('2025-09', '2026-02'), true)
+assert.equal(inTrendWindow('2025-08', '2026-02'), false)
+assert.equal(inTrendWindow('2026-03', '2026-02'), false)
 
 console.log('check-money: ok')

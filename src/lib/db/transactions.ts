@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { doc, orderBy, query, where } from 'firebase/firestore'
-import { monthRange } from '@/lib/date'
+import { monthRange, monthsRange } from '@/lib/date'
 import { col, newId, remove, save } from './core'
 import type { Transaction, TransactionDraft, WithId } from './types'
 import { useDocs } from './use-docs'
@@ -10,9 +10,20 @@ export const monthQuery = (uid: string, ym: string) => {
   return query(col(uid, 'transactions'), where('date', '>=', start), where('date', '<', end), orderBy('date', 'desc'))
 }
 
-/** Transactions of one month, newest first. */
-export function useMonth(uid: string, ym: string) {
-  const q = useMemo(() => monthQuery(uid, ym), [uid, ym])
+export const monthsQuery = (uid: string, fromYm: string, toYm: string) => {
+  const { start, end } = monthsRange(fromYm, toYm)
+  return query(col(uid, 'transactions'), where('date', '>=', start), where('date', '<', end), orderBy('date', 'desc'))
+}
+
+/** Transactions of one month, newest first. `enabled: false` skips the listener (undefined until enabled). */
+export function useMonth(uid: string, ym: string, enabled = true) {
+  const q = useMemo(() => (enabled ? monthQuery(uid, ym) : null), [uid, ym, enabled])
+  return useDocs(q)
+}
+
+/** Transactions of the whole months fromYm..toYm, newest first, through one listener. */
+export function useMonths(uid: string, fromYm: string, toYm: string) {
+  const q = useMemo(() => monthsQuery(uid, fromYm, toYm), [uid, fromYm, toYm])
   return useDocs(q)
 }
 

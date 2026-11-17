@@ -74,8 +74,10 @@ function Shell({ user }: { user: AppUser }) {
   const [dir, setDir] = useState(1)
   const [navPos, setNavPos] = useState<NavPos>(readNavPos)
   const lg = useMediaQuery('(min-width: 1024px)')
-  const [ym, setYm] = useState(() => todayISO().slice(0, 7))
-  const sync = useSyncStatus(user.uid, ym)
+  // ponytail: read once per mount, so "Today" and the trend window go stale if the app stays open past midnight.
+  const [today] = useState(todayISO)
+  const [ym, setYm] = useState(today.slice(0, 7))
+  const sync = useSyncStatus(user.uid, ym, today.slice(0, 7))
   const side = navPos !== 'bottom'
   const slide: Slide = { dir, lg }
 
@@ -108,7 +110,7 @@ function Shell({ user }: { user: AppUser }) {
             exit="exit"
             transition={soft}
           >
-            {tab === 'home' && <Home user={user} ym={ym} onYm={setYm} />}
+            {tab === 'home' && <Home user={user} today={today} ym={ym} onYm={setYm} />}
             {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} />}
             {tab === 'recurring' && <RecurringScreen user={user} />}
             {tab === 'split' && (
