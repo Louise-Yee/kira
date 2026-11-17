@@ -3,6 +3,7 @@ import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/rea
 import { House, ReceiptText, Repeat, Settings } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
 import { soft } from '@/lib/motion'
+import { useSeedDefaults } from '@/lib/seed'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 import { TabBar, type TabItem } from '@/components/tab-bar'
@@ -24,6 +25,7 @@ const devGallery = import.meta.env.DEV && new URLSearchParams(location.search).h
 export default function App() {
   const authUser = useUser()
   const user = devUser ?? authUser
+  useSeedDefaults(authUser?.uid) // real accounts only: ?dev has no Firebase uid
   if (devGallery) return <MotionConfig reducedMotion="user"><Gallery /></MotionConfig>
   return (
     <MotionConfig reducedMotion="user">
