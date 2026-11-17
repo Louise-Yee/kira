@@ -13,10 +13,12 @@ import { Sheet } from '@/components/sheet'
 import { SyncPill } from '@/components/sync-pill'
 import type { SyncStatus } from '@/lib/db'
 import { TransactionSheet } from '@/components/transaction-sheet'
+import { ReceiptSheet } from '@/components/receipt-sheet'
 import { monthlyTotals } from '@/lib/chart-data'
+import { computeShares } from '@/lib/split'
 import { trendMonths } from '@/lib/date'
 import { defaultCategories } from '@/lib/default-categories'
-import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
+import type { Category, Split, Transaction, TransactionDraft, WithId } from '@/lib/db'
 import { categoryIconNames } from '@/lib/category-icons'
 import { CategoriesManager } from '@/screens/categories/manager'
 import { MonthView } from '@/screens/month-view'
@@ -96,7 +98,46 @@ const fakeIsUsed = (id: string) =>
 
 // Temporary, dev only: open /?gallery to try the shared components. Removed once real screens use them (P1.5).
 export function Gallery() {
-  return new URLSearchParams(location.search).get('gallery') === 'month' ? <MonthDemo /> : <ComponentGallery />
+  const which = new URLSearchParams(location.search).get('gallery')
+  return which === 'month' ? <MonthDemo /> : which === 'receipt' ? <ReceiptDemo /> : <ComponentGallery />
+}
+
+// /?gallery=receipt: the receipt sheet with a fake split and a random-squares "QR".
+function fakeQr(): string {
+  const c = document.createElement('canvas')
+  c.width = c.height = 300
+  const g = c.getContext('2d')!
+  g.fillStyle = '#fff'
+  g.fillRect(0, 0, 300, 300)
+  g.fillStyle = '#000'
+  for (let i = 0; i < 25; i++) for (let j = 0; j < 25; j++) if ((i * 7 + j * 13 + ((i * j) % 5)) % 3 === 0) g.fillRect(i * 12, j * 12, 12, 12)
+  return c.toDataURL('image/webp', 0.85)
+}
+
+function ReceiptDemo() {
+  const [qr] = useState(fakeQr)
+  const items = [
+    { name: 'Nasi lemak', amount: 680, people: [0, 1, 2] },
+    { name: 'Sushi platter', amount: 4500, people: [0, 1] },
+    { amount: 1200, people: [0] },
+    { name: 'Teh tarik', amount: 350, people: [2] },
+  ]
+  const charges = { type: 'percent', value: 1600 } as const
+  const split: WithId<Split> = {
+    id: 'demo',
+    title: 'Dinner at Sushi King with the whole gang',
+    date: '2026-11-17',
+    mode: 'itemized',
+    people: ['Me', 'Aiman', 'Bee'],
+    items,
+    charges,
+    shares: computeShares({ people: 3, items, charges }).shares,
+    categoryId: 'food',
+    expenseTxId: null,
+    createdAt: 1,
+    updatedAt: 1,
+  }
+  return <ReceiptSheet open onClose={() => {}} split={split} qr={qr} />
 }
 
 function ComponentGallery() {

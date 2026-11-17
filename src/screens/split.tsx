@@ -4,16 +4,19 @@ import { EmptyState } from '@/components/empty-state'
 import { Fab } from '@/components/fab'
 import { ListRow } from '@/components/list-row'
 import { Money } from '@/components/money'
+import { ReceiptSheet } from '@/components/receipt-sheet'
 import { SplitEditor } from '@/components/split-editor'
 import { dayLabel } from '@/lib/date'
-import { deleteSplit, saveSplit, useCategories, useSplits, type Split, type WithId } from '@/lib/db'
+import { deleteSplit, saveSplit, useCategories, useSettings, useSplits, type Split, type WithId } from '@/lib/db'
 import type { AppUser } from '@/lib/firebase'
 
 export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
   const splits = useSplits(user.uid)
   const categories = useCategories(user.uid) ?? []
-  // `open` and `split` are separate so the sheet keeps its title while it slides out.
+  const qr = useSettings(user.uid)?.tngQr
+  // `open` and `split` are separate so a sheet keeps its content while it slides out.
   const [sheet, setSheet] = useState<{ open: boolean; split?: WithId<Split> }>({ open: false })
+  const [receipt, setReceipt] = useState<{ open: boolean; split?: WithId<Split> }>({ open: false })
   const open = (split?: WithId<Split>) => setSheet({ open: true, split })
 
   // Names from past splits (newest first, without me), offered as one-tap additions.
@@ -56,7 +59,12 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
         initial={sheet.split}
         onSave={(draft) => saveSplit(user.uid, draft, sheet.split)}
         onDelete={() => sheet.split && deleteSplit(user.uid, sheet.split.id)}
+        onShare={() => {
+          setReceipt({ open: true, split: sheet.split })
+          setSheet((s) => ({ ...s, open: false }))
+        }}
       />
+      <ReceiptSheet open={receipt.open} onClose={() => setReceipt((r) => ({ ...r, open: false }))} split={receipt.split} qr={qr} />
     </div>
   )
 }

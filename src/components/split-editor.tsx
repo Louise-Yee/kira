@@ -32,6 +32,8 @@ type Props = {
   initial?: WithId<Split>
   onSave: (draft: SplitDraft) => void
   onDelete?: () => void
+  /** Open the receipt for the saved split (editing only). */
+  onShare?: () => void
 }
 
 const modeOptions = [
@@ -64,7 +66,7 @@ export function SplitEditor({ open, onClose, initial, ...rest }: Props) {
   )
 }
 
-function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: Omit<Props, 'open'>) {
+function Form({ initial, categories, suggestions, onSave, onDelete, onShare, onClose }: Omit<Props, 'open'>) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial?.date ?? todayISO())
   const [form, setForm] = useState<SplitForm>(initial ? formFromSplit(initial) : emptyForm)
@@ -315,6 +317,11 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
       >
         Save
       </PillButton>
+      {initial && onShare && (
+        <PillButton variant="secondary" onClick={onShare}>
+          Share receipt (as saved)
+        </PillButton>
+      )}
       {initial &&
         onDelete &&
         (confirming ? (

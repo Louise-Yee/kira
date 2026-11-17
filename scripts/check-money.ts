@@ -1,7 +1,7 @@
 // Self-check for money + date helpers: node scripts/check-money.ts
 import assert from 'node:assert/strict'
 import { digitsToSen, formatRM, formatSen } from '../src/lib/money.ts'
-import { addMonths, inTrendWindow, lastMonths, monthLabel, monthRange, monthsRange, todayISO, trendMonths } from '../src/lib/date.ts'
+import { addMonths, inTrendWindow, lastMonths, longDate, monthLabel, monthRange, monthsRange, todayISO, trendMonths } from '../src/lib/date.ts'
 
 // digitsToSen
 assert.equal(digitsToSen(''), 0)
@@ -46,5 +46,8 @@ assert.equal(inTrendWindow('2026-02', '2026-02'), true)
 assert.equal(inTrendWindow('2025-09', '2026-02'), true)
 assert.equal(inTrendWindow('2025-08', '2026-02'), false)
 assert.equal(inTrendWindow('2026-03', '2026-02'), false)
+
+assert.equal(longDate('2026-12-01'), '1 Dec 2026')
+assert.equal(longDate('2027-01-09'), '9 Jan 2027')
 
 console.log('check-money: ok')
