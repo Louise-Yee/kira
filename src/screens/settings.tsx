@@ -1,11 +1,21 @@
 import { useCallback, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
-import { categoryInUse, deleteCategory, moveAndDeleteCategory, saveCategory, swapCategoryOrder, useCategories } from '@/lib/db'
+import { ChevronRight, QrCode } from 'lucide-react'
+import {
+  categoryInUse,
+  deleteCategory,
+  moveAndDeleteCategory,
+  saveCategory,
+  setPaymentQr,
+  swapCategoryOrder,
+  useCategories,
+  useSettings,
+} from '@/lib/db'
 import { logOut, type AppUser } from '@/lib/firebase'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { readTheme, setTheme, type Theme } from '@/lib/theme'
 import { CategoryIcon } from '@/components/category-icon'
 import { ListRow } from '@/components/list-row'
+import { PaymentQrSheet } from '@/components/payment-qr-sheet'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
 import { CategoriesManager } from '@/screens/categories/manager'
@@ -20,6 +30,8 @@ export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navP
   const [theme, setThemeState] = useState<Theme>(readTheme)
   const categories = useCategories(user.uid) ?? []
   const [managing, setManaging] = useState(false)
+  const [qrOpen, setQrOpen] = useState(false)
+  const settings = useSettings(user.uid)
   const isUsed = useCallback((id: string) => categoryInUse(user.uid, id), [user.uid])
   return (
     <div className="flex flex-col gap-5">
@@ -57,6 +69,24 @@ export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navP
         isUsed={isUsed}
         onDelete={(id) => deleteCategory(user.uid, id)}
         onMove={(from, to) => moveAndDeleteCategory(user.uid, from, to)}
+      />
+      <ListRow
+        icon={
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary">
+            <QrCode className="size-5" aria-hidden />
+          </span>
+        }
+        title="Payment QR"
+        subtitle={settings === undefined ? undefined : settings?.tngQr ? 'On your split receipts' : 'Not set'}
+        trailing={<ChevronRight className="size-5 text-muted-foreground" />}
+        onClick={() => setQrOpen(true)}
+      />
+      <PaymentQrSheet
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        qr={settings?.tngQr}
+        onSave={(url) => setPaymentQr(user.uid, url)}
+        onRemove={() => setPaymentQr(user.uid, null)}
       />
       {/* Only matters at lg: phones always use the floating bottom bar. */}
       <div className="hidden rounded-3xl bg-card p-5 lg:block">
