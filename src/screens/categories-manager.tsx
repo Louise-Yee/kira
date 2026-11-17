@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { Check, ChevronDown, ChevronUp, Pencil, Plus } from 'lucide-react'
 import { CategoryIcon } from '@/components/category-icon'
+import { CategoryPicker } from '@/components/category-picker'
 import { ListRow } from '@/components/list-row'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
@@ -26,9 +27,16 @@ type Props = {
   categories: readonly WithId<Category>[]
   onSave: (data: Category, id?: string) => void
   onSwap: (a: WithId<Category>, b: WithId<Category>) => void
+  /** Whether any transaction uses the category. Must reject when it can't be known (offline). */
+  isUsed: (id: string) => Promise<boolean>
+  onDelete: (id: string) => void
+  /** Move all of `fromId`'s transactions to `toId`, then delete `fromId`. Rejects if the server can't be reached. */
+  onMove: (fromId: string, toId: string) => Promise<void>
 }
 
-/** Manage categories in a sheet: list (reorder, edit) and an add/edit form that replaces it in place. */
+type View = { t: 'list' } | { t: 'form'; cat?: WithId<Category> } | { t: 'delete'; cat: WithId<Category> }
+
+/** Manage categories in a sheet: the list (reorder, edit) and the add/edit/delete screens replace it in place. */
 export function CategoriesManager({ open, onClose, ...rest }: Props) {
   return (
     <Sheet open={open} onClose={onClose} title="Categories">
@@ -38,27 +46,68 @@ export function CategoriesManager({ open, onClose, ...rest }: Props) {
   )
 }
 
-function Body({ categories, onSave, onSwap }: Omit<Props, 'open' | 'onClose'>) {
-  const [kind, setKind] = useState<Kind>('expense')
-  // 'new' = add form, a category = edit form, null = the list.
-  const [form, setForm] = useState<'new' | WithId<Category> | null>(null)
-  const list = categories.filter((c) => c.kind === kind)
+const asData = (c: WithId<Category>, patch: Partial<Category> = {}): Category => ({
+  name: c.name,
+  kind: c.kind,
+  color: c.color,
+  icon: c.icon,
+  order: c.order,
+  archived: c.archived,
+  ...patch,
+})
 
-  if (form) {
+function Body({ categories, onSave, onSwap, isUsed, onDelete, onMove }: Omit<Props, 'open' | 'onClose'>) {
+  const [kind, setKind] = useState<Kind>('expense')
+  const [view, setView] = useState<View>({ t: 'list' })
+  const list = categories.filter((c) => c.kind === kind)
+  const toList = () => setView({ t: 'list' })
+
+  if (view.t === 'form') {
+    const { cat } = view
     return (
       <Form
-        key={form === 'new' ? 'new' : form.id}
-        initial={form === 'new' ? undefined : form}
-        onCancel={() => setForm(null)}
+        key={cat?.id ?? 'new'}
+        initial={cat}
+        onCancel={toList}
+        onDelete={cat && (() => setView({ t: 'delete', cat }))}
+        onRestore={
+          cat?.archived
+            ? () => {
+                onSave(asData(cat, { archived: false }), cat.id)
+                toList()
+              }
+            : undefined
+        }
         onSubmit={(data) => {
           onSave(
-            form === 'new'
-              ? { ...data, kind, order: Math.max(-1, ...list.map((c) => c.order)) + 1, archived: false }
-              : { ...data, kind: form.kind, order: form.order, archived: form.archived },
-            form === 'new' ? undefined : form.id,
+            cat
+              ? asData(cat, data)
+              : { ...data, kind, order: Math.max(-1, ...list.map((c) => c.order)) + 1, archived: false },
+            cat?.id,
           )
-          setForm(null)
+          toList()
         }}
+      />
+    )
+  }
+
+  if (view.t === 'delete') {
+    const { cat } = view
+    return (
+      <DeleteFlow
+        cat={cat}
+        targets={categories.filter((c) => c.kind === cat.kind && c.id !== cat.id && !c.archived)}
+        isUsed={isUsed}
+        onDelete={() => {
+          onDelete(cat.id)
+          toList()
+        }}
+        onArchive={() => {
+          onSave(asData(cat, { archived: true }), cat.id)
+          toList()
+        }}
+        onMove={(toId) => onMove(cat.id, toId).then(toList)}
+        onCancel={() => setView({ t: 'form', cat })}
       />
     )
   }
@@ -66,7 +115,7 @@ function Body({ categories, onSave, onSwap }: Omit<Props, 'open' | 'onClose'>) {
   return (
     <div className="flex flex-col gap-3 pb-1">
       <Segmented options={kindOptions} value={kind} onChange={setKind} />
-      <PillButton size="pill-sm" variant="secondary" onClick={() => setForm('new')}>
+      <PillButton size="pill-sm" variant="secondary" onClick={() => setView({ t: 'form' })}>
         <Plus className="size-5" />
         Add category
       </PillButton>
@@ -78,7 +127,7 @@ function Body({ categories, onSave, onSwap }: Omit<Props, 'open' | 'onClose'>) {
           subtitle={c.archived ? 'Archived' : undefined}
           trailing={
             <span className="flex shrink-0">
-              <IconButton label={`Edit ${c.name}`} onClick={() => setForm(c)}>
+              <IconButton label={`Edit ${c.name}`} onClick={() => setView({ t: 'form', cat: c })}>
                 <Pencil className="size-5" />
               </IconButton>
               <IconButton label={`Move ${c.name} up`} disabled={i === 0} onClick={() => onSwap(c, list[i - 1])}>
@@ -95,7 +144,7 @@ function Body({ categories, onSave, onSwap }: Omit<Props, 'open' | 'onClose'>) {
   )
 }
 
-function IconButton({ label, disabled, onClick, children }: { label: string; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
+function IconButton({ label, disabled, onClick, children }: { label: string; disabled?: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <motion.button
       type="button"
@@ -114,9 +163,13 @@ type FormProps = {
   initial?: WithId<Category>
   onCancel: () => void
   onSubmit: (data: Pick<Category, 'name' | 'icon' | 'color'>) => void
+  /** Edit only: open the delete flow. */
+  onDelete?: () => void
+  /** Edit of an archived category only. */
+  onRestore?: () => void
 }
 
-function Form({ initial, onCancel, onSubmit }: FormProps) {
+function Form({ initial, onCancel, onSubmit, onDelete, onRestore }: FormProps) {
   const [name, setName] = useState(initial?.name ?? '')
   const [icon, setIcon] = useState(initial?.icon ?? 'other')
   const [color, setColor] = useState(initial?.color ?? 'cat-1')
@@ -163,9 +216,118 @@ function Form({ initial, onCancel, onSubmit }: FormProps) {
       <PillButton disabled={!trimmed} onClick={() => trimmed && onSubmit({ name: trimmed, icon, color })}>
         Save
       </PillButton>
+      {onRestore && (
+        <PillButton variant="secondary" onClick={onRestore}>
+          Restore category
+        </PillButton>
+      )}
       <PillButton variant="secondary" onClick={onCancel}>
         Cancel
       </PillButton>
+      {onDelete && (
+        <PillButton variant="destructive" onClick={onDelete}>
+          Delete category
+        </PillButton>
+      )}
     </div>
+  )
+}
+
+type DeleteProps = {
+  cat: WithId<Category>
+  /** Same-kind, non-archived categories that transactions can move to. */
+  targets: readonly WithId<Category>[]
+  isUsed: Props['isUsed']
+  onDelete: () => void
+  onArchive: () => void
+  onMove: (toId: string) => Promise<void>
+  onCancel: () => void
+}
+
+type Usage = 'checking' | 'unknown' | 'unused' | 'used'
+
+function DeleteFlow({ cat, targets, isUsed, onDelete, onArchive, onMove, onCancel }: DeleteProps) {
+  const [usage, setUsage] = useState<Usage>('checking')
+  const [target, setTarget] = useState<string | null>(null)
+  const [moving, setMoving] = useState(false)
+  const [moveFailed, setMoveFailed] = useState(false)
+
+  useEffect(() => {
+    let live = true
+    isUsed(cat.id).then(
+      (used) => live && setUsage(used ? 'used' : 'unused'),
+      () => live && setUsage('unknown'),
+    )
+    return () => {
+      live = false
+    }
+  }, [cat.id, isUsed])
+
+  return (
+    <div className="flex flex-col gap-4 pb-1">
+      <p className="text-base font-semibold text-muted-foreground">Delete “{cat.name}”</p>
+
+      {usage === 'checking' && <p className="text-base">Checking whether it's in use…</p>}
+
+      {usage === 'unknown' && (
+        <>
+          <p className="text-base">
+            Can't tell whether it's in use right now (you may be offline). Deleting could orphan transactions, so
+            it's blocked. You can archive it instead.
+          </p>
+          <ArchiveButton onClick={onArchive} />
+        </>
+      )}
+
+      {usage === 'unused' && (
+        <>
+          <p className="text-base">No transactions use it. This can't be undone.</p>
+          <PillButton variant="destructive" onClick={onDelete}>
+            Delete
+          </PillButton>
+        </>
+      )}
+
+      {usage === 'used' && (
+        <>
+          <p className="text-base">Transactions use it. Move them to another category, or archive it.</p>
+          {targets.length > 0 ? (
+            <>
+              <CategoryPicker categories={targets} value={target} onChange={setTarget} />
+              <PillButton
+                disabled={!target || moving}
+                onClick={() => {
+                  if (!target) return
+                  setMoving(true)
+                  setMoveFailed(false)
+                  onMove(target).catch(() => {
+                    setMoving(false)
+                    setMoveFailed(true)
+                  })
+                }}
+              >
+                {moving ? 'Moving…' : 'Move transactions and delete'}
+              </PillButton>
+              {moveFailed && <p className="text-base text-destructive">Couldn't reach the server. Nothing was changed.</p>}
+            </>
+          ) : (
+            <p className="text-base text-muted-foreground">There's no other category to move them to.</p>
+          )}
+          <ArchiveButton onClick={onArchive} />
+        </>
+      )}
+
+      <PillButton variant="secondary" onClick={onCancel} disabled={moving}>
+        Cancel
+      </PillButton>
+    </div>
+  )
+}
+
+function ArchiveButton({ onClick }: { onClick: () => void }) {
+  return (
+    <PillButton variant="secondary" onClick={onClick}>
+      Archive (hide from pickers, keep old transactions)
+    </PillButton>
   )
 }
