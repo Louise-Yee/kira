@@ -9,8 +9,17 @@ import { cn } from '@/lib/utils'
 import { Ascii, AsciiCoin } from '@/components/ascii'
 import { coinField, type Field } from '@/lib/coin'
 
+type AppUser = Pick<User, 'displayName' | 'photoURL' | 'email'>
+
+// Dev only: open http://localhost:5173/?dev to skip sign-in. Vite strips this from prod builds.
+const devUser: AppUser | null =
+  import.meta.env.DEV && new URLSearchParams(location.search).has('dev')
+    ? { displayName: 'Dev User', photoURL: null, email: 'dev@localhost' }
+    : null
+
 export default function App() {
-  const user = useUser()
+  const authUser = useUser()
+  const user = devUser ?? authUser
   return (
     <MotionConfig reducedMotion="user">
       {user === undefined ? null : user ? <Shell user={user} /> : <SignIn />}
@@ -102,7 +111,7 @@ const page: Variants = {
   exit: ({ dir, lg }: Slide) => (lg ? { opacity: 0, y: -8 } : { x: `${-dir * 100}%`, opacity: 0 }),
 }
 
-function Shell({ user }: { user: User }) {
+function Shell({ user }: { user: AppUser }) {
   const [tab, setTab] = useState<Tab>('home')
   const [dir, setDir] = useState(1)
   const [navPos, setNavPos] = useState<NavPos>(readNavPos)
@@ -197,7 +206,7 @@ function Shell({ user }: { user: User }) {
   )
 }
 
-function Home({ user }: { user: User }) {
+function Home({ user }: { user: AppUser }) {
   const month = new Date().toLocaleString('en-MY', { month: 'long' })
   return (
     <div className="flex flex-col gap-5">
@@ -219,7 +228,7 @@ function Home({ user }: { user: User }) {
   )
 }
 
-function SettingsScreen({ user, navPos, onNavPos }: { user: User; navPos: NavPos; onNavPos: (p: NavPos) => void }) {
+function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navPos: NavPos; onNavPos: (p: NavPos) => void }) {
   return (
     <div className="flex flex-col gap-5">
       <h1 className="font-heading text-3xl font-extrabold tracking-tight">Settings</h1>
