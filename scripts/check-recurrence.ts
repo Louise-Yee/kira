@@ -44,6 +44,9 @@ assert.deepEqual(dueIndices(rule({ startDate: '2026-01-01', end: { type: 'date',
 // Paused
 assert.deepEqual(dueIndices(rule({ startDate: '2026-01-01', paused: true }), 0, '2030-01-01'), [])
 
+// Bad interval must not hang
+assert.deepEqual(dueIndices(rule({ startDate: '2026-01-01', interval: 0 }), 0, '2030-01-01'), [])
+
 // 5-year backlog = 60 indices
 const backlog = dueIndices(monthly, 0, '2030-12-01')
 assert.equal(backlog.length, 60)

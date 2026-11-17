@@ -33,10 +33,10 @@ const withinEnd = (rule: RecurrenceRule, n: number) =>
   rule.end.type === 'never' ||
   (rule.end.type === 'count' ? n < rule.end.value : occurrenceDate(rule, n) <= rule.end.value)
 
-/** Every n >= fromIndex that is due on or before `today`. Paused rules have none. */
+/** Every n >= fromIndex that is due on or before `today`. Paused rules have none; so do bad intervals (< 1), which would loop forever. */
 export function dueIndices(rule: RecurrenceRule, fromIndex: number, today: string): number[] {
   const out: number[] = []
-  if (rule.paused) return out
+  if (rule.paused || !(rule.interval >= 1)) return out
   for (let n = fromIndex; withinEnd(rule, n) && occurrenceDate(rule, n) <= today; n++) out.push(n)
   return out
 }
