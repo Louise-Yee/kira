@@ -26,6 +26,12 @@ export function monthsRange(fromYm: string, toYm: string): { start: string; end:
 /** The `n` months ending at `ym`, oldest first. */
 export const lastMonths = (ym: string, n: number): string[] => Array.from({ length: n }, (_, i) => addMonths(ym, i - n + 1))
 
+/** The months the Home trend covers: 6 ending at the current one, oldest first. */
+export const trendMonths = (currentYm: string): string[] => lastMonths(currentYm, 6)
+
+/** Whether `ym` falls inside the trend window, so its transactions are already loaded. */
+export const inTrendWindow = (ym: string, currentYm: string): boolean => ym >= trendMonths(currentYm)[0] && ym <= currentYm
+
 /** "2026-11" -> "November 2026". */
 export function monthLabel(ym: string): string {
   const [y, m] = ym.split('-').map(Number)

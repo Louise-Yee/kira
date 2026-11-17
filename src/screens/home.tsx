@@ -1,17 +1,20 @@
 import { useState } from 'react'
-import { deleteTransaction, saveTransaction, useCategories, useMonth, type Transaction, type WithId } from '@/lib/db'
-import { todayISO } from '@/lib/date'
+import { deleteTransaction, saveTransaction, useCategories, useMonth, useMonths, type Transaction, type WithId } from '@/lib/db'
+import { inTrendWindow, trendMonths } from '@/lib/date'
 import type { AppUser } from '@/lib/firebase'
 import { Fab } from '@/components/fab'
 import { TransactionSheet } from '@/components/transaction-sheet'
 import { MonthView } from '@/screens/month-view'
 
-/** `ym` lives in the shell so the sync indicator watches the month being viewed. */
-export function Home({ user, ym, onYm }: { user: AppUser; ym: string; onYm: (ym: string) => void }) {
-  // ponytail: read once per mount, so "Today" goes stale if the app stays open past midnight.
-  const [today] = useState(todayISO)
+/** `today` and `ym` live in the shell so the sync indicator watches the same months as this screen. */
+export function Home({ user, today, ym, onYm }: { user: AppUser; today: string; ym: string; onYm: (ym: string) => void }) {
   const categories = useCategories(user.uid) ?? []
-  const transactions = useMonth(user.uid, ym)
+  const currentYm = today.slice(0, 7)
+  // One listener covers the trend window; a month older than that falls back to its own listener.
+  const windowTx = useMonths(user.uid, trendMonths(currentYm)[0], currentYm)
+  const inWindow = inTrendWindow(ym, currentYm)
+  const olderTx = useMonth(user.uid, ym, !inWindow)
+  const transactions = inWindow ? windowTx?.filter((t) => t.date.startsWith(ym)) : olderTx
   // `open` and `tx` are separate so the sheet keeps its title while it slides out.
   const [sheet, setSheet] = useState<{ open: boolean; tx?: WithId<Transaction> }>({ open: false })
 

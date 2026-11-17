@@ -9,7 +9,7 @@ export {
   swapCategoryOrder,
   useCategories,
 } from './categories'
-export { deleteTransaction, saveTransaction, useMonth } from './transactions'
+export { deleteTransaction, saveTransaction, useMonth, useMonths } from './transactions'
 export {
   countRecurringTransactions,
   deleteRecurring,

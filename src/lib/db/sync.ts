@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
 import { onSnapshot } from 'firebase/firestore'
+import { inTrendWindow, trendMonths } from '@/lib/date'
 import { categoriesQuery } from './categories'
 import { reportError } from './core'
-import { monthQuery } from './transactions'
+import { monthQuery, monthsQuery } from './transactions'
 import type { SyncStatus } from './types'
 
 /**
  * offline: the browser says so. saving: unsynced local writes. synced: otherwise.
- * Watches the given month plus the categories, so a pending write elsewhere (another month) isn't seen.
+ * Watches the trend window, the viewed month when it is older than the window, and the categories.
+ * Each is the same query the screens already listen to, so the SDK shares the watch: no extra reads.
  */
-export function useSyncStatus(uid: string, ym: string): SyncStatus {
+export function useSyncStatus(uid: string, ym: string, currentYm: string): SyncStatus {
   const [online, setOnline] = useState(navigator.onLine)
-  const [txPending, setTxPending] = useState(false)
+  const [winPending, setWinPending] = useState(false)
+  const [monthPending, setMonthPending] = useState(false)
   const [catPending, setCatPending] = useState(false)
   useEffect(() => {
     const on = () => setOnline(true)
@@ -24,10 +27,22 @@ export function useSyncStatus(uid: string, ym: string): SyncStatus {
     }
   }, [])
   useEffect(
-    // Same query as useMonth, so the SDK shares one watch target: no extra reads.
     () =>
-      onSnapshot(monthQuery(uid, ym), { includeMetadataChanges: true }, (s) => setTxPending(s.metadata.hasPendingWrites), reportError),
-    [uid, ym],
+      onSnapshot(
+        monthsQuery(uid, trendMonths(currentYm)[0], currentYm),
+        { includeMetadataChanges: true },
+        (s) => setWinPending(s.metadata.hasPendingWrites),
+        reportError,
+      ),
+    [uid, currentYm],
+  )
+  const older = !inTrendWindow(ym, currentYm)
+  useEffect(
+    () =>
+      older
+        ? onSnapshot(monthQuery(uid, ym), { includeMetadataChanges: true }, (s) => setMonthPending(s.metadata.hasPendingWrites), reportError)
+        : undefined,
+    [uid, ym, older],
   )
   useEffect(
     // Same query as useCategories.
@@ -35,5 +50,5 @@ export function useSyncStatus(uid: string, ym: string): SyncStatus {
       onSnapshot(categoriesQuery(uid), { includeMetadataChanges: true }, (s) => setCatPending(s.metadata.hasPendingWrites), reportError),
     [uid],
   )
-  return !online ? 'offline' : txPending || catPending ? 'saving' : 'synced'
+  return !online ? 'offline' : winPending || (older && monthPending) || catPending ? 'saving' : 'synced'
 }
