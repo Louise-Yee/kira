@@ -11,9 +11,13 @@
     <meta name="theme-color" content="#f4f4f4" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
     <script>
-      // Follow the OS theme; runs before paint to avoid a flash.
+      // Apply the saved theme (system/light/dark) before first paint; 'system' follows the OS live.
       const mq = matchMedia('(prefers-color-scheme: dark)')
-      const apply = () => document.documentElement.classList.toggle('dark', mq.matches)
+      const apply = () => {
+        let t
+        try { t = localStorage.getItem('kira.theme') } catch {}
+        document.documentElement.classList.toggle('dark', t === 'dark' || (t !== 'light' && mq.matches))
+      }
       apply()
       mq.addEventListener('change', apply)
     </script>

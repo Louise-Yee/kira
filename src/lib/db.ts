@@ -48,7 +48,6 @@ export type Transaction = {
 
 export type Settings = {
   currency: 'MYR'
-  theme: 'system' | 'light' | 'dark'
   createdAt: number
   tngQr?: string
 }
