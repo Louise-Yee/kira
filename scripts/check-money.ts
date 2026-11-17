@@ -1,6 +1,6 @@
 // Self-check for money + date helpers: node scripts/check-money.ts
 import assert from 'node:assert/strict'
-import { digitsToSen, formatRM } from '../src/lib/money.ts'
+import { digitsToSen, formatRM, formatSen } from '../src/lib/money.ts'
 import { addMonths, monthLabel, monthRange, todayISO } from '../src/lib/date.ts'
 
 // digitsToSen
@@ -11,7 +11,9 @@ assert.equal(digitsToSen('RM 12.50'), 1250)
 assert.equal(digitsToSen('1234567890'), 123456789) // 10th digit ignored
 assert.equal(digitsToSen('0000'), 0)
 
-// formatRM
+// formatSen / formatRM
+assert.equal(formatSen(123450), '1,234.50')
+assert.equal(formatSen(0), '0.00')
 assert.equal(formatRM(0), 'RM 0.00')
 assert.equal(formatRM(5), 'RM 0.05')
 assert.equal(formatRM(500), 'RM 5.00')

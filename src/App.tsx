@@ -6,6 +6,7 @@ import { soft } from '@/lib/motion'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 import { TabBar, type TabItem } from '@/components/tab-bar'
+import { Gallery } from '@/screens/gallery'
 import { Home } from '@/screens/home'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { SettingsScreen } from '@/screens/settings'
@@ -17,9 +18,13 @@ const devUser: AppUser | null =
     ? { displayName: 'Dev User', photoURL: null, email: 'dev@localhost' }
     : null
 
+// Dev only: /?gallery shows the shared components without signing in.
+const devGallery = import.meta.env.DEV && new URLSearchParams(location.search).has('gallery')
+
 export default function App() {
   const authUser = useUser()
   const user = devUser ?? authUser
+  if (devGallery) return <MotionConfig reducedMotion="user"><Gallery /></MotionConfig>
   return (
     <MotionConfig reducedMotion="user">
       {user === undefined ? null : user ? <Shell user={user} /> : <SignIn />}
