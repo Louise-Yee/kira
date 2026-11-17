@@ -1,9 +1,12 @@
 import { motion } from 'motion/react'
 import { ChevronLeft, ChevronRight, Receipt } from 'lucide-react'
+import { CategoryBars } from '@/components/category-bars'
 import { CategoryIcon } from '@/components/category-icon'
 import { EmptyState } from '@/components/empty-state'
 import { ListRow } from '@/components/list-row'
 import { Money } from '@/components/money'
+import { TrendBars } from '@/components/trend-bars'
+import { byCategory, type MonthTotals } from '@/lib/chart-data'
 import { Ascii } from '@/components/ascii'
 import { coinField, type Field } from '@/lib/coin'
 import { addMonths, dayLabel, monthLabel, monthName } from '@/lib/date'
@@ -24,15 +27,19 @@ type Props = {
   /** undefined while the first snapshot is loading. */
   transactions: readonly WithId<Transaction>[] | undefined
   categories: readonly WithId<Category>[]
+  /** Income and expense of the last months for the trend chart; undefined while loading. */
+  trend: readonly MonthTotals[] | undefined
   onAdd: () => void
   onEdit: (tx: WithId<Transaction>) => void
 }
 
-export function MonthView({ name, ym, today, onMonthChange, transactions, categories, onAdd, onEdit }: Props) {
+export function MonthView({ name, ym, today, onMonthChange, transactions, categories, trend, onAdd, onEdit }: Props) {
   const currentYm = today.slice(0, 7)
   const { income, expense } = totals(transactions ?? [])
   const days = groupByDay(transactions ?? [])
   const byId = new Map(categories.map((c) => [c.id, c]))
+  const breakdown = byCategory(transactions ?? [])
+  const showTrend = trend?.some((m) => m.income || m.expense)
   // Index of each day's first row across all groups, for the stagger delay.
   const starts = days.map((_, i) => days.slice(0, i).reduce((n, d) => n + d.items.length, 0))
 
@@ -85,6 +92,13 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
           <Money sen={expense} countUp className="block font-heading text-xl font-bold" />
         </div>
       </div>
+
+      {(breakdown.total > 0 || showTrend) && (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {breakdown.total > 0 && <CategoryBars breakdown={breakdown} categories={byId} />}
+          {trend && showTrend && <TrendBars months={trend} selected={ym} onSelect={onMonthChange} />}
+        </div>
+      )}
 
       {transactions?.length === 0 && (
         <EmptyState icon={Receipt} text="Nothing logged this month yet." action={{ label: 'Add expense', onClick: onAdd }} />
