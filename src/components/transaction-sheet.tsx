@@ -1,12 +1,10 @@
 import { useState } from 'react'
-import { AmountInput } from '@/components/amount-input'
-import { CategoryPicker } from '@/components/category-picker'
+import { EntryFields, type Entry } from '@/components/entry-fields'
 import { PillButton } from '@/components/pill-button'
-import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
 import { TextField } from '@/components/text-field'
 import { todayISO } from '@/lib/date'
-import type { Category, Kind, Transaction, TransactionDraft, WithId } from '@/lib/db'
+import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
 
 type Props = {
   open: boolean
@@ -18,11 +16,6 @@ type Props = {
   onDelete?: () => void
 }
 
-const kindOptions = [
-  { value: 'expense', label: 'Expense' },
-  { value: 'income', label: 'Income' },
-] as const satisfies readonly { value: Kind; label: string }[]
-
 export function TransactionSheet({ open, onClose, initial, ...rest }: Props) {
   return (
     <Sheet open={open} onClose={onClose} title={initial ? 'Edit transaction' : 'New transaction'}>
@@ -33,18 +26,20 @@ export function TransactionSheet({ open, onClose, initial, ...rest }: Props) {
 }
 
 function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'open'>) {
-  const [kind, setKind] = useState<Kind>(initial?.kind ?? 'expense')
-  const [amount, setAmount] = useState(initial?.amount ?? 0)
-  const [categoryId, setCategoryId] = useState<string | null>(initial?.categoryId ?? null)
+  const [entry, setEntry] = useState<Entry>({
+    kind: initial?.kind ?? 'expense',
+    amount: initial?.amount ?? 0,
+    categoryId: initial?.categoryId ?? null,
+    note: initial?.note ?? '',
+  })
   const [date, setDate] = useState(initial?.date ?? todayISO())
-  const [note, setNote] = useState(initial?.note ?? '')
   const [confirming, setConfirming] = useState(false)
 
-  // Archived categories are hidden, except the one this transaction already uses.
-  const choices = categories.filter((c) => c.kind === kind && (!c.archived || c.id === initial?.categoryId))
   // null until the form can be saved (amount entered, category picked, date set).
   const draft: TransactionDraft | null =
-    amount > 0 && categoryId && date ? { kind, amount, categoryId, date, note: note.trim() } : null
+    entry.amount > 0 && entry.categoryId && date
+      ? { kind: entry.kind, amount: entry.amount, categoryId: entry.categoryId, date, note: entry.note.trim() }
+      : null
   const badge = initial?.recurringId ? 'Recurring' : initial?.splitId ? 'Split' : null
 
   return (
@@ -54,25 +49,9 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
           {badge}
         </span>
       )}
-      <Segmented
-        options={kindOptions}
-        value={kind}
-        onChange={(k) => {
-          setKind(k)
-          // A category belongs to one kind: drop the pick if it no longer fits.
-          if (categories.find((c) => c.id === categoryId)?.kind !== k) setCategoryId(null)
-        }}
-      />
-      <AmountInput value={amount} onChange={setAmount} autoFocus />
-      <CategoryPicker categories={choices} value={categoryId} onChange={setCategoryId} />
-      <TextField type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" />
-      <TextField
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Note (optional)"
-        aria-label="Note"
-        maxLength={200}
-      />
+      <EntryFields value={entry} onChange={setEntry} categories={categories} keepCategoryId={initial?.categoryId} autoFocus>
+        <TextField type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" />
+      </EntryFields>
       <PillButton
         disabled={!draft}
         onClick={() => {

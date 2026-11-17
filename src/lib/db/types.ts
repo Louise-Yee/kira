@@ -34,6 +34,9 @@ export type Transaction = {
 export type Recurring = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'note'> &
   RecurrenceRule & { posted: number; createdAt: number }
 
+/** What the rule form produces; `posted` and `createdAt` are managed by the db layer. */
+export type RecurringDraft = Omit<Recurring, 'posted' | 'createdAt'>
+
 export type Settings = {
   currency: 'MYR'
   createdAt: number

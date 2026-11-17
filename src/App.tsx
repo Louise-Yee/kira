@@ -14,6 +14,7 @@ import { TabBar, type TabItem } from '@/components/tab-bar'
 import { Gallery } from '@/screens/gallery'
 import { Home } from '@/screens/home'
 import { navPositions, type NavPos } from '@/lib/nav'
+import { RecurringScreen } from '@/screens/recurring'
 import { SettingsScreen } from '@/screens/settings'
 import { SignIn } from '@/screens/sign-in'
 
@@ -109,7 +110,8 @@ function Shell({ user }: { user: AppUser }) {
           >
             {tab === 'home' && <Home user={user} ym={ym} onYm={setYm} />}
             {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} />}
-            {(tab === 'recurring' || tab === 'split') && (
+            {tab === 'recurring' && <RecurringScreen user={user} />}
+            {tab === 'split' && (
               <p className="pt-10 text-center text-lg text-muted-foreground">Coming soon</p>
             )}
           </motion.div>
