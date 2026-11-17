@@ -9,7 +9,7 @@ Read `SPEC.md` first (the product spec) and `CLAUDE.md` (the rules). This file s
 4. Work on a branch named `feature/…`, `fix/…`, `chores/…` or `refactor/…` (kebab-case), and open a PR into `main`. The PR gets a preview URL, and merging deploys to the live site. If you changed `firestore.rules`, also run `firebase deploy --only firestore:rules`.
 5. Never commit or push unless the user asks.
 
-**Status:** P0 and P1 are done and deployed. Next up is P2.
+**Status:** P0, P1 and P2 are done and deployed. Next up is P3.
 
 **P0.5 (done):** floating glass nav (active tab shows its label), directional page slide on phones, nav position setting (left/right/bottom at `lg`, kept in localStorage).
 
@@ -22,6 +22,18 @@ Read `SPEC.md` first (the product spec) and `CLAUDE.md` (the rules). This file s
 - **Dev gallery** (`/?gallery`, `/?gallery=month`, dev builds only) is kept as a component playground that needs no sign-in. `?dev` skips sign-in but has no Firestore access.
 - **Extra pure logic:** `lib/month-summary.ts` and `lib/default-categories.ts`, each with a check script (`check-month.ts`, `check-seed.ts`).
 - **Branch rule:** merges into `main` go through a PR; a repository ruleset blocks direct updates.
+
+**What changed from the plan during P2** (the code is the source of truth):
+- **Poster waits for the server.** `usePostRecurring` listens with `useRecurring(uid, true)`, which ignores cache-served snapshots (`useDocs(q, serverOnly)`). A stale cached `posted` would otherwise re-post transactions the user deleted on another device. Cost: nothing posts while offline; it posts on reconnect.
+- **`postOccurrences`** lives in `lib/db/recurring.ts` (all Firestore access stays in `lib/db/`). `lib/post-recurring.ts` only holds the hook. The posting write is a full `set`, so it would overwrite an edited or deleted posted transaction if it ran with a stale `posted`.
+- **`Transaction.occurrence` is a `number`** (it was typed `string`).
+- **Editing a rule:** a schedule change on a rule that has posted must start at or after the old rule's next due date (`restartFloor`); the sheet defaults to it and blocks earlier dates, because the new rule would otherwise re-post history (found in live testing, fixed in PR #22). Amount, category, note, end and paused use `updateDoc` and never touch `posted`. A frequency, interval or start-date change ends the old rule (`end = count(posted)`) and creates a new one, unless `posted` is 0, in which case the rule is just updated in place (`scheduleChanged` in `lib/recurrence.ts`).
+- **Deleting a rule is online-only.** It reads the server first (`countRecurringTransactions`, `deleteRecurring`) and is blocked offline with a message. The rule is deleted last, after every transaction batch is acked.
+- **`interval < 1` is guarded** in `dueIndices`: it would otherwise loop forever.
+- **Pause is only shown when editing.** Resuming a paused rule backfills everything missed while paused.
+- **`EntryFields`** (`components/entry-fields.tsx`) holds kind, amount, category and note, shared by the transaction and recurring sheets.
+- **Extra helpers:** `describeFrequency` and `scheduleChanged` in `lib/recurrence.ts`, `shortDate` in `lib/date.ts`.
+- **Known gaps:** two devices that both post a backlog in the same instant write the same ids, which is harmless. A PWA can run the previous build for a visit after a deploy until its service worker updates.
 
 **Assumed decisions** (the user hasn't confirmed these yet; change them here if they do):
 - Default categories. Expense: Food, Groceries, Transport, Bills, Rent, Shopping, Entertainment, Health, Subscriptions, Other. Income: Salary, Side income, Other.
@@ -53,7 +65,7 @@ src/
     default-categories.ts    seed data (pure)
     seed.ts                  first sign-in seeding
     theme.ts, nav.ts         theme and nav-position (localStorage)
-    recurrence.ts            pure recurring-date logic        (P2)
+    recurrence.ts            pure recurring-date logic        (P2, done)
     split.ts                 pure split math                  (P4)
     backup.ts                export/import                    (P5)
   components/
@@ -62,7 +74,7 @@ src/
     ...shared components (see P1.3): sheet, amount-input, segmented, pill-button, text-field,
       category-icon, category-picker, list-row, money, fab, empty-state, transaction-sheet, sync-pill
   screens/
-    sign-in.tsx, home.tsx, month-view.tsx, settings.tsx, recurring.tsx (P2), split.tsx (P4)
+    sign-in.tsx, home.tsx, month-view.tsx, settings.tsx, recurring.tsx, split.tsx (P4)
     categories/              manager.tsx, category-form.tsx, delete-flow.tsx
     gallery.tsx              dev-only component playground (stripped from production)
 scripts/
@@ -151,11 +163,11 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 
 ---
 
-## P2 — Recurring engine
+## P2 — Recurring engine (done)
 
 **Done when:** rent and salary post automatically every month, with no duplicates across devices.
 
-### P2.1 Recurrence math (pure)
+### P2.1 Recurrence math (pure) (done)
 *Read first:* SPEC §5.2
 *New:* `src/lib/recurrence.ts`, `scripts/check-recurrence.ts`
 - `occurrenceDate(rule, n): string`, the date of occurrence `n` (0-based), **always computed from `startDate`**, never from the previous occurrence.
@@ -166,7 +178,7 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 - `nextDate(rule, fromIndex)` gives the next upcoming date, or null when the rule has ended.
 - The check script covers: month-end clamping across a leap year, every 3 months, yearly from Feb 29, weekly, count end, date end, paused, and a 5-year backlog (60 indices).
 
-### P2.2 Poster
+### P2.2 Poster (done)
 *New:* `src/lib/post-recurring.ts`, called once per app open after sign-in, and again when the app becomes visible on a new day.
 - Add `posted: number` to the recurring doc: the count of occurrences already created.
 - For each rule: `idx = dueIndices(rule, rule.posted, todayISO())`. In one batch, write each transaction with ID `{ruleId}_{n}` (fields copied from the rule, plus `recurringId` and `occurrence: n`) and set `posted` to the last `n + 1`.
@@ -174,7 +186,7 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 - The deterministic IDs mean two offline devices posting the same occurrence write the same document, so there are no duplicates.
 - Batch limit: 500 writes. Chunk them if a backlog is larger than that.
 
-### P2.3 Recurring screen
+### P2.3 Recurring screen (done)
 *New:* `src/screens/recurring.tsx`, `src/components/recurring-sheet.tsx`
 - List the rules as `ListRow`s: name/category, amount, and "Every month · next 1 Dec". Split them into Active and Ended/paused sections.
 - The sheet reuses the transaction fields (`Segmented`, `AmountInput`, `CategoryPicker`, note), plus:
