@@ -9,6 +9,8 @@ type Props = {
   value: number
   onChange: (sen: number) => void
   autoFocus?: boolean
+  /** `sm` for rows in a list (split items), `lg` (default) for the one big amount on a form. */
+  size?: 'lg' | 'sm'
   className?: string
 }
 
@@ -17,7 +19,7 @@ type Props = {
  * A real numeric input so the phone's number pad opens; typing, backspace and paste
  * all go through digitsToSen.
  */
-export function AmountInput({ value, onChange, autoFocus, className }: Props) {
+export function AmountInput({ value, onChange, autoFocus, size = 'lg', className }: Props) {
   const ref = useRef<HTMLInputElement>(null)
   const reduce = useReducedMotion()
   const prev = useRef(value)
@@ -41,7 +43,7 @@ export function AmountInput({ value, onChange, autoFocus, className }: Props) {
 
   return (
     <div className={cn('flex items-baseline justify-center gap-2 font-heading', className)}>
-      <span className="text-3xl font-bold text-muted-foreground">RM</span>
+      <span className={cn('font-bold text-muted-foreground', size === 'sm' ? 'text-base' : 'text-3xl')}>RM</span>
       <input
         ref={ref}
         value={text}
@@ -58,7 +60,8 @@ export function AmountInput({ value, onChange, autoFocus, className }: Props) {
         aria-label="Amount"
         style={{ width: `${text.length}ch` }}
         className={cn(
-          'min-w-[4ch] bg-transparent text-6xl font-extrabold tracking-tight tabular-nums outline-none',
+          'min-w-[4ch] bg-transparent font-extrabold tracking-tight tabular-nums outline-none',
+          size === 'sm' ? 'text-2xl' : 'text-6xl',
           value === 0 ? 'text-muted-foreground' : 'text-foreground',
         )}
       />

@@ -16,6 +16,7 @@ import { Home } from '@/screens/home'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { RecurringScreen } from '@/screens/recurring'
 import { SettingsScreen } from '@/screens/settings'
+import { SplitScreen } from '@/screens/split'
 import { SignIn } from '@/screens/sign-in'
 
 // Dev only: open http://localhost:5173/?dev to skip sign-in. Vite strips this from prod builds.
@@ -117,9 +118,7 @@ function Shell({ user }: { user: AppUser }) {
             {tab === 'home' && <Home user={user} today={today} ym={ym} onYm={setYm} />}
             {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} />}
             {tab === 'recurring' && <RecurringScreen user={user} />}
-            {tab === 'split' && (
-              <p className="pt-10 text-center text-lg text-muted-foreground">Coming soon</p>
-            )}
+            {tab === 'split' && <SplitScreen user={user} today={today} />}
           </motion.div>
         </AnimatePresence>
       </main>

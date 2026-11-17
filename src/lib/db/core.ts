@@ -9,9 +9,9 @@ import {
   type FirestoreDataConverter,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import type { Category, Recurring, Settings, Transaction } from './types'
+import type { Category, Recurring, Settings, Split, Transaction } from './types'
 
-type Collections = { categories: Category; transactions: Transaction; recurring: Recurring }
+type Collections = { categories: Category; transactions: Transaction; recurring: Recurring; splits: Split }
 
 const converter = <T extends DocumentData>(): FirestoreDataConverter<T> => ({
   toFirestore: (data) => data,

@@ -1,4 +1,5 @@
 import type { RecurrenceRule } from '@/lib/recurrence'
+import type { Charge, Share, SplitForm, SplitItem, SplitMode } from '@/lib/split'
 
 export type Kind = 'expense' | 'income'
 
@@ -36,6 +37,28 @@ export type Recurring = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'no
 
 /** What the rule form produces; `posted` and `createdAt` are managed by the db layer. */
 export type RecurringDraft = Omit<Recurring, 'posted' | 'createdAt'>
+
+/** A bill split between people. `people[0]` is me; `shares` are stored as fixed values, never recomputed. */
+export type Split = {
+  title: string
+  /** Local YYYY-MM-DD. */
+  date: string
+  mode: SplitMode
+  people: string[]
+  /** Always the items the maths ran on (even and exact modes are stored as items too). */
+  items: SplitItem[]
+  charges: Charge
+  shares: Share[]
+  /** Category of my expense. */
+  categoryId: string
+  /** `{splitId}_me`, or null when my share is 0 (no expense is created). */
+  expenseTxId: string | null
+  createdAt: number
+  updatedAt: number
+}
+
+/** What the editor produces; shares, the expense id and timestamps are added on save. */
+export type SplitDraft = { title: string; date: string; categoryId: string; form: SplitForm }
 
 export type Settings = {
   currency: 'MYR'

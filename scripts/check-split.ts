@@ -1,6 +1,23 @@
 // Self-check for split maths: node scripts/check-split.ts
 import assert from 'node:assert/strict'
-import { apportion, computeShares, evenItems, exactItems, grandTotal, splitItem, type SplitItem } from '../src/lib/split.ts'
+import {
+  addPerson,
+  apportion,
+  computeForm,
+  computeShares,
+  evenItems,
+  exactItems,
+  formatPercent,
+  formFromSplit,
+  grandTotal,
+  parsePercent,
+  removePerson,
+  resolveItems,
+  splitItem,
+  splitProblem,
+  type SplitForm,
+  type SplitItem,
+} from '../src/lib/split.ts'
 
 const none = { type: 'percent', value: 0 } as const
 
@@ -90,5 +107,65 @@ for (let bill = 0; bill < 200; bill++) {
   assert.equal(r.subtotal, items.reduce((n, i) => n + i.amount, 0), `bill ${bill} items`)
   for (const s of r.shares) assert.equal(s.subtotal + s.charge, s.total)
 }
+
+// Form helpers
+const form = (over: Partial<SplitForm> = {}): SplitForm => ({
+  mode: 'itemized',
+  people: ['Me', 'Aiman', 'Bee'],
+  items: [{ amount: 680, people: [0, 1, 2] }],
+  evenTotal: 0,
+  exact: [0, 0, 0],
+  charges: { type: 'percent', value: 1600 },
+  ...over,
+})
+
+// removePerson re-points items; me can't be removed
+const removed = removePerson(form({ items: [{ amount: 100, people: [0, 1] }, { amount: 200, people: [1, 2] }, { amount: 300, people: [2] }], exact: [5, 6, 7] }), 1)
+assert.deepEqual(removed.people, ['Me', 'Bee'])
+assert.deepEqual(removed.items.map((i) => i.people), [[0], [1], [1]])
+assert.deepEqual(removed.exact, [5, 7])
+assert.equal(removePerson(form(), 0).people.length, 3)
+assert.equal(removePerson(form(), 9).people.length, 3)
+assert.deepEqual(addPerson(form(), 'Cat').exact, [0, 0, 0, 0])
+
+// resolveItems / computeForm per mode
+assert.deepEqual(resolveItems(form({ mode: 'even', evenTotal: 900 })), [{ amount: 900, people: [0, 1, 2] }])
+assert.deepEqual(computeForm(form({ mode: 'even', evenTotal: 1000, charges: { type: 'percent', value: 0 } })).shares.map((s) => s.total), [334, 333, 333])
+// exact mode ignores any charge left over from another mode
+assert.deepEqual(computeForm(form({ mode: 'exact', exact: [1000, 0, 250] })).shares.map((s) => s.total), [1000, 0, 250])
+assert.equal(computeForm(form()).total, 789) // 6.80 + 16% = 7.888 -> 7.89
+
+// formFromSplit round-trips every mode
+for (const f of [form(), form({ mode: 'even', evenTotal: 900, items: [] }), form({ mode: 'exact', exact: [1000, 0, 250], items: [] })]) {
+  const saved = { mode: f.mode, people: f.people, items: resolveItems(f), charges: f.charges }
+  assert.deepEqual(formFromSplit(saved), f)
+}
+
+// splitProblem
+assert.equal(splitProblem(form()), null)
+assert.equal(splitProblem(form({ people: ['Me'], exact: [0] })), 'Add at least one other person.')
+assert.equal(splitProblem(form({ items: [] })), 'Add at least one item.')
+assert.equal(splitProblem(form({ items: [{ amount: 0, people: [0] }] })), 'Every item needs an amount.')
+assert.equal(splitProblem(form({ items: [{ amount: 100, people: [] }] })), 'Pick who shares each item.')
+assert.equal(splitProblem(form({ mode: 'even', evenTotal: 0 })), 'Enter the total.')
+assert.equal(splitProblem(form({ mode: 'exact', exact: [0, 0, 0] })), 'Enter an amount for at least one person.')
+assert.equal(splitProblem(form({ charges: { type: 'total', value: 0 } })), 'Enter the receipt total.')
+assert.equal(splitProblem(form({ mode: 'exact', exact: [1, 0, 0], charges: { type: 'total', value: 0 } })), null) // exact has no charges
+
+// parsePercent / formatPercent
+assert.equal(parsePercent('16'), 1600)
+assert.equal(parsePercent('6.5'), 650)
+assert.equal(parsePercent('16.25'), 1625)
+assert.equal(parsePercent('0'), 0)
+assert.equal(parsePercent('100'), 10000)
+assert.equal(parsePercent('101'), null)
+assert.equal(parsePercent(''), null)
+assert.equal(parsePercent('1.234'), null)
+assert.equal(parsePercent('abc'), null)
+assert.equal(formatPercent(1600), '16')
+assert.equal(formatPercent(650), '6.5')
+assert.equal(formatPercent(1625), '16.25')
+assert.equal(formatPercent(5), '0.05')
+assert.equal(formatPercent(0), '0')
 
 console.log('check-split: ok')

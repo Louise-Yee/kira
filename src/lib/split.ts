@@ -82,3 +82,90 @@ export const evenItems = (amount: number, people: number): SplitItem[] => [{ amo
 /** Exact mode: each person's own amount (people owing 0 are left out). */
 export const exactItems = (amounts: readonly number[]): SplitItem[] =>
   amounts.flatMap((amount, person) => (amount > 0 ? [{ amount, people: [person] }] : []))
+
+export type SplitMode = 'itemized' | 'even' | 'exact'
+
+/** Everything the editor holds. `people[0]` is always me. `exact` has one amount per person. */
+export type SplitForm = {
+  mode: SplitMode
+  people: string[]
+  items: SplitItem[]
+  /** Even mode: the whole bill, in sen. */
+  evenTotal: number
+  exact: number[]
+  charges: Charge
+}
+
+export const addPerson = (form: SplitForm, name: string): SplitForm => ({
+  ...form,
+  people: [...form.people, name],
+  exact: [...form.exact, 0],
+})
+
+/** Remove a person (never me, index 0) and re-point every item at the people who are left. */
+export function removePerson(form: SplitForm, index: number): SplitForm {
+  if (index <= 0 || index >= form.people.length) return form
+  return {
+    ...form,
+    people: form.people.filter((_, i) => i !== index),
+    exact: form.exact.filter((_, i) => i !== index),
+    items: form.items.map((item) => ({
+      ...item,
+      people: item.people.filter((p) => p !== index).map((p) => (p > index ? p - 1 : p)),
+    })),
+  }
+}
+
+/** The items the maths runs on, whichever mode the form is in. */
+export function resolveItems(form: SplitForm): SplitItem[] {
+  if (form.mode === 'even') return evenItems(form.evenTotal, form.people.length)
+  if (form.mode === 'exact') return exactItems(form.exact)
+  return form.items
+}
+
+/** Exact mode has no tax or charges: each person pays exactly their amount. */
+export const computeForm = (form: SplitForm): SplitResult =>
+  computeShares({ people: form.people.length, items: resolveItems(form), charges: form.mode === 'exact' ? { type: 'percent', value: 0 } : form.charges })
+
+/** Rebuild the editor form from a saved split (the inverse of `resolveItems`). */
+export function formFromSplit(s: { mode: SplitMode; people: string[]; items: SplitItem[]; charges: Charge }): SplitForm {
+  const exact = s.people.map(() => 0)
+  if (s.mode === 'exact') for (const item of s.items) exact[item.people[0]] += item.amount
+  return {
+    mode: s.mode,
+    people: s.people,
+    items: s.mode === 'itemized' ? s.items : [],
+    evenTotal: s.mode === 'even' ? (s.items[0]?.amount ?? 0) : 0,
+    exact,
+    charges: s.charges,
+  }
+}
+
+/** Why the form can't be saved yet, or null when it can. */
+export function splitProblem(form: SplitForm): string | null {
+  if (form.people.length < 2) return 'Add at least one other person.'
+  if (form.mode === 'itemized') {
+    if (form.items.length === 0) return 'Add at least one item.'
+    if (form.items.some((i) => i.amount <= 0)) return 'Every item needs an amount.'
+    if (form.items.some((i) => i.people.length === 0)) return 'Pick who shares each item.'
+  }
+  if (form.mode === 'even' && form.evenTotal <= 0) return 'Enter the total.'
+  if (form.mode === 'exact' && !form.exact.some((a) => a > 0)) return 'Enter an amount for at least one person.'
+  if (form.mode !== 'exact' && form.charges.type === 'total' && form.charges.value <= 0) return 'Enter the receipt total.'
+  return null
+}
+
+/** "16" -> 1600, "6.5" -> 650, "16.25" -> 1625 (basis points, no float maths). Null if invalid or over 100%. */
+export function parsePercent(text: string): number | null {
+  const m = /^(\d{1,3})(?:\.(\d{1,2}))?$/.exec(text.trim())
+  if (!m) return null
+  const bp = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'))
+  return bp <= 10000 ? bp : null
+}
+
+/** 1600 -> "16", 650 -> "6.5", 1625 -> "16.25". */
+export function formatPercent(bp: number): string {
+  const whole = Math.floor(bp / 100)
+  const frac = String(bp % 100).padStart(2, '0').replace(/0$/, '')
+  return frac === '0' || frac === '' ? String(whole) : `${whole}.${frac}`
+}
