@@ -6,10 +6,10 @@ import { Fab } from '@/components/fab'
 import { TransactionSheet } from '@/components/transaction-sheet'
 import { MonthView } from '@/screens/month-view'
 
-export function Home({ user }: { user: AppUser }) {
+/** `ym` lives in the shell so the sync indicator watches the month being viewed. */
+export function Home({ user, ym, onYm }: { user: AppUser; ym: string; onYm: (ym: string) => void }) {
   // ponytail: read once per mount, so "Today" goes stale if the app stays open past midnight.
   const [today] = useState(todayISO)
-  const [ym, setYm] = useState(today.slice(0, 7))
   const categories = useCategories(user.uid) ?? []
   const transactions = useMonth(user.uid, ym)
   // `open` and `tx` are separate so the sheet keeps its title while it slides out.
@@ -21,7 +21,7 @@ export function Home({ user }: { user: AppUser }) {
         name={user.displayName?.split(' ')[0] ?? 'there'}
         ym={ym}
         today={today}
-        onMonthChange={setYm}
+        onMonthChange={onYm}
         transactions={transactions}
         categories={categories}
         onAdd={() => setSheet({ open: true })}

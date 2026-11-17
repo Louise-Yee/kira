@@ -10,6 +10,8 @@ import { Money } from '@/components/money'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
+import { SyncPill } from '@/components/sync-pill'
+import type { SyncStatus } from '@/lib/db'
 import { TransactionSheet } from '@/components/transaction-sheet'
 import { defaultCategories } from '@/lib/default-categories'
 import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
@@ -92,6 +94,7 @@ function ComponentGallery() {
   const [saved, setSaved] = useState<TransactionDraft | null>(null)
   const [deletes, setDeletes] = useState(0)
   const [managing, setManaging] = useState(false)
+  const [sync, setSync] = useState<SyncStatus>('synced')
   const [moved, setMoved] = useState('none')
   const [managed, setManaged] = useState<WithId<Category>[]>(defaultCategories)
   return (
@@ -159,6 +162,16 @@ function ComponentGallery() {
         onDelete={() => setDeletes((d) => d + 1)}
       />
 
+      <SyncPill status={sync} />
+      <Segmented
+        options={[
+          { value: 'synced', label: 'Synced' },
+          { value: 'saving', label: 'Saving' },
+          { value: 'offline', label: 'Offline' },
+        ]}
+        value={sync}
+        onChange={setSync}
+      />
       <PillButton variant="secondary" onClick={() => setManaging(true)}>
         Manage categories
       </PillButton>
