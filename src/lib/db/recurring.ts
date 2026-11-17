@@ -6,10 +6,13 @@ import { col, reportError } from './core'
 import type { Recurring } from './types'
 import { useDocs } from './use-docs'
 
-/** All recurring rules. Pass undefined to skip listening (e.g. before sign-in). */
-export function useRecurring(uid: string | undefined) {
+/**
+ * All recurring rules. Pass undefined to skip listening (e.g. before sign-in).
+ * `serverOnly`: wait for the server's answer, so a stale cached `posted` is never acted on.
+ */
+export function useRecurring(uid: string | undefined, serverOnly = false) {
   const q = useMemo(() => (uid ? col(uid, 'recurring') : null), [uid])
-  return useDocs(q)
+  return useDocs(q, serverOnly)
 }
 
 // A batch holds 500 writes: up to 499 transactions plus the rule's `posted` update.

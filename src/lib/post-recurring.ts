@@ -5,10 +5,10 @@ import { dueIndices } from '@/lib/recurrence'
 
 /**
  * Posts every due occurrence of every rule: once the rules first load, and again when the app
- * becomes visible on a new day. Idempotent, so a repeat run (or another device) is harmless.
+ * becomes visible on a new day. Needs the server (nothing posts while offline); a repeat run is harmless.
  */
 export function usePostRecurring(uid: string | undefined) {
-  const rules = useRecurring(uid)
+  const rules = useRecurring(uid, true) // server-confirmed only: a stale cached `posted` would re-post deleted transactions
   const [today, setToday] = useState(todayISO)
 
   useEffect(() => {
