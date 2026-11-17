@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { deleteTransaction, saveTransaction, useCategories, useMonth, useMonths, type Transaction, type WithId } from '@/lib/db'
+import { monthlyTotals } from '@/lib/chart-data'
 import { inTrendWindow, trendMonths } from '@/lib/date'
 import type { AppUser } from '@/lib/firebase'
 import { Fab } from '@/components/fab'
@@ -11,7 +12,8 @@ export function Home({ user, today, ym, onYm }: { user: AppUser; today: string; 
   const categories = useCategories(user.uid) ?? []
   const currentYm = today.slice(0, 7)
   // One listener covers the trend window; a month older than that falls back to its own listener.
-  const windowTx = useMonths(user.uid, trendMonths(currentYm)[0], currentYm)
+  const yms = trendMonths(currentYm)
+  const windowTx = useMonths(user.uid, yms[0], currentYm)
   const inWindow = inTrendWindow(ym, currentYm)
   const olderTx = useMonth(user.uid, ym, !inWindow)
   const transactions = inWindow ? windowTx?.filter((t) => t.date.startsWith(ym)) : olderTx
@@ -27,6 +29,7 @@ export function Home({ user, today, ym, onYm }: { user: AppUser; today: string; 
         onMonthChange={onYm}
         transactions={transactions}
         categories={categories}
+        trend={windowTx && monthlyTotals(windowTx, yms)}
         onAdd={() => setSheet({ open: true })}
         onEdit={(tx) => setSheet({ open: true, tx })}
       />

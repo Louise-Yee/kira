@@ -13,6 +13,8 @@ import { Sheet } from '@/components/sheet'
 import { SyncPill } from '@/components/sync-pill'
 import type { SyncStatus } from '@/lib/db'
 import { TransactionSheet } from '@/components/transaction-sheet'
+import { monthlyTotals } from '@/lib/chart-data'
+import { trendMonths } from '@/lib/date'
 import { defaultCategories } from '@/lib/default-categories'
 import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
 import { categoryIconNames } from '@/lib/category-icons'
@@ -49,7 +51,20 @@ const demoTx = [
   t('d', 'expense', 100000, 'rent', '2026-11-10', '', 1),
   t('e', 'income', 500000, 'salary', '2026-11-01', '', 1),
   t('f', 'expense', 1000, 'food', '2026-10-31', 'Old', 1),
+  // More categories than the chart shows (top 6 + Others), and older months for the trend.
+  t('g', 'expense', 6000, 'shopping', '2026-11-05', '', 1),
+  t('h', 'expense', 3000, 'entertainment', '2026-11-06', '', 1),
+  t('i', 'expense', 2000, 'health', '2026-11-07', '', 1),
+  t('j', 'expense', 1500, 'subscriptions', '2026-11-08', '', 1),
+  t('k', 'expense', 500, 'other', '2026-11-09', '', 1),
+  t('l', 'income', 500000, 'salary', '2026-10-01', '', 1),
+  t('m', 'expense', 150000, 'rent', '2026-10-10', '', 1),
+  t('n', 'expense', 80000, 'groceries', '2026-09-12', '', 1),
+  t('o', 'income', 520000, 'salary', '2026-09-01', '', 1),
+  t('p', 'expense', 30000, 'bills', '2026-08-20', '', 1),
+  t('q', 'expense', 100, 'food', '2026-07-02', 'tiny', 1),
 ]
+const demoMonths = trendMonths('2026-11')
 
 // /?gallery=month: the month view with fixed fake data (today = 2026-11-17).
 function MonthDemo() {
@@ -65,6 +80,7 @@ function MonthDemo() {
         onMonthChange={setYm}
         transactions={demoTx.filter((x) => x.date.startsWith(ym))}
         categories={defaultCategories}
+        trend={monthlyTotals(demoTx, demoMonths)}
         onAdd={() => setAdds((n) => n + 1)}
         onEdit={(x) => setEdited(x.id)}
       />
