@@ -16,7 +16,7 @@ import { TransactionSheet } from '@/components/transaction-sheet'
 import { defaultCategories } from '@/lib/default-categories'
 import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
 import { categoryIconNames } from '@/lib/category-icons'
-import { CategoriesManager } from '@/screens/categories-manager'
+import { CategoriesManager } from '@/screens/categories/manager'
 import { MonthView } from '@/screens/month-view'
 
 const cats = [

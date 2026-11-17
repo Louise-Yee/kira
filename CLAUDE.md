@@ -21,7 +21,7 @@ Personal expense tracker PWA. Product spec: `SPEC.md`. Task list: `PLAN.md`. Do 
 ## Data
 - Money is **integer sen** everywhere. Amounts are entered only through `<AmountInput>` (TNG-style, digits fill from the right). Use `digitsToSen` / `formatRM` from `src/lib/money.ts`, and never use float math for money.
 - Dates are local `YYYY-MM-DD` strings from `src/lib/date.ts`. Never use `toISOString()` to get a date.
-- All Firestore access goes through `src/lib/db.ts`. **Never `await` a write in the UI**: the app is offline-first, and a pending write resolves only once it reaches the server.
+- All Firestore access goes through `src/lib/db/` (import from `@/lib/db`, the `index.ts` barrel; never from the files inside). **Never `await` a write in the UI**: the app is offline-first, and a pending write resolves only once it reaches the server.
 - Data lives under `users/{uid}/...` only, and `firestore.rules` stays locked to the owner.
 - **Billing:** the Firebase project stays on the free Spark plan. Never add Cloud Functions, Storage, extensions or anything that needs Blaze. Keep reads low (listen to bounded date ranges, never the whole history).
 - Never write to the live Firestore database from a script or the CLI without the user's explicit approval.
