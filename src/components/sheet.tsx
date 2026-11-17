@@ -27,7 +27,19 @@ export function Sheet({ open, onClose, title, children }: Props) {
                 className="fixed inset-0 z-20 bg-foreground/40"
               />
             </Dialog.Overlay>
-            <Dialog.Content forceMount asChild aria-describedby={undefined}>
+            <Dialog.Content
+              forceMount
+              asChild
+              aria-describedby={undefined}
+              // Radix focuses the first tabbable element; let a [data-autofocus] element (AmountInput) win.
+              onOpenAutoFocus={(e) => {
+                const el = document.querySelector<HTMLElement>('[data-autofocus]')
+                if (el) {
+                  e.preventDefault()
+                  el.focus()
+                }
+              }}
+            >
               <motion.div
                 initial={lg ? { opacity: 0, scale: 0.94 } : { y: '100%' }}
                 animate={lg ? { opacity: 1, scale: 1 } : { y: 0 }}

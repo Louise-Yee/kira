@@ -10,6 +10,9 @@ import { Money } from '@/components/money'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
+import { TransactionSheet } from '@/components/transaction-sheet'
+import { defaultCategories } from '@/lib/default-categories'
+import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
 import { categoryIconNames } from '@/lib/category-icons'
 
 const cats = [
@@ -19,6 +22,19 @@ const cats = [
   { id: 'coffee', name: 'Coffee', icon: 'coffee', color: 'cat-2' },
 ]
 
+const fakeCategories: WithId<Category>[] = defaultCategories.map((c) => (c.id === 'bills' ? { ...c, archived: true } : c))
+const editing: WithId<Transaction> = {
+  id: 'tx1',
+  kind: 'expense',
+  amount: 1250,
+  categoryId: 'bills', // archived on purpose: still shown while editing
+  date: '2026-11-03',
+  note: 'Electric',
+  recurringId: 'r1',
+  createdAt: 1,
+  updatedAt: 1,
+}
+
 // Temporary, dev only: open /?gallery to try the shared components. Removed once real screens use them (P1.5).
 export function Gallery() {
   const [open, setOpen] = useState(false)
@@ -27,6 +43,9 @@ export function Gallery() {
   const [cat, setCat] = useState<string | null>(null)
   const [total, setTotal] = useState(123450)
   const [taps, setTaps] = useState(0)
+  const [tx, setTx] = useState<'add' | 'edit' | null>(null)
+  const [saved, setSaved] = useState<TransactionDraft | null>(null)
+  const [deletes, setDeletes] = useState(0)
   return (
     <main className="mx-auto flex max-w-md flex-col gap-5 p-5 pb-40">
       <h1 className="font-heading text-3xl font-extrabold tracking-tight">Gallery</h1>
@@ -76,6 +95,21 @@ export function Gallery() {
 
       <EmptyState icon={Inbox} text="No transactions yet" action={{ label: 'Add expense', onClick: () => setOpen(true) }} />
       <EmptyState icon={Inbox} text="Nothing here, no action" />
+
+      <PillButton onClick={() => setTx('add')}>New transaction</PillButton>
+      <PillButton variant="secondary" onClick={() => setTx('edit')}>
+        Edit transaction
+      </PillButton>
+      <p data-testid="saved">saved: {saved ? JSON.stringify(saved) : 'none'}</p>
+      <p data-testid="deletes">deletes: {deletes}</p>
+      <TransactionSheet
+        open={tx !== null}
+        onClose={() => setTx(null)}
+        categories={fakeCategories}
+        initial={tx === 'edit' ? editing : undefined}
+        onSave={setSaved}
+        onDelete={() => setDeletes((d) => d + 1)}
+      />
 
       <Fab label="Add" onClick={() => setOpen(true)} />
 

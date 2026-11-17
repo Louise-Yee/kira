@@ -16,7 +16,7 @@ import { SignIn } from '@/screens/sign-in'
 // Dev only: open http://localhost:5173/?dev to skip sign-in. Vite strips this from prod builds.
 const devUser: AppUser | null =
   import.meta.env.DEV && new URLSearchParams(location.search).has('dev')
-    ? { displayName: 'Dev User', photoURL: null, email: 'dev@localhost' }
+    ? { displayName: 'Dev User', photoURL: null, email: 'dev@localhost', uid: 'dev' }
     : null
 
 // Dev only: /?gallery shows the shared components without signing in.

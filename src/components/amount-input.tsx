@@ -53,6 +53,7 @@ export function AmountInput({ value, onChange, autoFocus, className }: Props) {
         }}
         inputMode="numeric"
         autoFocus={autoFocus}
+        data-autofocus={autoFocus || undefined}
         autoComplete="off"
         aria-label="Amount"
         style={{ width: `${text.length}ch` }}
