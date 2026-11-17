@@ -17,7 +17,7 @@ export function SyncPill({ status }: { status: SyncStatus }) {
             transition={pop}
             className={
               status === 'offline'
-                ? 'flex h-9 items-center gap-2 rounded-full bg-secondary px-4 text-base font-semibold text-muted-foreground'
+                ? 'flex h-9 items-center gap-2 rounded-full bg-secondary px-4 text-base font-semibold text-secondary-foreground'
                 : 'flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-base font-semibold text-primary-foreground'
             }
           >
