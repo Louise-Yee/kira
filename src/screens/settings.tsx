@@ -13,9 +13,10 @@ export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navP
           <p className="truncate text-base text-muted-foreground">{user.email}</p>
         </div>
       </div>
-      <div className="rounded-3xl bg-card p-5">
+      {/* Only matters at lg: phones always use the floating bottom bar. */}
+      <div className="hidden rounded-3xl bg-card p-5 lg:block">
         <p className="text-base font-semibold">Navigation position</p>
-        <p className="text-base text-muted-foreground">On large screens. Phones always use the bottom bar.</p>
+        <p className="text-base text-muted-foreground">Where the menu sits on large screens.</p>
         <div className="mt-3 flex gap-2">
           {navPositions.map((p) => (
             <PillButton
