@@ -15,6 +15,8 @@ import {
 } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
 
+export type AppUser = Pick<User, 'displayName' | 'photoURL' | 'email'>
+
 // Config comes from .env (see .env.example). Vite inlines it into the bundle at build time.
 const env = import.meta.env
 const required = ['VITE_FIREBASE_API_KEY', 'VITE_FIREBASE_PROJECT_ID', 'VITE_FIREBASE_SENDER_ID', 'VITE_FIREBASE_APP_ID'] as const
