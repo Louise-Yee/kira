@@ -14,6 +14,7 @@ import { TransactionSheet } from '@/components/transaction-sheet'
 import { defaultCategories } from '@/lib/default-categories'
 import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
 import { categoryIconNames } from '@/lib/category-icons'
+import { MonthView } from '@/screens/month-view'
 
 const cats = [
   { id: 'food', name: 'Food', icon: 'food', color: 'cat-1' },
@@ -35,8 +36,47 @@ const editing: WithId<Transaction> = {
   updatedAt: 1,
 }
 
+const t = (id: string, kind: 'expense' | 'income', amount: number, categoryId: string, date: string, note: string, createdAt: number): WithId<Transaction> => ({
+  id, kind, amount, categoryId, date, note, createdAt, updatedAt: createdAt,
+})
+const demoTx = [
+  t('a', 'expense', 850, 'food', '2026-11-17', 'Nasi lemak', 3),
+  t('b', 'expense', 1200, 'transport', '2026-11-17', '', 2),
+  t('c', 'expense', 4590, 'groceries', '2026-11-16', 'Jaya Grocer', 1),
+  t('d', 'expense', 100000, 'rent', '2026-11-10', '', 1),
+  t('e', 'income', 500000, 'salary', '2026-11-01', '', 1),
+  t('f', 'expense', 1000, 'food', '2026-10-31', 'Old', 1),
+]
+
+// /?gallery=month: the month view with fixed fake data (today = 2026-11-17).
+function MonthDemo() {
+  const [ym, setYm] = useState('2026-11')
+  const [adds, setAdds] = useState(0)
+  const [edited, setEdited] = useState('none')
+  return (
+    <main className="mx-auto max-w-md p-5 pb-32">
+      <MonthView
+        name="Louise"
+        ym={ym}
+        today="2026-11-17"
+        onMonthChange={setYm}
+        transactions={demoTx.filter((x) => x.date.startsWith(ym))}
+        categories={defaultCategories}
+        onAdd={() => setAdds((n) => n + 1)}
+        onEdit={(x) => setEdited(x.id)}
+      />
+      <p data-testid="adds">adds: {adds}</p>
+      <p data-testid="edited">edited: {edited}</p>
+    </main>
+  )
+}
+
 // Temporary, dev only: open /?gallery to try the shared components. Removed once real screens use them (P1.5).
 export function Gallery() {
+  return new URLSearchParams(location.search).get('gallery') === 'month' ? <MonthDemo /> : <ComponentGallery />
+}
+
+function ComponentGallery() {
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<'expense' | 'income'>('expense')
   const [amount, setAmount] = useState(0)
