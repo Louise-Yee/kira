@@ -5,6 +5,7 @@ import { useUser, type AppUser } from '@/lib/firebase'
 import { useSyncStatus } from '@/lib/db'
 import { todayISO } from '@/lib/date'
 import { soft } from '@/lib/motion'
+import { usePostRecurring } from '@/lib/post-recurring'
 import { useSeedDefaults } from '@/lib/seed'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
@@ -29,6 +30,7 @@ export default function App() {
   const authUser = useUser()
   const user = devUser ?? authUser
   useSeedDefaults(authUser?.uid) // real accounts only: ?dev has no Firebase uid
+  usePostRecurring(authUser?.uid)
   if (devGallery) return <MotionConfig reducedMotion="user"><Gallery /></MotionConfig>
   return (
     <MotionConfig reducedMotion="user">
