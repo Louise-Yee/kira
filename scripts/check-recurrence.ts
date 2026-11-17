@@ -1,6 +1,6 @@
 // Self-check for recurrence math: node scripts/check-recurrence.ts
 import assert from 'node:assert/strict'
-import { describeFrequency, dueIndices, nextDate, occurrenceDate, scheduleChanged, type RecurrenceRule } from '../src/lib/recurrence.ts'
+import { describeFrequency, dueIndices, nextDate, occurrenceDate, restartFloor, scheduleChanged, type RecurrenceRule } from '../src/lib/recurrence.ts'
 
 const rule = (over: Partial<RecurrenceRule>): RecurrenceRule => ({
   freq: 'month',
@@ -64,5 +64,9 @@ assert.equal(scheduleChanged(monthly, { ...monthly }), false)
 assert.equal(scheduleChanged(monthly, { ...monthly, interval: 2 }), true)
 assert.equal(scheduleChanged(monthly, { ...monthly, startDate: '2026-01-02' }), true)
 assert.equal(scheduleChanged(monthly, { ...monthly, freq: 'year' }), true)
+
+// restartFloor: the date the next payment was due
+assert.equal(restartFloor(rule({ startDate: '2026-01-17' }), 3), '2026-04-17')
+assert.equal(restartFloor(rule({ startDate: '2026-01-31' }), 1), '2026-02-28') // clamped like any occurrence
 
 console.log('check-recurrence: ok')

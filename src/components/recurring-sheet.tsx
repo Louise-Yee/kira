@@ -6,7 +6,7 @@ import { Sheet } from '@/components/sheet'
 import { TextField } from '@/components/text-field'
 import { shortDate, todayISO } from '@/lib/date'
 import type { Category, Recurring, RecurringDraft, WithId } from '@/lib/db'
-import { nextDate, scheduleChanged, type Freq, type RecurrenceEnd } from '@/lib/recurrence'
+import { nextDate, restartFloor, scheduleChanged, type Freq, type RecurrenceEnd } from '@/lib/recurrence'
 
 type Props = {
   open: boolean
@@ -73,7 +73,9 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
   const [preset, setPreset] = useState(() => initialPreset(initial))
   const [interval, setInterval] = useState(String(initial?.interval ?? 1))
   const [unit, setUnit] = useState<Freq>(initial?.freq ?? 'month')
-  const [startDate, setStartDate] = useState(initial?.startDate ?? todayISO())
+  const [today] = useState(todayISO)
+  // null until the user touches the start date, so a frequency change can move it for them.
+  const [pickedStart, setPickedStart] = useState<string | null>(null)
   const [endType, setEndType] = useState<RecurrenceEnd['type']>(initial?.end.type ?? 'never')
   const [endDate, setEndDate] = useState(initial?.end.type === 'date' ? initial.end.value : '')
   const [endCount, setEndCount] = useState(initial?.end.type === 'count' ? String(initial.end.value) : '')
@@ -82,6 +84,14 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
   const freq: Freq = preset === 'custom' ? unit : preset
   const n = preset === 'custom' ? wholeNumber(interval) : 1
   const count = wholeNumber(endCount)
+
+  // Changing the schedule of a rule that has posted starts a new rule. It must not begin before the old
+  // rule's next due date, or the dates already posted would be posted again.
+  const floor = initial && initial.posted > 0 ? restartFloor(initial, initial.posted) : null
+  const freqChanged = !!initial && (freq !== initial.freq || n !== initial.interval)
+  const startDate = pickedStart ?? (freqChanged && floor ? floor : (initial?.startDate ?? today))
+  const restarts = !!floor && (freqChanged || startDate !== initial?.startDate)
+  const tooEarly = restarts && startDate < floor
   const end: RecurrenceEnd | null =
     endType === 'never'
       ? { type: 'never' }
@@ -94,7 +104,7 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
           : null
   // null until the form can be saved.
   const draft: RecurringDraft | null =
-    entry.amount > 0 && entry.categoryId && startDate && n && end
+    entry.amount > 0 && entry.categoryId && startDate && !tooEarly && n && end
       ? {
           kind: entry.kind,
           amount: entry.amount,
@@ -140,7 +150,17 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
 
       <label className="flex flex-col gap-1">
         <span className="px-1 text-base font-semibold">Starts</span>
-        <TextField type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        <TextField
+          type="date"
+          value={startDate}
+          min={restarts ? floor : undefined}
+          onChange={(e) => setPickedStart(e.target.value)}
+        />
+        {tooEarly && (
+          <span className="px-1 text-base text-destructive">
+            A changed schedule can't start before {shortDate(floor)}, when the next payment was due.
+          </span>
+        )}
       </label>
 
       <div className="flex flex-col gap-2">
@@ -171,7 +191,7 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
       {initial && (
         <p className="px-1 text-base text-muted-foreground">
           Amount, category, note, end and pause apply to future payments. Changing the repeat or start date starts a
-          new rule; payments already posted stay as they are.
+          new rule from the next payment date or later; payments already posted stay as they are.
         </p>
       )}
 

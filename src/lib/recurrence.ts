@@ -54,3 +54,10 @@ export const scheduleChanged = (
   a: Pick<RecurrenceRule, 'freq' | 'interval' | 'startDate'>,
   b: Pick<RecurrenceRule, 'freq' | 'interval' | 'startDate'>,
 ): boolean => a.freq !== b.freq || a.interval !== b.interval || a.startDate !== b.startDate
+
+/**
+ * Earliest start for a rule that replaces `old` after it posted `posted` payments: the date its next payment
+ * was due. Starting earlier would post those dates a second time.
+ */
+export const restartFloor = (old: Pick<RecurrenceRule, 'freq' | 'interval' | 'startDate'>, posted: number): string =>
+  occurrenceDate(old, posted)
