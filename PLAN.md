@@ -9,7 +9,7 @@ Read `SPEC.md` first (the product spec) and `CLAUDE.md` (the rules). This file s
 4. Work on a branch named `feature/…`, `fix/…`, `chores/…` or `refactor/…` (kebab-case), and open a PR into `main`. The PR gets a preview URL, and merging deploys to the live site. If you changed `firestore.rules`, also run `firebase deploy --only firestore:rules`.
 5. Never commit or push unless the user asks.
 
-**Status:** P0, P1 and P2 are done and deployed. Next up is P3.
+**Status:** P0, P1, P2 and P3 are done and deployed. Next up is P4.
 
 **P0.5 (done):** floating glass nav (active tab shows its label), directional page slide on phones, nav position setting (left/right/bottom at `lg`, kept in localStorage).
 
@@ -34,6 +34,16 @@ Read `SPEC.md` first (the product spec) and `CLAUDE.md` (the rules). This file s
 - **`EntryFields`** (`components/entry-fields.tsx`) holds kind, amount, category and note, shared by the transaction and recurring sheets.
 - **Extra helpers:** `describeFrequency` and `scheduleChanged` in `lib/recurrence.ts`, `shortDate` in `lib/date.ts`.
 - **Known gaps:** two devices that both post a backlog in the same instant write the same ids, which is harmless. A PWA can run the previous build for a visit after a deploy until its service worker updates.
+
+**What changed from the plan during P3** (the code is the source of truth):
+- **No Recharts, no shadcn `chart`.** Both charts are plain `motion` bars (`components/category-bars.tsx`, `components/trend-bars.tsx`): Recharts animates with ease curves, which breaks the springs-only rule, and it would add ~100KB to the precache. Bars grow with the no-overshoot `glide` spring and skip animation for reduced motion.
+- **One listener, fixed window.** `useMonths` listens once to the 6 months ending at the current month (`trendMonths`, `inTrendWindow` in `lib/date.ts`). Home derives the viewed month from it when inside the window and falls back to `useMonth(uid, ym, enabled)` for older months. `useSyncStatus(uid, ym, currentYm)` watches the same window (plus the older month when relevant), so no extra reads. `today` now lives in the shell.
+- **Pure logic:** `lib/chart-data.ts` (`byCategory`: top 6 plus "Others", whole percents that sum to 100; `monthlyTotals`) with `scripts/check-chart-data.ts`.
+- **Layout:** the trend card is always first (left at `lg`, top on phones) and cards keep their own height (`items-start`). At `lg` an empty month shows a "No spending" card in the second slot, so nothing slides between columns when the month changes. Charts hide when there is no data at all.
+- **Colours:** in = `--chart-3`, out = `--chart-1`; category bars use the category's own `--cat-*` token.
+- **Add button (`Fab`) is always a portal on `document.body`**, fixed bottom-right. The page wrapper slides with a transform while tabs change, and a transformed ancestor makes `fixed` relative to it, so the button used to ride along and then jump. At `lg` it lines up with the content column's right edge; the offset depends on the nav position through `data-nav` on `<html>` (set by the shell): left sidebar, right sidebar (sits left of it) or bottom nav. `main` has extra bottom padding at `lg` so the last row isn't hidden under it.
+- **Dev gallery month demo** (`/?gallery=month`) now has multi-month fake data for the charts.
+- **Known gaps:** the Add button is ~7px inside the content edge on desktop browsers with a classic scrollbar (`100vw` includes it). The page height still changes when a month has no data (the "Nothing logged" block appears below the charts).
 
 **Assumed decisions** (the user hasn't confirmed these yet; change them here if they do):
 - Default categories. Expense: Food, Groceries, Transport, Bills, Rent, Shopping, Entertainment, Health, Subscriptions, Other. Income: Salary, Side income, Other.
@@ -201,11 +211,11 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 
 ---
 
-## P3 — Dashboard charts
+## P3 — Dashboard charts (done)
 
 **Done when:** Home shows spending by category and a 6-month trend.
 
-### P3.1 Charts
+### P3.1 Charts (done, see the P3 notes above for what changed)
 *Read first:* SPEC §5.4, the shadcn chart docs
 - `npx shadcn@latest add chart` (adds Recharts). Colors come from `--chart-*` / `--cat-*` tokens only.
 - `useMonths(uid, fromYm, toYm)` in `src/lib/db/transactions.ts`: one listener for the 6-month range. Don't open 6 listeners.
