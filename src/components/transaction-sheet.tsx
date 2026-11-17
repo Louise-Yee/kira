@@ -4,6 +4,7 @@ import { CategoryPicker } from '@/components/category-picker'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
+import { TextField } from '@/components/text-field'
 import { todayISO } from '@/lib/date'
 import type { Category, Kind, Transaction, TransactionDraft, WithId } from '@/lib/db'
 
@@ -21,8 +22,6 @@ const kindOptions = [
   { value: 'expense', label: 'Expense' },
   { value: 'income', label: 'Income' },
 ] as const satisfies readonly { value: Kind; label: string }[]
-
-const field = 'h-12 w-full rounded-2xl bg-secondary px-4 text-base outline-none placeholder:text-muted-foreground'
 
 export function TransactionSheet({ open, onClose, initial, ...rest }: Props) {
   return (
@@ -66,14 +65,13 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
       />
       <AmountInput value={amount} onChange={setAmount} autoFocus />
       <CategoryPicker categories={choices} value={categoryId} onChange={setCategoryId} />
-      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" className={field} />
-      <input
+      <TextField type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" />
+      <TextField
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Note (optional)"
         aria-label="Note"
         maxLength={200}
-        className={field}
       />
       <PillButton
         disabled={!draft}
