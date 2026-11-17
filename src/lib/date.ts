@@ -47,7 +47,13 @@ export function shortDate(iso: string): string {
   return `${d} ${MONTHS[m - 1].slice(0, 3)}`
 }
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+/** "2026-12-01" -> "1 Dec 2026". */
+export function longDate(iso: string): string {
+  const [y] = iso.split('-').map(Number)
+  return `${shortDate(iso)} ${y}`
+}
+
+const WEEKDAYS =['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 /** "Today", "Yesterday", else "Mon, 10 Nov". `today` is passed in so this stays pure. */
 export function dayLabel(iso: string, today: string): string {
