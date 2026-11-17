@@ -1,3 +1,5 @@
+import type { RecurrenceRule } from '@/lib/recurrence'
+
 export type Kind = 'expense' | 'income'
 
 export type Category = {
@@ -20,12 +22,17 @@ export type Transaction = {
   date: string
   note: string
   recurringId?: string
-  occurrence?: string
+  /** Index of the recurring occurrence this was posted for. */
+  occurrence?: number
   splitId?: string
   /** Epoch ms (not serverTimestamp, which reads back null while a write is pending). */
   createdAt: number
   updatedAt: number
 }
+
+/** A recurring rule. `posted` = how many occurrences already exist (the next index to post). */
+export type Recurring = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'note'> &
+  RecurrenceRule & { posted: number; createdAt: number }
 
 export type Settings = {
   currency: 'MYR'
