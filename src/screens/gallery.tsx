@@ -72,6 +72,10 @@ function MonthDemo() {
   )
 }
 
+// Simulated usage check: Food is used, Health can't be checked (offline), everything else is unused.
+const fakeIsUsed = (id: string) =>
+  id === 'food' ? Promise.resolve(true) : id === 'health' ? Promise.reject(new Error('offline')) : Promise.resolve(false)
+
 // Temporary, dev only: open /?gallery to try the shared components. Removed once real screens use them (P1.5).
 export function Gallery() {
   return new URLSearchParams(location.search).get('gallery') === 'month' ? <MonthDemo /> : <ComponentGallery />
@@ -88,6 +92,7 @@ function ComponentGallery() {
   const [saved, setSaved] = useState<TransactionDraft | null>(null)
   const [deletes, setDeletes] = useState(0)
   const [managing, setManaging] = useState(false)
+  const [moved, setMoved] = useState('none')
   const [managed, setManaged] = useState<WithId<Category>[]>(defaultCategories)
   return (
     <main className="mx-auto flex max-w-md flex-col gap-5 p-5 pb-40">
@@ -157,6 +162,7 @@ function ComponentGallery() {
       <PillButton variant="secondary" onClick={() => setManaging(true)}>
         Manage categories
       </PillButton>
+      <p data-testid="moved">moved: {moved}</p>
       <p data-testid="cats">
         cats: {[...managed].sort((a, b) => a.order - b.order).filter((c) => c.kind === 'expense').map((c) => c.name).join(', ')} |{' '}
         {managed.length}
@@ -169,6 +175,14 @@ function ComponentGallery() {
           setManaged((cs) => (id ? cs.map((c) => (c.id === id ? { ...data, id } : c)) : [...cs, { ...data, id: `new-${cs.length}` }]))
         }
         onSwap={(a, b) => setManaged((cs) => cs.map((c) => (c.id === a.id ? { ...c, order: b.order } : c.id === b.id ? { ...c, order: a.order } : c)))}
+        isUsed={fakeIsUsed}
+        onDelete={(id) => setManaged((cs) => cs.filter((c) => c.id !== id))}
+        onMove={(from, to) => {
+          if (to === 'other') return Promise.reject(new Error('server'))
+          setMoved(`${from}->${to}`)
+          setManaged((cs) => cs.filter((c) => c.id !== from))
+          return Promise.resolve()
+        }}
       />
 
       <Fab label="Add" onClick={() => setOpen(true)} />

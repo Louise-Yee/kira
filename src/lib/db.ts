@@ -3,6 +3,8 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocsFromServer,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -113,6 +115,37 @@ export function swapCategoryOrder(uid: string, a: WithId<Category>, b: WithId<Ca
   batch.update(doc(col(uid, 'categories'), a.id), { order: b.order })
   batch.update(doc(col(uid, 'categories'), b.id), { order: a.order })
   void batch.commit().catch(reportError)
+}
+
+/**
+ * Does any transaction use this category? Asks the server, never the cache: a partial cache could say
+ * "no" and let a used category be deleted. Rejects when offline, so callers must treat that as "unknown".
+ */
+export async function categoryInUse(uid: string, id: string): Promise<boolean> {
+  const snap = await getDocsFromServer(query(col(uid, 'transactions'), where('categoryId', '==', id), limit(1)))
+  return !snap.empty
+}
+
+export const deleteCategory = (uid: string, id: string) => remove(doc(col(uid, 'categories'), id))
+
+/**
+ * Re-point every transaction of `fromId` to `toId`, then delete `fromId`.
+ * The returned promise covers only the server read (rejects offline, nothing changed). The batches and the
+ * delete run detached, and the delete waits for every batch, so a failed move never deletes the category.
+ */
+export async function moveAndDeleteCategory(uid: string, fromId: string, toId: string): Promise<void> {
+  const snap = await getDocsFromServer(query(col(uid, 'transactions'), where('categoryId', '==', fromId)))
+  const now = Date.now()
+  const commits: Promise<void>[] = []
+  for (let i = 0; i < snap.docs.length; i += 450) {
+    // A batch holds at most 500 writes.
+    const batch = writeBatch(db)
+    for (const d of snap.docs.slice(i, i + 450)) batch.update(d.ref, { categoryId: toId, updatedAt: now })
+    commits.push(batch.commit())
+  }
+  void Promise.all(commits)
+    .then(() => deleteCategory(uid, fromId))
+    .catch(reportError)
 }
 
 /** Live query results; undefined until the first snapshot (cache-first, so instant when offline). */
