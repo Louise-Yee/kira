@@ -18,6 +18,14 @@ export function monthRange(ym: string): { start: string; end: string } {
   return { start: `${ym}-01`, end: `${addMonths(ym, 1)}-01` }
 }
 
+/** Half-open range covering whole months fromYm..toYm inclusive. */
+export function monthsRange(fromYm: string, toYm: string): { start: string; end: string } {
+  return { start: `${fromYm}-01`, end: `${addMonths(toYm, 1)}-01` }
+}
+
+/** The `n` months ending at `ym`, oldest first. */
+export const lastMonths = (ym: string, n: number): string[] => Array.from({ length: n }, (_, i) => addMonths(ym, i - n + 1))
+
 /** "2026-11" -> "November 2026". */
 export function monthLabel(ym: string): string {
   const [y, m] = ym.split('-').map(Number)
