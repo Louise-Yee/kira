@@ -2,12 +2,13 @@ import { motion, useReducedMotion } from 'motion/react'
 import { CategoryIcon } from '@/components/category-icon'
 import { Money } from '@/components/money'
 import { catColor } from '@/lib/category-icons'
+import { categoryOrOther } from '@/lib/category-lookup'
 import type { CategoryBreakdown } from '@/lib/chart-data'
 import { glide } from '@/lib/motion'
 
 type Props = {
   breakdown: CategoryBreakdown
-  /** Name, icon and colour token per category id. Unknown ids show as "Unknown". */
+  /** Name, icon and colour token per category id. Unknown ids fall back to "Other". */
   categories: ReadonlyMap<string, { name: string; icon: string; color: string }>
 }
 
@@ -18,8 +19,8 @@ export function CategoryBars({ breakdown, categories }: Props) {
   const biggest = rows[0]?.amount ?? 0
   const items = [
     ...rows.map((r) => {
-      const c = categories.get(r.categoryId)
-      return { key: r.categoryId, name: c?.name ?? 'Unknown', icon: c?.icon ?? 'other', color: c?.color ?? '', amount: r.amount, percent: r.percent }
+      const c = categoryOrOther(categories, r.categoryId, 'expense')
+      return { key: r.categoryId, name: c?.name ?? 'Other', icon: c?.icon ?? 'other', color: c?.color ?? '', amount: r.amount, percent: r.percent }
     }),
     ...(others ? [{ key: 'others', name: 'Others', icon: 'other', color: '', ...others }] : []),
   ]

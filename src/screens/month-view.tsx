@@ -8,6 +8,7 @@ import { Money } from '@/components/money'
 import { TrendBars } from '@/components/trend-bars'
 import { byCategory, type MonthTotals } from '@/lib/chart-data'
 import { Ascii } from '@/components/ascii'
+import { categoryOrOther } from '@/lib/category-lookup'
 import { coinField, type Field } from '@/lib/coin'
 import { addMonths, dayLabel, monthLabel, monthName } from '@/lib/date'
 import type { Category, Transaction, WithId } from '@/lib/db'
@@ -121,7 +122,7 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
             <Money sen={day.net} sign className="text-base font-semibold text-muted-foreground" />
           </div>
           {day.items.map((t, ti) => {
-            const cat = byId.get(t.categoryId)
+            const cat = categoryOrOther(byId, t.categoryId, t.kind)
             const i = starts[di] + ti
             return (
               <motion.div
