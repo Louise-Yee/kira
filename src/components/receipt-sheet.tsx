@@ -5,6 +5,7 @@ import type { Split, WithId } from '@/lib/db'
 import { buildReceipt } from '@/lib/receipt-data'
 import { renderReceipt } from '@/lib/receipt-canvas'
 import { canShareImages, shareImage } from '@/lib/share-image'
+import { canShareLinks, receiptUrl, shareLink } from '@/lib/share-link'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -13,19 +14,21 @@ type Props = {
   split: WithId<Split> | undefined
   /** The payment QR (data URL) from Settings, if set. */
   qr: string | undefined
+  /** Creates (or finds) the receipt link for one person and returns its id. */
+  onCreateLink: (split: WithId<Split>, person: number) => string
 }
 
 /** Preview a split's receipt image and share it: everyone's, or one person's (so others' items stay private). */
-export function ReceiptSheet({ open, onClose, split, qr }: Props) {
+export function ReceiptSheet({ open, onClose, split, qr, onCreateLink }: Props) {
   return (
     <Sheet open={open} onClose={onClose} title="Receipt" tall>
       {/* Mounted only while open; `split` stays set while the sheet slides out. */}
-      {split && <Body split={split} qr={qr} />}
+      {split && <Body split={split} qr={qr} onCreateLink={onCreateLink} />}
     </Sheet>
   )
 }
 
-function Body({ split, qr }: { split: WithId<Split>; qr: string | undefined }) {
+function Body({ split, qr, onCreateLink }: Pick<Props, 'qr' | 'onCreateLink'> & { split: WithId<Split> }) {
   // null = everyone, otherwise a person index.
   const [only, setOnly] = useState<number | null>(null)
   const [image, setImage] = useState<{ blob: Blob; url: string } | null>(null)
@@ -56,6 +59,12 @@ function Body({ split, qr }: { split: WithId<Split>; qr: string | undefined }) {
     const who = only === null ? 'receipt' : split.people[only].toLowerCase().replace(/\W+/g, '-')
     const result = await shareImage(image.blob, `${split.title.toLowerCase().replace(/\W+/g, '-')}-${who}.png`, split.title)
     setNotice(result === 'downloaded' ? 'Saved to your downloads.' : null)
+  }
+
+  const link = async () => {
+    if (only === null) return
+    const result = await shareLink(receiptUrl(onCreateLink(split, only)), split.title).catch(() => null)
+    setNotice(result === 'copied' ? 'Link copied.' : result === null ? "Couldn't copy the link." : null)
   }
 
   const audience = [{ label: 'Everyone', value: null }, ...split.people.map((name, i) => ({ label: name, value: i }))]
@@ -93,8 +102,13 @@ function Body({ split, qr }: { split: WithId<Split>; qr: string | undefined }) {
       {!qr && <p className="px-1 text-base text-muted-foreground">Add your payment QR in Settings to show it on the receipt.</p>}
       {notice && <p className="px-1 text-base text-muted-foreground">{notice}</p>}
       <PillButton disabled={!image} onClick={share}>
-        {canShareImages() ? 'Share' : 'Download'}
+        {canShareImages() ? 'Share image' : 'Download'}
       </PillButton>
+      {only !== null && (
+        <PillButton variant="secondary" onClick={link}>
+          {canShareLinks() ? 'Share link' : 'Copy link'}
+        </PillButton>
+      )}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import type { RecurrenceRule } from '@/lib/recurrence'
+import type { Receipt } from '@/lib/receipt-data'
 import type { Charge, Share, SplitForm, SplitItem, SplitMode } from '@/lib/split'
 
 export type Kind = 'expense' | 'income'
@@ -53,6 +54,18 @@ export type Split = {
   categoryId: string
   /** `{splitId}_me`, or null when my share is 0 (no expense is created). */
   expenseTxId: string | null
+  /** Receipt links by person index: the id of that person's doc in `shares`. */
+  shareIds?: Record<string, string>
+  createdAt: number
+  updatedAt: number
+}
+
+/** A public receipt for one person (`shares/{id}`, readable by anyone with the id). It holds only that person's rows. */
+export type PublicReceipt = {
+  uid: string
+  splitId: string
+  person: number
+  receipt: Receipt
   createdAt: number
   updatedAt: number
 }
