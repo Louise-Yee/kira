@@ -7,6 +7,7 @@ import { todayISO } from '@/lib/date'
 import { soft } from '@/lib/motion'
 import { usePostRecurring } from '@/lib/post-recurring'
 import { useSeedDefaults } from '@/lib/seed'
+import { useAddLink } from '@/lib/widget'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 import { SyncPill } from '@/components/sync-pill'
@@ -89,6 +90,14 @@ function Shell({ user }: { user: AppUser }) {
   const side = navPos !== 'bottom'
   const slide: Slide = { dir, lg }
 
+  // The widget's "+" opens kira://add: jump to Home, then Home opens the add sheet.
+  const [addRequest, setAddRequest] = useState(0)
+  useAddLink(() => {
+    setTab('home')
+    setYm(today.slice(0, 7))
+    setAddRequest((n) => n + 1)
+  })
+
   const go = (id: Tab) => {
     setDir(Math.sign(tabs.findIndex((t) => t.id === id) - tabs.findIndex((t) => t.id === tab)) || 1)
     setTab(id)
@@ -118,7 +127,7 @@ function Shell({ user }: { user: AppUser }) {
             exit="exit"
             transition={soft}
           >
-            {tab === 'home' && <Home user={user} today={today} ym={ym} onYm={setYm} />}
+            {tab === 'home' && <Home user={user} today={today} ym={ym} onYm={setYm} addRequest={addRequest} />}
             {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} />}
             {tab === 'recurring' && <RecurringScreen user={user} />}
             {tab === 'split' && <SplitScreen user={user} today={today} />}

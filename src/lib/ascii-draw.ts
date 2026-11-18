@@ -1,17 +1,18 @@
-const RAMP = ' .:-=+*%#$@'
-const hash = (x: number, y: number) => {
+export const RAMP = ' .:-=+*%#$@'
+export const hash = (x: number, y: number) => {
   const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453
   return s - Math.floor(s)
 }
 
 // Dark → cobalt → white, matching the A1 palette.
 const STOPS = [[18, 18, 18], [26, 42, 122], [53, 99, 255], [157, 178, 255], [255, 255, 255]]
-const color = (v: number) => {
+export const rgb = (v: number) => {
   const x = Math.min(0.999, Math.max(0, v)) * (STOPS.length - 1)
   const i = Math.floor(x)
   const t = x - i
-  return `rgb(${STOPS[i].map((c, k) => Math.round(c + (STOPS[i + 1][k] - c) * t)).join()})`
+  return STOPS[i].map((c, k) => Math.round(c + (STOPS[i + 1][k] - c) * t))
 }
+const color = (v: number) => `rgb(${rgb(v).join()})`
 
 /**
  * Draw one ASCII frame into a w x h area (CSS pixels) of any 2D context: sample(nx, ny) in -1..1 gives a

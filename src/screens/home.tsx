@@ -3,12 +3,14 @@ import { deleteTransaction, saveTransaction, useCategories, useMonth, useMonths,
 import { monthlyTotals } from '@/lib/chart-data'
 import { inTrendWindow, trendMonths } from '@/lib/date'
 import type { AppUser } from '@/lib/firebase'
+import { totals } from '@/lib/month-summary'
+import { usePushWidget } from '@/lib/widget'
 import { Fab } from '@/components/fab'
 import { TransactionSheet } from '@/components/transaction-sheet'
 import { MonthView } from '@/screens/month-view'
 
 /** `today` and `ym` live in the shell so the sync indicator watches the same months as this screen. */
-export function Home({ user, today, ym, onYm }: { user: AppUser; today: string; ym: string; onYm: (ym: string) => void }) {
+export function Home({ user, today, ym, onYm, addRequest }: { user: AppUser; today: string; ym: string; onYm: (ym: string) => void; addRequest: number }) {
   const categories = useCategories(user.uid) ?? []
   const currentYm = today.slice(0, 7)
   // One listener covers the trend window; a month older than that falls back to its own listener.
@@ -19,6 +21,15 @@ export function Home({ user, today, ym, onYm }: { user: AppUser; today: string; 
   const transactions = inWindow ? windowTx?.filter((t) => t.date.startsWith(ym)) : olderTx
   // `open` and `tx` are separate so the sheet keeps its title while it slides out.
   const [sheet, setSheet] = useState<{ open: boolean; tx?: WithId<Transaction> }>({ open: false })
+
+  // addRequest counts up each time the widget's "+" is tapped; open the sheet once per bump.
+  const [seenRequest, setSeenRequest] = useState(0)
+  if (addRequest !== seenRequest) {
+    setSeenRequest(addRequest)
+    setSheet({ open: true })
+  }
+  const thisMonth = windowTx && totals(windowTx.filter((t) => t.date.startsWith(currentYm)))
+  usePushWidget(currentYm, thisMonth?.income, thisMonth?.expense)
 
   return (
     <>
