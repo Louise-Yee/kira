@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { Dialog } from 'radix-ui'
 import { pop, soft } from '@/lib/motion'
-import { useMediaQuery } from '@/lib/use-media-query'
+import { useMediaQuery, useTouch } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -20,6 +20,7 @@ const CLOSE_VELOCITY = 500
 /** Bottom sheet on phones (drag the handle down to close); centered dialog at lg. */
 export function Sheet({ open, onClose, title, children, tall }: Props) {
   const lg = useMediaQuery('(min-width: 1024px)')
+  const touch = useTouch()
   const controls = useDragControls()
   return (
     <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
@@ -40,7 +41,9 @@ export function Sheet({ open, onClose, title, children, tall }: Props) {
               asChild
               aria-describedby={undefined}
               // Radix focuses the first tabbable element; let a [data-autofocus] element (AmountInput) win.
+              // On touch screens nothing is focused, so the keyboard doesn't push the sheet around.
               onOpenAutoFocus={(e) => {
+                if (touch) return e.preventDefault()
                 const el = document.querySelector<HTMLElement>('[data-autofocus]')
                 if (el) {
                   e.preventDefault()
