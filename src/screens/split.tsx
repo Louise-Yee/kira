@@ -7,6 +7,7 @@ import { Money } from '@/components/money'
 import { ReceiptSheet } from '@/components/receipt-sheet'
 import { Segmented } from '@/components/segmented'
 import { SplitEditor } from '@/components/split-editor'
+import { SwipeRow } from '@/components/swipe-row'
 import { addDays, dayLabel, monthLabel } from '@/lib/date'
 import {
   createShare,
@@ -81,17 +82,19 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
             {tab === 'history' && (i === 0 || s.date.slice(0, 7) !== splits[i - 1].date.slice(0, 7)) && (
               <h2 className="px-1 pt-3 text-base font-semibold text-muted-foreground">{monthLabel(s.date.slice(0, 7))}</h2>
             )}
-            <ListRow
-              icon={
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary">
-                  <Users className="size-5" aria-hidden />
-                </span>
-              }
-              title={s.title}
-              subtitle={`${dayLabel(s.date, today)} · ${s.people.length} people`}
-              trailing={<Money sen={s.shares[0].total} className="text-base font-semibold" />}
-              onClick={() => open(s)}
-            />
+            <SwipeRow label="Share" onSwipe={() => setReceipt({ open: true, split: s })}>
+              <ListRow
+                icon={
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary">
+                    <Users className="size-5" aria-hidden />
+                  </span>
+                }
+                title={s.title}
+                subtitle={`${dayLabel(s.date, today)} · ${s.people.length} people`}
+                trailing={<Money sen={s.shares[0].total} className="text-base font-semibold" />}
+                onClick={() => open(s)}
+              />
+            </SwipeRow>
           </Fragment>
         ))}
         {more && <div ref={sentinel} className="h-8" />}

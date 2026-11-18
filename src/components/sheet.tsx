@@ -12,13 +12,15 @@ type Props = {
   children: ReactNode
   /** Fill most of the screen height on phones (long forms) instead of shrinking to the content. */
   tall?: boolean
+  /** A control at the right of the title row (e.g. a share button), reachable without scrolling. */
+  action?: ReactNode
 }
 
 const CLOSE_DISTANCE = 120
 const CLOSE_VELOCITY = 500
 
 /** Bottom sheet on phones (drag the handle down to close); centered dialog at lg. */
-export function Sheet({ open, onClose, title, children, tall }: Props) {
+export function Sheet({ open, onClose, title, children, tall, action }: Props) {
   const lg = useMediaQuery('(min-width: 1024px)')
   const touch = useTouch()
   const controls = useDragControls()
@@ -72,9 +74,10 @@ export function Sheet({ open, onClose, title, children, tall }: Props) {
                 >
                   <div className="h-1.5 w-10 rounded-full bg-muted-foreground/40" />
                 </div>
-                <Dialog.Title className="px-5 pb-3 font-heading text-2xl font-extrabold tracking-tight lg:pt-6">
-                  {title}
-                </Dialog.Title>
+                <div className="flex items-center justify-between gap-3 px-5 pb-3 lg:pt-6">
+                  <Dialog.Title className="font-heading text-2xl font-extrabold tracking-tight">{title}</Dialog.Title>
+                  {action}
+                </div>
                 <div className="overflow-y-auto px-5">{children}</div>
               </motion.div>
             </Dialog.Content>
