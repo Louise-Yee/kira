@@ -1,0 +1,37 @@
+name: Checks
+
+# Shared by preview.yml (PRs) and deploy.yml (main). Uploads dist/ so later jobs don't rebuild it.
+on: workflow_call
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_SENDER_ID: ${{ secrets.VITE_FIREBASE_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+    steps:
+      - name: Branch name
+        if: github.event_name == 'pull_request'
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if ! [[ "$BRANCH" =~ ^(feature|fix|chores|refactor)/[a-z0-9][a-z0-9-]*$ ]]; then
+            echo "::error::Branch '$BRANCH' must be feature/, fix/, chores/ or refactor/ followed by a kebab-case name"
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: for f in scripts/check-*.ts; do node "$f"; done
+      - run: npm run build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist
+          retention-days: 7

@@ -38,5 +38,7 @@ Personal expense tracker PWA. Product spec: `SPEC.md`. Task list: `PLAN.md`. Do 
 - Open a PR into `main`. Every PR gets a preview deploy, and merging into `main` deploys the live site. Don't run `firebase deploy` by hand unless `firestore.rules` changed: CI deploys hosting only.
 - After each task, run `npm run build` and `npm run lint`, plus any check scripts the task touches. Report failures exactly as they appear.
 - Rules deploy (only when `firestore.rules` changed): `firebase deploy --only firestore:rules`.
+- Releases: bump `version` in `package.json` (and `minVersion` for forced updates) in a `chores/release-X.Y.Z` PR; merging it publishes the APK. Never push `v*` tags by hand. See "Releasing" in `README.md`.
+- Old APKs keep using the same data: Firestore changes are additive only (never rename, remove or change the meaning of a field), and rules must not start rejecting older versions' writes.
 - Commit only when the user asks. Never add a `Co-Authored-By` line to commits or PR descriptions.
 - If the plan looks wrong once you're in the code, stop and ask; don't improvise around it.
