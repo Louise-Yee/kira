@@ -4,4 +4,5 @@
     <string name="title_activity_main">kira</string>
     <string name="package_name">app.kira</string>
     <string name="custom_url_scheme">app.kira</string>
+    <string name="widget_description">Balance for the current month, with a quick-add button</string>
 </resources>
