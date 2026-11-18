@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, X } from 'lucide-react'
+import { Share2, Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
 import { CategoryPicker } from '@/components/category-picker'
 import { Money } from '@/components/money'
@@ -57,16 +57,34 @@ const emptyForm: SplitForm = {
   charges: { type: 'percent', value: 1600 },
 }
 
-export function SplitEditor({ open, onClose, initial, ...rest }: Props) {
+export function SplitEditor({ open, onClose, initial, onShare, ...rest }: Props) {
   return (
-    <Sheet open={open} onClose={onClose} title={initial ? 'Edit split' : 'New split'} tall>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={initial ? 'Edit split' : 'New split'}
+      tall
+      action={
+        initial &&
+        onShare && (
+          <button
+            type="button"
+            aria-label="Share receipt (as saved)"
+            onClick={onShare}
+            className="flex size-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground"
+          >
+            <Share2 className="size-5" aria-hidden />
+          </button>
+        )
+      }
+    >
       {/* Mounted only while open, so the form starts fresh each time. */}
       <Form initial={initial} onClose={onClose} {...rest} />
     </Sheet>
   )
 }
 
-function Form({ initial, categories, suggestions, onSave, onDelete, onShare, onClose }: Omit<Props, 'open'>) {
+function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: Omit<Props, 'open' | 'onShare'>) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial?.date ?? todayISO())
   const [form, setForm] = useState<SplitForm>(initial ? formFromSplit(initial) : emptyForm)
@@ -317,11 +335,6 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onShare, onC
       >
         Save
       </PillButton>
-      {initial && onShare && (
-        <PillButton variant="secondary" onClick={onShare}>
-          Share receipt (as saved)
-        </PillButton>
-      )}
       {initial &&
         onDelete &&
         (confirming ? (
