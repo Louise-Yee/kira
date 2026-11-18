@@ -7,6 +7,7 @@ import { TextField } from '@/components/text-field'
 import { catColor, categoryIconNames } from '@/lib/category-icons'
 import type { Category, WithId } from '@/lib/db'
 import { press } from '@/lib/motion'
+import { useTouch } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 const colorTokens = ['cat-1', 'cat-2', 'cat-3', 'cat-4', 'cat-5', 'cat-6', 'cat-7', 'cat-8']
@@ -25,12 +26,13 @@ export function CategoryForm({ initial, onCancel, onSubmit, onDelete, onRestore 
   const [name, setName] = useState(initial?.name ?? '')
   const [icon, setIcon] = useState(initial?.icon ?? 'other')
   const [color, setColor] = useState(initial?.color ?? 'cat-1')
+  const touch = useTouch()
   const trimmed = name.trim()
 
   return (
     <div className="flex flex-col gap-4 pb-1">
       <p className="text-base font-semibold text-muted-foreground">{initial ? 'Edit category' : 'New category'}</p>
-      <TextField value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Name" maxLength={30} autoFocus />
+      <TextField value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Name" maxLength={30} autoFocus={!touch} />
       <div className="flex flex-wrap gap-2" role="group" aria-label="Icon">
         {categoryIconNames.map((n) => (
           <motion.button

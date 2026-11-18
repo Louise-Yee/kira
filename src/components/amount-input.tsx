@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react'
 import { animate, useReducedMotion } from 'motion/react'
 import { digitsToSen, formatSen } from '@/lib/money'
 import { pop } from '@/lib/motion'
+import { useTouch } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -21,6 +22,8 @@ type Props = {
  */
 export function AmountInput({ value, onChange, autoFocus, size = 'lg', className }: Props) {
   const ref = useRef<HTMLInputElement>(null)
+  const touch = useTouch()
+  const focus = autoFocus && !touch
   const reduce = useReducedMotion()
   const prev = useRef(value)
   const text = formatSen(value)
@@ -54,8 +57,8 @@ export function AmountInput({ value, onChange, autoFocus, size = 'lg', className
           if (el.selectionStart !== end || el.selectionEnd !== end) el.setSelectionRange(end, end)
         }}
         inputMode="numeric"
-        autoFocus={autoFocus}
-        data-autofocus={autoFocus || undefined}
+        autoFocus={focus}
+        data-autofocus={focus || undefined}
         autoComplete="off"
         aria-label="Amount"
         style={{ width: `${text.length}ch` }}
