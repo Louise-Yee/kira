@@ -1,8 +1,11 @@
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication'
+import { Capacitor } from '@capacitor/core'
 import { initializeApp } from 'firebase/app'
 import {
   GoogleAuthProvider,
   getAuth,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithPopup,
   signInWithRedirect,
   signOut,
@@ -42,13 +45,22 @@ export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 })
 
-export function signIn() {
+export async function signIn() {
+  if (Capacitor.isNativePlatform()) {
+    // Google blocks OAuth in WebViews: native sign-in returns an ID token, then the JS SDK signs in with it.
+    const { credential } = await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true })
+    if (!credential?.idToken) throw new Error('Google sign-in returned no ID token')
+    return signInWithCredential(auth, GoogleAuthProvider.credential(credential.idToken))
+  }
   const provider = new GoogleAuthProvider()
   // Popups break in installed PWAs; redirect needs a same-origin auth domain (see above).
   return onFirebaseHosting ? signInWithRedirect(auth, provider) : signInWithPopup(auth, provider)
 }
 
-export const logOut = () => signOut(auth)
+export async function logOut() {
+  if (Capacitor.isNativePlatform()) await FirebaseAuthentication.signOut()
+  return signOut(auth)
+}
 
 /** undefined = still resolving, null = signed out. */
 export function useUser() {

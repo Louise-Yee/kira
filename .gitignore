@@ -30,3 +30,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Android Firebase config (CI writes it from the GOOGLE_SERVICES_JSON secret)
+android/app/google-services.json
