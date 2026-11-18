@@ -77,6 +77,8 @@ function Body({ split, qr, onCreateLink }: Pick<Props, 'qr' | 'onCreateLink'> & 
             type="button"
             aria-pressed={only === a.value}
             onClick={() => {
+              // Same chip again: nothing changes, so no new render would ever replace the cleared image.
+              if (a.value === only) return
               setImage(null)
               setOnly(a.value)
             }}
