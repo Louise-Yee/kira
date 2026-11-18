@@ -42,7 +42,7 @@ export function TrendBars({ months, selected, onSelect }: Props) {
               aria-label={`${monthLabel(m.ym)}: in ${formatRM(m.income)}, out ${formatRM(m.expense)}`}
               className={cn('flex min-h-11 flex-1 flex-col items-center gap-1 rounded-xl p-1', active && 'bg-secondary')}
             >
-              <span className="flex h-36 w-full items-end justify-center gap-1">
+              <span className="flex h-36 w-full items-end justify-center gap-1 py-3">
                 <motion.span
                   className="w-1/3 max-w-4 rounded-t-md bg-chart-3"
                   initial={{ height: 0 }}
