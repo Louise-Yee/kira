@@ -11,6 +11,7 @@ import { useAddLink } from '@/lib/widget'
 import { useUpdate } from '@/lib/update'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
+import { FabSlideContext } from '@/lib/fab-slide'
 import { SyncPill } from '@/components/sync-pill'
 import { TabBar, type TabItem } from '@/components/tab-bar'
 import { UpdateSheet } from '@/components/update-sheet'
@@ -80,6 +81,7 @@ const page: Variants = {
 function Shell({ user }: { user: AppUser }) {
   const [tab, setTab] = useState<Tab>('home')
   const [dir, setDir] = useState(1)
+  const [from, setFrom] = useState<Tab>('home')
   const [navPos, setNavPos] = useState<NavPos>(readNavPos)
   const lg = useMediaQuery('(min-width: 1024px)')
   // ponytail: read once per mount, so "Today" and the trend window go stale if the app stays open past midnight.
@@ -104,6 +106,7 @@ function Shell({ user }: { user: AppUser }) {
 
   const go = (id: Tab) => {
     setDir(Math.sign(tabs.findIndex((t) => t.id === id) - tabs.findIndex((t) => t.id === tab)) || 1)
+    setFrom(tab)
     setTab(id)
   }
   const changeNavPos = (p: NavPos) => {
@@ -118,8 +121,9 @@ function Shell({ user }: { user: AppUser }) {
   return (
     <div className={cn('mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6', navPos === 'right' && 'lg:flex-row-reverse')}>
       <SyncPill status={sync} />
-      <TabBar tabs={tabs} active={tab} onChange={go} side={side} lg={lg} />
+      <TabBar tabs={tabs} active={tab} onChange={go} side={side} />
 
+      <FabSlideContext value={tab === 'settings' || from === 'settings'}>
       <main className={cn('relative flex-1 overflow-x-clip px-5 pt-[calc(1.5rem+var(--inset-top))] pb-32', side && 'lg:p-0 lg:pb-24')}>
         <AnimatePresence mode="popLayout" initial={false} custom={slide}>
           <motion.div
@@ -138,6 +142,7 @@ function Shell({ user }: { user: AppUser }) {
           </motion.div>
         </AnimatePresence>
       </main>
+      </FabSlideContext>
       <UpdateSheet open={update.open} update={update.update} onLater={update.later} />
     </div>
   )

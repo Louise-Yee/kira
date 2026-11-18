@@ -1,7 +1,7 @@
-import { AnimatePresence, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import type { LucideIcon } from 'lucide-react'
 import { select } from '@/lib/haptics'
-import { glide, press } from '@/lib/motion'
+import { press, soft } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export type TabItem<Id extends string> = { id: Id; label: string; icon: LucideIcon }
@@ -12,11 +12,9 @@ type Props<Id extends string> = {
   onChange: (id: Id) => void
   /** Sidebar layout at lg (nav position left/right). */
   side: boolean
-  /** Viewport is at the lg breakpoint or wider. */
-  lg: boolean
 }
 
-export function TabBar<Id extends string>({ tabs, active: current, onChange, side, lg }: Props<Id>) {
+export function TabBar<Id extends string>({ tabs, active: current, onChange, side }: Props<Id>) {
   return (
     <nav
       className={cn(
@@ -40,31 +38,26 @@ export function TabBar<Id extends string>({ tabs, active: current, onChange, sid
             aria-label={t.label}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'relative flex h-11 items-center justify-center rounded-full px-2.5 text-base font-semibold',
+              'relative flex h-14 w-[4.5rem] min-w-0 items-center justify-center rounded-full text-base font-semibold',
               active ? 'text-foreground' : 'text-muted-foreground',
-              side && 'lg:h-12 lg:justify-start lg:rounded-2xl lg:px-4',
+              side && 'lg:h-12 lg:w-auto lg:justify-start lg:rounded-2xl lg:px-4',
             )}
           >
+            {active && (
+              <motion.span
+                layoutId="tab-active"
+                transition={soft}
+                className={cn('absolute inset-0 rounded-full bg-foreground/10', side && 'lg:rounded-2xl')}
+              />
+            )}
             <motion.span
               initial={false}
-              animate={{ opacity: active ? 1 : 0 }}
-              transition={glide}
-              className={cn('absolute inset-0 rounded-full bg-foreground/10', side && 'lg:rounded-2xl')}
+              animate={{ opacity: active ? 1 : 0, scaleX: active ? 1 : 0 }}
+              transition={soft}
+              className={cn('absolute bottom-1.5 h-0.5 w-5 rounded-full bg-foreground', side && 'lg:hidden')}
             />
             <t.icon className="relative size-6 shrink-0 lg:size-5" />
-            <AnimatePresence initial={false}>
-              {(active || (side && lg)) && (
-                <motion.span
-                  initial={{ width: 0, opacity: 0, x: -10 }}
-                  animate={{ width: 'auto', opacity: 1, x: 0 }}
-                  exit={{ width: 0, opacity: 0, x: -10 }}
-                  transition={glide}
-                  className="relative overflow-hidden whitespace-nowrap"
-                >
-                  <span className={cn('block pl-2', side && 'lg:pl-3')}>{t.label}</span>
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <span className={cn('relative hidden', side && 'lg:block lg:pl-3')}>{t.label}</span>
           </motion.button>
         )
       })}
