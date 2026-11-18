@@ -1,6 +1,6 @@
 // Self-check for month totals and day grouping: node scripts/check-month.ts
 import assert from 'node:assert/strict'
-import { dayLabel, monthName } from '../src/lib/date.ts'
+import { addDays, dayLabel, monthName } from '../src/lib/date.ts'
 import { groupByDay, signed, totals } from '../src/lib/month-summary.ts'
 
 const tx = (kind: 'expense' | 'income', amount: number, date: string, createdAt = 0) => ({ kind, amount, date, createdAt })
@@ -34,3 +34,8 @@ assert.equal(dayLabel('2026-11-03', '2026-11-17'), 'Tue, 3 Nov')
 assert.equal(monthName('2026-11'), 'November')
 
 console.log('check-month: ok')
+
+// addDays
+assert.equal(addDays('2026-11-17', -30), '2026-10-18')
+assert.equal(addDays('2026-03-01', -1), '2026-02-28')
+assert.equal(addDays('2026-12-31', 1), '2027-01-01')

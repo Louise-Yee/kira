@@ -6,6 +6,12 @@ export function todayISO(now: Date = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
+/** "2026-11-17" shifted by n days (n may be negative). */
+export function addDays(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return todayISO(new Date(y, m - 1, d + n))
+}
+
 /** "2026-11" shifted by n months (n may be negative). */
 export function addMonths(ym: string, n: number): string {
   const [y, m] = ym.split('-').map(Number)

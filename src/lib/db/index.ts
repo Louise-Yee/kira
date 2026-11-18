@@ -18,5 +18,5 @@ export {
   useRecurring,
 } from './recurring'
 export { setPaymentQr, useSettings } from './settings'
-export { deleteSplit, saveSplit, useSplits } from './splits'
+export { deleteSplit, saveSplit, SPLITS_PAGE, useOlderSplits, useRecentSplits } from './splits'
 export { useSyncStatus } from './sync'
