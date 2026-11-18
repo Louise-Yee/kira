@@ -3,6 +3,7 @@ import { EntryFields, type Entry } from '@/components/entry-fields'
 import { PillButton } from '@/components/pill-button'
 import { Sheet } from '@/components/sheet'
 import { TextField } from '@/components/text-field'
+import { success, warning } from '@/lib/haptics'
 import { todayISO } from '@/lib/date'
 import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
 
@@ -56,6 +57,7 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
         disabled={!draft}
         onClick={() => {
           if (!draft) return
+          success()
           onSave(draft)
           onClose()
         }}
@@ -72,6 +74,7 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
               variant="destructive"
               className="flex-1"
               onClick={() => {
+                warning()
                 onDelete()
                 onClose()
               }}

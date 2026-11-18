@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
 import { Plus } from 'lucide-react'
 import { PillButton } from '@/components/pill-button'
+import { press } from '@/lib/haptics'
 
 type Props = { label: string; onClick: () => void }
 
@@ -15,6 +16,8 @@ type Props = { label: string; onClick: () => void }
 export function Fab({ label, onClick }: Props) {
   return createPortal(
     <PillButton
+      // Tick on press, not click: the sheet it opens ticks on open, so the two read as down-up instead of one smear.
+      onPointerDown={() => press()}
       onClick={onClick}
       aria-label={label}
       className="fixed right-5 bottom-[calc(max(1rem,var(--inset-bottom))+4.75rem)] z-10 size-14 gap-2 px-0 shadow-lg lg:right-[calc(max(0px,(100vw-64rem)/2)+1.5rem)] lg:bottom-6 lg:h-14 lg:w-fit lg:px-7 in-data-[nav=right]:lg:right-[calc(max(0px,(100vw-64rem)/2)+17.5rem)] in-data-[nav=bottom]:lg:right-[calc(max(0px,(100vw-64rem)/2)+2.75rem)]"

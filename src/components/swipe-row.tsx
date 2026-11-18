@@ -1,6 +1,7 @@
 import { useRef, type ReactNode } from 'react'
-import { motion, useMotionValue, useTransform } from 'motion/react'
+import { motion, useMotionValue, useMotionValueEvent, useTransform } from 'motion/react'
 import { Share2 } from 'lucide-react'
+import { detent } from '@/lib/haptics'
 
 const THRESHOLD = 80 // px: swipe left past this and let go to trigger
 
@@ -12,7 +13,14 @@ export function SwipeRow({ onSwipe, label, children }: { onSwipe: () => void; la
   const x = useMotionValue(0)
   const reveal = useTransform(x, [0, -THRESHOLD], [0.4, 1], { clamp: true })
   const bg = useTransform(x, [0, -6], [0, 1], { clamp: true }) // hidden at rest so no blue fringe at the corners
-  const dragged =useRef(false)
+  const dragged = useRef(false)
+  const armed = useRef(false)
+  // A detent when the drag crosses the commit point, so you feel it before letting go.
+  useMotionValueEvent(x, 'change', (v) => {
+    const past = v < -THRESHOLD
+    if (past && !armed.current) detent()
+    armed.current = past
+  })
   return (
     <div className="relative overflow-hidden rounded-2xl">
       <motion.div className="absolute inset-0 bg-primary" style={{ opacity: bg }} aria-hidden />
@@ -31,7 +39,6 @@ export function SwipeRow({ onSwipe, label, children }: { onSwipe: () => void; la
         onDragStart={() => (dragged.current = true)}
         onDragEnd={(_, info) => {
           if (info.offset.x < -THRESHOLD) {
-            navigator.vibrate?.(10)
             onSwipe()
           }
           setTimeout(() => (dragged.current = false), 0)

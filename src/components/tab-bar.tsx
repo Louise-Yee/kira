@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import type { LucideIcon } from 'lucide-react'
+import { select } from '@/lib/haptics'
 import { glide, press } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
@@ -32,7 +33,10 @@ export function TabBar<Id extends string>({ tabs, active: current, onChange, sid
           <motion.button
             key={t.id}
             whileTap={press}
-            onClick={() => onChange(t.id)}
+            onClick={() => {
+              if (!active) select()
+              onChange(t.id)
+            }}
             aria-label={t.label}
             aria-current={active ? 'page' : undefined}
             className={cn(

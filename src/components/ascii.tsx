@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useReducedMotion } from 'motion/react'
 import type { Field } from '@/lib/coin'
 import { drawAscii } from '@/lib/ascii-draw'
+import { createPacer } from '@/lib/haptic-pacer'
+import { tick } from '@/lib/haptics'
 import { haloField, identity, orthonormalize, rotateWorld, shadeCoin } from '@/lib/coin3d'
 
 /** Draw one frame: sample(nx, ny) in -1..1 → brightness → glyph. */
@@ -50,6 +52,13 @@ export function AsciiCoin({ className, cell = 6.5, ink }: { className?: string; 
     let drag: { x: number; y: number; t: number; x0: number; y0: number; t0: number } | null = null
     let raf = 0
     let last = 0
+    // Ticks follow user-driven rotation only (drag, fling, tap flip), never the idle spin. The receipt coin (ink) is silent.
+    const pacer = createPacer()
+    const buzz = (angle: number, speed: number, now: number) => {
+      if (ink || reduce || angle <= 0) return
+      const t = pacer.feed(angle, speed, now)
+      if (t) tick(t)
+    }
 
     const frame = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000)
@@ -66,6 +75,8 @@ export function AsciiCoin({ className, cell = 6.5, ink }: { className?: string; 
       const step = flipV * dt
       flip += step
       m = orthonormalize(rotateWorld(m, 0, 1, 0, step))
+      const fling = Math.hypot(wx, wy - auto) // user-imparted spin, excluding the idle spin
+      buzz(Math.abs(step) + (drag ? 0 : fling * dt), fling + Math.abs(flipV), now)
 
       const t = reduce ? 0 : now / 1000
       paint(cv, g, cell, 0.08, (nx, ny) => {
@@ -88,6 +99,7 @@ export function AsciiCoin({ className, cell = 6.5, ink }: { className?: string; 
       const now = performance.now()
       drag = { x: e.clientX, y: e.clientY, t: now, x0: e.clientX, y0: e.clientY, t0: now }
       wx = wy = 0
+      pacer.reset()
       wake()
     }
     const move = (e: PointerEvent) => {
@@ -101,13 +113,16 @@ export function AsciiCoin({ className, cell = 6.5, ink }: { className?: string; 
       wy = 0.7 * (yaw / dt) + 0.3 * wy
       wx = 0.7 * (pitch / dt) + 0.3 * wx
       drag = { ...drag, x: e.clientX, y: e.clientY, t: now }
+      buzz(Math.hypot(yaw, pitch), Math.hypot(wx, wy), now)
     }
     const up = () => {
       if (!drag) return
       const now = performance.now()
       const tap = Math.hypot(drag.x - drag.x0, drag.y - drag.y0) < TAP_PX && now - drag.t0 < TAP_MS
-      if (tap) flipTarget += Math.PI
-      else if (now - drag.t > 80) wx = wy = 0 // held still before release: no fling
+      if (tap) {
+        flipTarget += Math.PI
+        pacer.reset()
+      } else if (now - drag.t > 80) wx = wy = 0 // held still before release: no fling
       drag = null
       wake()
     }
