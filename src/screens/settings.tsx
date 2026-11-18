@@ -52,13 +52,26 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate }: Pro
   const [managing, setManaging] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [backupOpen, setBackupOpen] = useState(false)
+  const [photoFailed, setPhotoFailed] = useState(false)
   const settings = useSettings(user.uid)
   const isUsed = useCallback((id: string) => categoryInUse(user.uid, id), [user.uid])
   return (
     <div className="flex flex-col gap-5">
       <h1 className="font-heading text-3xl font-extrabold tracking-tight">Settings</h1>
       <div className="flex items-center gap-4 rounded-3xl bg-card p-5">
-        {user.photoURL && <img src={user.photoURL} alt="" className="size-12 rounded-full" />}
+        {user.photoURL && !photoFailed ? (
+          <img
+            src={user.photoURL}
+            alt=""
+            referrerPolicy="no-referrer"
+            onError={() => setPhotoFailed(true)}
+            className="size-12 rounded-full"
+          />
+        ) : (
+          <div className="flex size-12 items-center justify-center rounded-full bg-primary font-heading text-xl font-bold text-primary-foreground">
+            {(user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-semibold">{user.displayName}</p>
           <p className="truncate text-base text-muted-foreground">{user.email}</p>

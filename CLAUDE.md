@@ -40,5 +40,5 @@ Personal expense tracker PWA. Product spec: `SPEC.md`. Task list: `PLAN.md`. Do 
 - Rules deploy (only when `firestore.rules` changed): `firebase deploy --only firestore:rules`.
 - Releases: bump `version` in `package.json` (and `minVersion` for forced updates) in a `chores/release-X.Y.Z` PR; merging it publishes the APK. Never push `v*` tags by hand. See "Releasing" in `README.md`.
 - Old APKs keep using the same data: Firestore changes are additive only (never rename, remove or change the meaning of a field), and rules must not start rejecting older versions' writes.
-- Commit only when the user asks. Never add a `Co-Authored-By` line to commits or PR descriptions.
+- Commit only when the user asks. Commits end with the `Co-Authored-By` line and PR descriptions with the "Generated with Claude Code" line, as given in the session's attribution reminder.
 - If the plan looks wrong once you're in the code, stop and ask; don't improvise around it.
