@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { Dialog } from 'radix-ui'
 import { sheet } from '@/lib/haptics'
 import { pop, soft } from '@/lib/motion'
+import { useBackClose } from '@/lib/use-back-close'
 import { useMediaQuery, useTouch } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +26,7 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
   const lg = useMediaQuery('(min-width: 1024px)')
   const touch = useTouch()
   const controls = useDragControls()
+  useBackClose(open, onClose)
   useEffect(() => {
     if (open) sheet()
   }, [open])
