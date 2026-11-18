@@ -87,7 +87,17 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
                   <Dialog.Title className="font-heading text-2xl font-extrabold tracking-tight">{title}</Dialog.Title>
                   {action}
                 </div>
-                <div className="overflow-y-auto px-5">{children}</div>
+                <div
+                  className="min-h-0 overflow-y-auto overscroll-contain px-5 pt-1"
+                  // Keep a focused field clear of the on-screen keyboard once the viewport has resized.
+                  onFocusCapture={(e) => {
+                    const el = e.target
+                    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return
+                    setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)
+                  }}
+                >
+                  {children}
+                </div>
               </motion.div>
             </Dialog.Content>
           </Dialog.Portal>
