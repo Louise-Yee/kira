@@ -45,8 +45,9 @@
   --radius-4xl: calc(var(--radius) * 2.5);
 }
 
-/* A1: cobalt on neutral grey */
-:root {
+/* A1: cobalt on neutral grey. `.light` forces these inside a dark page (the paper receipt). */
+:root,
+.light {
   --radius: 1rem;
   --background: #f4f4f4;
   --foreground: #121212;

@@ -14,6 +14,8 @@ import { SyncPill } from '@/components/sync-pill'
 import type { SyncStatus } from '@/lib/db'
 import { TransactionSheet } from '@/components/transaction-sheet'
 import { ReceiptSheet } from '@/components/receipt-sheet'
+import { buildReceipt } from '@/lib/receipt-data'
+import { ReceiptCard } from '@/screens/receipt-page'
 import { monthlyTotals } from '@/lib/chart-data'
 import { computeShares } from '@/lib/split'
 import { trendMonths } from '@/lib/date'
@@ -99,7 +101,7 @@ const fakeIsUsed = (id: string) =>
 // Temporary, dev only: open /?gallery to try the shared components. Removed once real screens use them (P1.5).
 export function Gallery() {
   const which = new URLSearchParams(location.search).get('gallery')
-  return which === 'month' ? <MonthDemo /> : which === 'receipt' ? <ReceiptDemo /> : <ComponentGallery />
+  return which === 'month' ? <MonthDemo /> : which === 'receipt' ? <ReceiptDemo /> : which === 'receiptpage' ? <ReceiptPageDemo /> : <ComponentGallery />
 }
 
 // /?gallery=receipt: the receipt sheet with a fake split and a random-squares "QR".
@@ -114,8 +116,7 @@ function fakeQr(): string {
   return c.toDataURL('image/webp', 0.85)
 }
 
-function ReceiptDemo() {
-  const [qr] = useState(fakeQr)
+function demoSplit(): WithId<Split> {
   const items = [
     { name: 'Nasi lemak', amount: 680, people: [0, 1, 2] },
     { name: 'Sushi platter', amount: 4500, people: [0, 1] },
@@ -123,7 +124,7 @@ function ReceiptDemo() {
     { name: 'Teh tarik', amount: 350, people: [2] },
   ]
   const charges = { type: 'percent', value: 1600 } as const
-  const split: WithId<Split> = {
+  return {
     id: 'demo',
     title: 'Dinner at Sushi King with the whole gang',
     date: '2026-11-17',
@@ -137,7 +138,16 @@ function ReceiptDemo() {
     createdAt: 1,
     updatedAt: 1,
   }
-  return <ReceiptSheet open onClose={() => {}} split={split} qr={qr} onCreateLink={() => 'demo'} />
+}
+
+function ReceiptDemo() {
+  const [qr] = useState(fakeQr)
+  return <ReceiptSheet open onClose={() => {}} split={demoSplit()} qr={qr} onCreateLink={() => 'demo'} />
+}
+
+// /?gallery=receiptpage: what a friend sees at /r/{id}, for person 1.
+function ReceiptPageDemo() {
+  return <ReceiptCard receipt={buildReceipt(demoSplit(), 1)} />
 }
 
 function ComponentGallery() {

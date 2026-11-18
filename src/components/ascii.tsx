@@ -5,7 +5,7 @@ import { drawAscii } from '@/lib/ascii-draw'
 import { haloField, identity, orthonormalize, rotateWorld, shadeCoin } from '@/lib/coin3d'
 
 /** Draw one frame: sample(nx, ny) in -1..1 → brightness → glyph. */
-function paint(cv: HTMLCanvasElement, g: CanvasRenderingContext2D, cell: number, floor: number, sample: (nx: number, ny: number) => number) {
+function paint(cv: HTMLCanvasElement, g: CanvasRenderingContext2D, cell: number, floor: number, sample: (nx: number, ny: number) => number, ink?: string) {
   const dpr = devicePixelRatio || 1
   const w = cv.clientWidth
   const h = cv.clientHeight
@@ -15,7 +15,7 @@ function paint(cv: HTMLCanvasElement, g: CanvasRenderingContext2D, cell: number,
   }
   g.setTransform(dpr, 0, 0, dpr, 0, 0)
   g.clearRect(0, 0, w, h)
-  drawAscii(g, w, h, cell, floor, sample)
+  drawAscii(g, w, h, cell, floor, sample, ink)
 }
 
 /** Static ASCII texture from a 2D field. */
@@ -34,7 +34,7 @@ const TAP_PX = 6
 const TAP_MS = 300
 
 /** Interactive 3D ASCII coin: drag to spin (with inertia), tap to flip. */
-export function AsciiCoin({ className, cell = 6.5 }: { className?: string; cell?: number }) {
+export function AsciiCoin({ className, cell = 6.5, ink }: { className?: string; cell?: number; ink?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const reduce = useReducedMotion()
 
@@ -72,7 +72,7 @@ export function AsciiCoin({ className, cell = 6.5 }: { className?: string; cell?
         const sx = nx * 1.05, sy = ny * 1.05
         const v = shadeCoin(m, sx, sy)
         return v >= 0 ? v : haloField(sx, sy, t)
-      })
+      }, ink ? 'currentColor' : undefined)
 
       const moving = drag || Math.abs(wx) > 0.005 || Math.abs(wy) > 0.005 || Math.abs(flipTarget - flip) > 0.001 || Math.abs(flipV) > 0.01
       raf = moving ? requestAnimationFrame(frame) : 0
@@ -124,7 +124,7 @@ export function AsciiCoin({ className, cell = 6.5 }: { className?: string; cell?
       cv.removeEventListener('pointerup', up)
       cv.removeEventListener('pointercancel', up)
     }
-  }, [reduce, cell])
+  }, [reduce, cell, ink])
 
   return (
     <canvas
