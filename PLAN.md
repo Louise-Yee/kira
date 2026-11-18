@@ -363,7 +363,7 @@ The web app and PWA stay as they are. The APK wraps the same `dist/` build. Andr
 - `__APP_VERSION__` is defined at build time from `package.json` (Vite `define`, typed in `src/vite-env.d.ts`). Settings shows "kira vX.Y.Z" on every platform.
 - On native launch only, fetch `https://api.github.com/repos/Louise-Yee/kira/releases/latest` (public, no token, 60 requests an hour per IP). Read `tag_name`, the `.apk` asset's `browser_download_url`, and `<!-- min-version: X.Y.Z -->` from `body`. If the fetch fails or the device is offline, do nothing.
 - installed < minVersion: a sheet with only **Update** that can't be dismissed (forced update).
-- installed < latest: a sheet with **Update** and **Later**. "Later" stores the dismissed version and doesn't prompt again until a newer release. Settings shows "Update to vX.Y.Z" whenever one is available, and it opens the same sheet.
+- installed < latest: a sheet with **Update** and **Later**. "Later" stores the dismissed version and doesn't prompt again until a newer release. Settings shows "vX.Y.Z is available" with an **Update** button whenever one is available, which opens the same sheet. Preview both sheets in dev at `/?gallery=update` and `/?gallery=update-forced`.
 - **Update** opens the APK URL in the system browser. Check on a device that `window.open` leaves the WebView; if it doesn't, `@capacitor/browser` is the fallback (a new dependency, so ask first).
 - `version.ts` is pure: parse `X.Y.Z`, `isNewer(a, b)`, and read the min-version marker. Its check script asserts the edge cases.
 

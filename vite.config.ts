@@ -3,8 +3,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'node:path'
+import { readFileSync } from 'node:fs'
+
+const pkg: { version: string } = JSON.parse(readFileSync(path.resolve(import.meta.dirname, 'package.json'), 'utf8'))
 
 export default defineConfig({
+  // The app's version comes from package.json, the same source CI releases from.
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
     react(),
     tailwindcss(),

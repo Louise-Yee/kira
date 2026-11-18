@@ -14,6 +14,7 @@ import { SyncPill } from '@/components/sync-pill'
 import type { SyncStatus } from '@/lib/db'
 import { TransactionSheet } from '@/components/transaction-sheet'
 import { ReceiptSheet } from '@/components/receipt-sheet'
+import { UpdateSheet } from '@/components/update-sheet'
 import { buildReceipt } from '@/lib/receipt-data'
 import { ReceiptCard } from '@/screens/receipt-page'
 import { monthlyTotals } from '@/lib/chart-data'
@@ -101,7 +102,7 @@ const fakeIsUsed = (id: string) =>
 // Temporary, dev only: open /?gallery to try the shared components. Removed once real screens use them (P1.5).
 export function Gallery() {
   const which = new URLSearchParams(location.search).get('gallery')
-  return which === 'month' ? <MonthDemo /> : which === 'receipt' ? <ReceiptDemo /> : which === 'receiptpage' ? <ReceiptPageDemo /> : <ComponentGallery />
+  return which === 'month' ? <MonthDemo /> : which === 'receipt' ? <ReceiptDemo /> : which === 'receiptpage' ? <ReceiptPageDemo /> : which?.startsWith('update') ? <UpdateDemo forced={which === 'update-forced'} /> : <ComponentGallery />
 }
 
 // /?gallery=receipt: the receipt sheet with a fake split and a random-squares "QR".
@@ -143,6 +144,12 @@ function demoSplit(): WithId<Split> {
 function ReceiptDemo() {
   const [qr] = useState(fakeQr)
   return <ReceiptSheet open onClose={() => {}} split={demoSplit()} qr={qr} onCreateLink={() => 'demo'} />
+}
+
+// /?gallery=update or update-forced: the Android update sheet with a fake release.
+function UpdateDemo({ forced }: { forced: boolean }) {
+  const [open, setOpen] = useState(true)
+  return <UpdateSheet open={open} update={{ release: { version: '9.9.9', apkUrl: '#', minVersion: null }, forced }} onLater={() => setOpen(false)} />
 }
 
 // /?gallery=receiptpage: what a friend sees at /r/{id}, for person 1.
