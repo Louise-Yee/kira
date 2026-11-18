@@ -6,6 +6,7 @@ import { Fab } from '@/components/fab'
 import { ListRow } from '@/components/list-row'
 import { Money } from '@/components/money'
 import { RecurringSheet } from '@/components/recurring-sheet'
+import { categoryOrOther } from '@/lib/category-lookup'
 import { shortDate } from '@/lib/date'
 import {
   countRecurringTransactions,
@@ -34,7 +35,7 @@ export function RecurringScreen({ user }: { user: AppUser }) {
   const inactive = (rules ?? []).filter((r) => r.paused || !next(r))
 
   const row = (r: WithId<Recurring>) => {
-    const cat = byId.get(r.categoryId)
+    const cat = categoryOrOther(byId, r.categoryId, r.kind)
     const upcoming = next(r)
     const status = !upcoming ? 'ended' : r.paused ? 'paused' : `next ${shortDate(upcoming)}`
     return (
