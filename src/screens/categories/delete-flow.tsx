@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { CategoryPicker } from '@/components/category-picker'
 import { PillButton } from '@/components/pill-button'
+import { error, warning } from '@/lib/haptics'
 import type { Category, WithId } from '@/lib/db'
 
 type DeleteProps = {
@@ -53,7 +54,13 @@ export function DeleteFlow({ cat, targets, isUsed, onDelete, onArchive, onMove, 
       {usage === 'unused' && (
         <>
           <p className="text-base">No transactions use it. This can't be undone.</p>
-          <PillButton variant="destructive" onClick={onDelete}>
+          <PillButton
+            variant="destructive"
+            onClick={() => {
+              warning()
+              onDelete()
+            }}
+          >
             Delete
           </PillButton>
         </>
@@ -72,6 +79,7 @@ export function DeleteFlow({ cat, targets, isUsed, onDelete, onArchive, onMove, 
                   setMoving(true)
                   setMoveFailed(false)
                   onMove(target).catch(() => {
+                    error()
                     setMoving(false)
                     setMoveFailed(true)
                   })

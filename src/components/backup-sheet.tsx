@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { PillButton } from '@/components/pill-button'
 import { Sheet } from '@/components/sheet'
+import { error as errorHaptic, success } from '@/lib/haptics'
 import { backupSummary, transactionsCsv, validateBackup, type Backup } from '@/lib/backup'
 import { todayISO } from '@/lib/date'
 import { exportBackup, importBackup } from '@/lib/db'
@@ -32,6 +33,7 @@ function Body({ uid, onClose }: { uid: string; onClose: () => void }) {
     try {
       await task()
     } catch (e) {
+      errorHaptic()
       setError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally {
       setBusy(false)
@@ -51,7 +53,10 @@ function Body({ uid, onClose }: { uid: string; onClose: () => void }) {
         format === 'json'
           ? new File([JSON.stringify(backup)], name, { type: 'application/json' })
           : new File([transactionsCsv(backup.transactions, backup.categories)], name, { type: 'text/csv' })
-      if ((await shareFile(file, name)) !== 'cancelled') setMessage('Exported.')
+      if ((await shareFile(file, name)) !== 'cancelled') {
+        success()
+        setMessage('Exported.')
+      }
     })
 
   const pick = (file: File | undefined) =>
@@ -82,6 +87,7 @@ function Body({ uid, onClose }: { uid: string; onClose: () => void }) {
           <PillButton
             className="flex-1"
             onClick={() => {
+              success()
               importBackup(uid, pending)
               onClose()
             }}

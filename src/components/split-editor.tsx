@@ -7,6 +7,7 @@ import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
 import { TextField } from '@/components/text-field'
+import { success, warning } from '@/lib/haptics'
 import { todayISO } from '@/lib/date'
 import type { Category, Split, SplitDraft, WithId } from '@/lib/db'
 import {
@@ -329,6 +330,7 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
         disabled={!!problem}
         onClick={() => {
           if (problem || !categoryId) return
+          success()
           onSave({ title: title.trim(), date, categoryId, form: effective })
           onClose()
         }}
@@ -346,6 +348,7 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
               variant="destructive"
               className="flex-1"
               onClick={() => {
+                warning()
                 onDelete()
                 onClose()
               }}

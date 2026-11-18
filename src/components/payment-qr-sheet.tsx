@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { PillButton } from '@/components/pill-button'
 import { Sheet } from '@/components/sheet'
+import { error as errorHaptic, success } from '@/lib/haptics'
 import { compressToDataUrl } from '@/lib/compress-image'
 
 type Props = {
@@ -34,7 +35,9 @@ function Body({ qr, onSave, onRemove, onClose }: Omit<Props, 'open'>) {
     setBusy(true)
     try {
       onSave(await compressToDataUrl(file))
+      success()
     } catch (e) {
+      errorHaptic()
       setError(e instanceof Error ? e.message : 'Something went wrong. Try another image.')
     } finally {
       setBusy(false)

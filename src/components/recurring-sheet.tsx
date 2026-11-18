@@ -4,6 +4,7 @@ import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
 import { TextField } from '@/components/text-field'
+import { error, success, warning } from '@/lib/haptics'
 import { shortDate, todayISO } from '@/lib/date'
 import type { Category, Recurring, RecurringDraft, WithId } from '@/lib/db'
 import { nextDate, restartFloor, scheduleChanged, type Freq, type RecurrenceEnd } from '@/lib/recurrence'
@@ -199,6 +200,7 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
         disabled={!draft}
         onClick={() => {
           if (!draft) return
+          success()
           onSave(draft)
           onClose()
         }}
@@ -216,8 +218,12 @@ type Del = { phase: 'idle' } | { phase: 'checking' } | { phase: 'offline' } | { 
 function DeleteFlow({ countTransactions, onDelete, onClose }: Pick<Props, 'countTransactions' | 'onDelete' | 'onClose'>) {
   const [del, setDel] = useState<Del>({ phase: 'idle' })
   const run = (withTransactions: boolean) => {
+    warning()
     setDel({ phase: 'checking' })
-    onDelete(withTransactions).then(onClose, () => setDel({ phase: 'offline' }))
+    onDelete(withTransactions).then(onClose, () => {
+      error()
+      setDel({ phase: 'offline' })
+    })
   }
 
   if (del.phase === 'idle') {

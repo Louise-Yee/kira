@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { Dialog } from 'radix-ui'
+import { sheet } from '@/lib/haptics'
 import { pop, soft } from '@/lib/motion'
 import { useMediaQuery, useTouch } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
@@ -24,6 +25,9 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
   const lg = useMediaQuery('(min-width: 1024px)')
   const touch = useTouch()
   const controls = useDragControls()
+  useEffect(() => {
+    if (open) sheet()
+  }, [open])
   return (
     <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <AnimatePresence>
@@ -64,7 +68,10 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
                 dragConstraints={{ top: 0, bottom: 0 }}
                 dragElastic={{ top: 0, bottom: 0.6 }}
                 onDragEnd={(_, info) => {
-                  if (info.offset.y > CLOSE_DISTANCE || info.velocity.y > CLOSE_VELOCITY) onClose()
+                  if (info.offset.y > CLOSE_DISTANCE || info.velocity.y > CLOSE_VELOCITY) {
+                    sheet()
+                    onClose()
+                  }
                 }}
                 className={cn('fixed inset-x-0 bottom-0 z-30 flex max-h-[90dvh] flex-col rounded-t-3xl bg-card pb-[max(1rem,var(--inset-bottom))] outline-none lg:inset-auto lg:top-1/2 lg:left-1/2 lg:w-md lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-3xl lg:pb-6', tall && 'h-[92dvh] lg:h-auto lg:max-h-[90dvh] lg:w-xl')}
               >
