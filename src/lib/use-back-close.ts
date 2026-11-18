@@ -25,7 +25,8 @@ export function useBackClose(open: boolean, onClose: () => void) {
     window.addEventListener('popstate', onPop, true)
     return () => {
       window.removeEventListener('popstate', onPop, true)
-      if (!popped) {
+      // A route change replaces history.state, leaving our entry behind; popping then would undo the navigation.
+      if (!popped && history.state?.sheet) {
         skip++
         history.back()
       }
