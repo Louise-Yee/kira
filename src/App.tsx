@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Navigate, useLocation, useMatch, useNavigate } from 'react-router'
 import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/react'
 import { House, ReceiptText, Repeat, Settings } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
@@ -39,7 +40,7 @@ export default function App() {
   useSeedDefaults(authUser?.uid) // real accounts only: ?dev has no Firebase uid
   usePostRecurring(authUser?.uid)
   useClientInfo(authUser?.uid)
-  const shareId = /^\/r\/([\w-]+)$/.exec(location.pathname)?.[1]
+  const shareId = useMatch('/r/:id')?.params.id
   if (shareId) return <MotionConfig reducedMotion="user"><ReceiptPage id={shareId} /></MotionConfig>
   if (devGallery) return <MotionConfig reducedMotion="user"><Gallery /></MotionConfig>
   return (
@@ -57,6 +58,8 @@ const tabs = [
 ] as const satisfies readonly TabItem<string>[]
 
 type Tab = (typeof tabs)[number]['id']
+
+const paths: Record<Tab, string> = { home: '/', recurring: '/recurring', split: '/split', settings: '/settings' }
 
 const NAV_KEY = 'kira.navPos'
 
@@ -79,9 +82,17 @@ const page: Variants = {
 }
 
 function Shell({ user }: { user: AppUser }) {
-  const [tab, setTab] = useState<Tab>('home')
-  const [dir, setDir] = useState(1)
-  const [from, setFrom] = useState<Tab>('home')
+  const { pathname, search } = useLocation()
+  const navigate = useNavigate()
+  const current = tabs.find((t) => paths[t.id] === pathname)
+  const tab: Tab = current?.id ?? 'home'
+  // Slide direction and previous tab follow the URL, so back/forward and refresh animate like a tap.
+  const [nav, setNav] = useState<{ tab: Tab; from: Tab; dir: number }>({ tab, from: tab, dir: 1 })
+  if (nav.tab !== tab) {
+    const delta = tabs.findIndex((t) => t.id === tab) - tabs.findIndex((t) => t.id === nav.tab)
+    setNav({ tab, from: nav.tab, dir: Math.sign(delta) || 1 })
+  }
+  const { dir, from } = nav
   const [navPos, setNavPos] = useState<NavPos>(readNavPos)
   const lg = useMediaQuery('(min-width: 1024px)')
   // ponytail: read once per mount, so "Today" and the trend window go stale if the app stays open past midnight.
@@ -99,15 +110,14 @@ function Shell({ user }: { user: AppUser }) {
   // The widget's "+" opens kira://add: jump to Home, then Home opens the add sheet.
   const [addRequest, setAddRequest] = useState(0)
   useAddLink(() => {
-    setTab('home')
+    if (pathname !== '/') navigate({ pathname: '/', search })
     setYm(today.slice(0, 7))
     setAddRequest((n) => n + 1)
   })
 
+  // `search` is kept so the dev-only ?dev / ?gallery flags survive navigation.
   const go = (id: Tab) => {
-    setDir(Math.sign(tabs.findIndex((t) => t.id === id) - tabs.findIndex((t) => t.id === tab)) || 1)
-    setFrom(tab)
-    setTab(id)
+    if (id !== tab) navigate({ pathname: paths[id], search })
   }
   const changeNavPos = (p: NavPos) => {
     setNavPos(p)
@@ -117,6 +127,8 @@ function Shell({ user }: { user: AppUser }) {
       // storage blocked: the choice just won't persist
     }
   }
+
+  if (!current) return <Navigate to={{ pathname: '/', search }} replace />
 
   return (
     <div className={cn('mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6', navPos === 'right' && 'lg:flex-row-reverse')}>
