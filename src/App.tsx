@@ -120,7 +120,7 @@ function Shell({ user }: { user: AppUser }) {
       <SyncPill status={sync} />
       <TabBar tabs={tabs} active={tab} onChange={go} side={side} lg={lg} />
 
-      <main className={cn('relative flex-1 overflow-x-clip px-5 pt-6 pb-32', side && 'lg:p-0 lg:pb-24')}>
+      <main className={cn('relative flex-1 overflow-x-clip px-5 pt-[calc(1.5rem+var(--inset-top))] pb-32', side && 'lg:p-0 lg:pb-24')}>
         <AnimatePresence mode="popLayout" initial={false} custom={slide}>
           <motion.div
             key={tab}

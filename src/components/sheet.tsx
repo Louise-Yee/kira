@@ -66,7 +66,7 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
                 onDragEnd={(_, info) => {
                   if (info.offset.y > CLOSE_DISTANCE || info.velocity.y > CLOSE_VELOCITY) onClose()
                 }}
-                className={cn('fixed inset-x-0 bottom-0 z-30 flex max-h-[90dvh] flex-col rounded-t-3xl bg-card pb-[max(1rem,env(safe-area-inset-bottom))] outline-none lg:inset-auto lg:top-1/2 lg:left-1/2 lg:w-md lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-3xl lg:pb-6', tall && 'h-[92dvh] lg:h-auto lg:max-h-[90dvh] lg:w-xl')}
+                className={cn('fixed inset-x-0 bottom-0 z-30 flex max-h-[90dvh] flex-col rounded-t-3xl bg-card pb-[max(1rem,var(--inset-bottom))] outline-none lg:inset-auto lg:top-1/2 lg:left-1/2 lg:w-md lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-3xl lg:pb-6', tall && 'h-[92dvh] lg:h-auto lg:max-h-[90dvh] lg:w-xl')}
               >
                 <div
                   onPointerDown={(e) => controls.start(e)}

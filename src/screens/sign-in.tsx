@@ -15,7 +15,7 @@ export function SignIn() {
   const [error, setError] = useState('')
   return (
     // Always dark: the texture needs a dark ground.
-    <main className="dark flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-foreground">
+    <main className="dark flex min-h-dvh flex-col pt-(--inset-top) pb-(--inset-bottom) items-center justify-center bg-background px-6 text-foreground">
       <motion.div {...rise(0)}>
         <AsciiCoin className="size-[min(78vw,320px)]" />
       </motion.div>

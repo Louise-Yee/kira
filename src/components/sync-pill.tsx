@@ -6,7 +6,7 @@ import { pop } from '@/lib/motion'
 /** Floating status pill: "Offline" (grey) or "Saving…" (cobalt, pulsing dot); hidden when synced. */
 export function SyncPill({ status }: { status: SyncStatus }) {
   return (
-    <div className="pointer-events-none fixed top-[max(0.75rem,env(safe-area-inset-top))] right-4 z-20" role="status">
+    <div className="pointer-events-none fixed top-[max(0.75rem,var(--inset-top))] right-4 z-20" role="status">
       <AnimatePresence>
         {status !== 'synced' && (
           <motion.span
