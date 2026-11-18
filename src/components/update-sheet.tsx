@@ -1,14 +1,30 @@
+import { useState } from 'react'
 import { PillButton } from '@/components/pill-button'
 import { Sheet } from '@/components/sheet'
-import { APP_VERSION, downloadUpdate, type Update } from '@/lib/update'
+import { APP_VERSION, installUpdate, type Update } from '@/lib/update'
 
 type Props = { open: boolean; update: Update | null; onLater: () => void }
+type Phase = { kind: 'idle' } | { kind: 'downloading'; percent: number } | { kind: 'permission' } | { kind: 'error' }
 
 /** A newer release on GitHub. Forced: no "Later", and the sheet can't be dismissed. */
 export function UpdateSheet({ open, update, onLater }: Props) {
   const forced = update?.forced ?? false
+  const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
+  const busy = phase.kind === 'downloading'
+
+  const start = async () => {
+    if (!update) return
+    setPhase({ kind: 'downloading', percent: 0 })
+    try {
+      const result = await installUpdate(update.release, (percent) => setPhase({ kind: 'downloading', percent }))
+      setPhase(result === 'permission' ? { kind: 'permission' } : { kind: 'idle' })
+    } catch {
+      setPhase({ kind: 'error' })
+    }
+  }
+
   return (
-    <Sheet open={open && !!update} onClose={forced ? () => {} : onLater} title={forced ? 'Update required' : 'Update available'}>
+    <Sheet open={open && !!update} onClose={forced || busy ? () => {} : onLater} title={forced ? 'Update required' : 'Update available'}>
       {update && (
         <div className="flex flex-col gap-3 pb-1">
           <p className="text-base">
@@ -16,13 +32,22 @@ export function UpdateSheet({ open, update, onLater }: Props) {
               ? `This version of kira (v${APP_VERSION}) is no longer supported. Install v${update.release.version} to keep using the app.`
               : `kira v${update.release.version} is out. You're on v${APP_VERSION}.`}
           </p>
-          <p className="text-base text-muted-foreground">
-            The download opens in your browser. Tap it to install; your data stays as it is.
-          </p>
-          <PillButton className="mt-2" onClick={() => downloadUpdate(update.release)}>
-            Download update
+          {phase.kind === 'permission' ? (
+            <p className="text-base text-muted-foreground">Allow kira to install apps in the screen that just opened, come back, and tap Update again.</p>
+          ) : phase.kind === 'error' ? (
+            <p className="text-base text-destructive">The download failed. Check your connection and try again.</p>
+          ) : (
+            <p className="text-base text-muted-foreground">Downloads here, then Android asks you to confirm the install. Your data stays as it is.</p>
+          )}
+          {busy && (
+            <div className="h-3 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={Math.max(phase.percent, 0)} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(phase.percent, 0)}%` }} />
+            </div>
+          )}
+          <PillButton className="mt-2" disabled={busy} onClick={start}>
+            {busy ? (phase.percent >= 0 ? `Downloading ${phase.percent}%` : 'Downloading…') : 'Update'}
           </PillButton>
-          {!forced && (
+          {!forced && !busy && (
             <PillButton variant="secondary" onClick={onLater}>
               Later
             </PillButton>
