@@ -4,14 +4,89 @@ on:
   push:
     branches: [main]
 
+# Merges deploy one at a time, in order.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
-  deploy:
+  checks:
+    uses: ./.github/workflows/checks.yml
+    secrets: inherit
+
+  web:
+    needs: checks
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_EXPENSES_TRACKER_285FB }}
+          projectId: expenses-tracker-285fb
+          channelId: live
+
+  # A release happens when package.json's "version" has no v<version> tag yet.
+  version:
+    needs: checks
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.v.outputs.release }}
+      version: ${{ steps.v.outputs.version }}
+      code: ${{ steps.v.outputs.code }}
+      min: ${{ steps.v.outputs.min }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: v
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          MIN=$(node -p "require('./package.json').minVersion")
+          semver='^([0-9]+)\.([0-9]+)\.([0-9]+)$'
+          for v in "$VERSION" "$MIN"; do
+            [[ "$v" =~ $semver ]] || { echo "::error::'$v' in package.json is not X.Y.Z"; exit 1; }
+          done
+          [[ "$VERSION" =~ $semver ]]
+          if (( BASH_REMATCH[2] > 99 || BASH_REMATCH[3] > 99 )); then
+            echo "::error::minor and patch must be 0-99 (versionCode = major*10000 + minor*100 + patch)"; exit 1
+          fi
+          CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
+          if [ "$(printf '%s\n%s\n' "$MIN" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]; then
+            echo "::error::minVersion $MIN is above version $VERSION"; exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "v$VERSION is already released; skipping."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          LATEST=$(git tag -l 'v*' --sort=-v:refname | head -1)
+          if [ -n "$LATEST" ] && [ "$(printf '%s\n%s\n' "${LATEST#v}" "$VERSION" | sort -V | tail -1)" != "$VERSION" ]; then
+            echo "::error::version $VERSION is below the latest release $LATEST"; exit 1
+          fi
+          {
+            echo "release=true"
+            echo "version=$VERSION"
+            echo "code=$CODE"
+            echo "min=$MIN"
+          } >> "$GITHUB_OUTPUT"
+
+  apk:
+    needs: [checks, version]
+    if: needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
-      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-      VITE_FIREBASE_SENDER_ID: ${{ secrets.VITE_FIREBASE_SENDER_ID }}
-      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      TAG: v${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -19,12 +94,39 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: for f in scripts/check-*.ts; do node "$f"; done
-      - run: npm run build
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - uses: actions/download-artifact@v8
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_EXPENSES_TRACKER_285FB }}
-          projectId: expenses-tracker-285fb
-          channelId: live
+          name: dist
+          path: dist
+      - run: npx cap sync android
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Write google-services.json and the keystore
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/kira-release.jks"
+      - name: Build the signed APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/kira-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_NAME: ${{ needs.version.outputs.version }}
+          VERSION_CODE: ${{ needs.version.outputs.code }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MIN: ${{ needs.version.outputs.min }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk "kira-$TAG.apk"
+          # The app reads this hidden line to decide whether an update is forced.
+          gh release create "$TAG" "kira-$TAG.apk" --target "$GITHUB_SHA" --generate-notes --notes "<!-- min-version: $MIN -->"

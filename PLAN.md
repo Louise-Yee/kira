@@ -312,14 +312,14 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 
 ## P6 — Android app (Capacitor) and home-screen widget
 
-**Done when:** pushing a `v*` tag publishes a signed APK to GitHub Releases. The installed app signs in with Google and works offline, and a home-screen widget shows this month's numbers with a quick-add button.
+**Done when:** merging a version bump into `main` publishes a signed APK to GitHub Releases. The installed app signs in with Google and works offline, and a home-screen widget shows this month's numbers with a quick-add button.
 
 The web app and PWA stay as they are. The APK wraps the same `dist/` build. Android only.
 
 **Decisions** (confirmed by the user):
 - App ID `app.kira`, app name "kira".
 - The widget is 4×1 or 4×2. It shows "Left in {month}" (the same number as the hero card) plus In and Out, and has a "+" button that opens the app straight into the add-transaction sheet.
-- Releases are sideloaded from GitHub only (no Play Store). There's no auto-update: each release means a manual reinstall.
+- Releases are sideloaded from GitHub only (no Play Store). The app checks GitHub for a newer release and offers it (P6.5); installing it is still manual.
 
 ### P6.1 Capacitor setup
 - `npm i @capacitor/core @capacitor/android @capacitor/app @capacitor/preferences` and `npm i -D @capacitor/cli`. Then `npx cap init kira app.kira --web-dir dist` and `npx cap add android`. Commit `android/`.
@@ -347,6 +347,7 @@ The web app and PWA stay as they are. The APK wraps the same `dist/` build. Andr
 - Known limit: the widget only updates while the app is running. Recurring items post when the app opens, so the widget can lag until the next launch. That's acceptable for a personal app. A scheduled `WorkManager` refresh would need the native Firestore SDK; skip it.
 
 ### P6.4 Signed release builds on GitHub
+*Revised:* the tag-triggered `release.yml` was replaced by the `apk` job in `deploy.yml`. A release happens when a merge into `main` carries a `package.json` version that has no `v` tag yet. `versionCode` = `major*10000 + minor*100 + patch`. Checks are shared in `checks.yml`. The steps below describe the original version.
 *New:* `.github/workflows/release.yml`
 - Generate the release keystore once, locally: `keytool -genkeypair -v -keystore kira-release.jks -alias kira -keyalg RSA -keysize 2048 -validity 10000`. **Never commit it.** Store it as the base64 secret `ANDROID_KEYSTORE_BASE64`, plus `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Back up the `.jks` somewhere safe: if it's lost, future APKs can't install over existing ones.
 - Trigger: push a tag `v*` (e.g. `v1.0.0`).
@@ -356,3 +357,26 @@ The web app and PWA stay as they are. The APK wraps the same `dist/` build. Andr
 - Publish with `gh release create $TAG android/app/build/outputs/apk/release/app-release.apk#kira-$TAG.apk --generate-notes`.
 - Cost: free (public repo, standard runner). A build takes about 5–8 minutes.
 - Update the README with how to install: download the APK from Releases and allow "install unknown apps" for the browser.
+
+### P6.5 In-app update check
+*New:* `src/lib/version.ts`, `scripts/check-version.ts`
+- `__APP_VERSION__` is defined at build time from `package.json` (Vite `define`, typed in `src/vite-env.d.ts`). Settings shows "kira vX.Y.Z" on every platform.
+- On native launch only, fetch `https://api.github.com/repos/Louise-Yee/kira/releases/latest` (public, no token, 60 requests an hour per IP). Read `tag_name`, the `.apk` asset's `browser_download_url`, and `<!-- min-version: X.Y.Z -->` from `body`. If the fetch fails or the device is offline, do nothing.
+- installed < minVersion: a sheet with only **Update** that can't be dismissed (forced update).
+- installed < latest: a sheet with **Update** and **Later**. "Later" stores the dismissed version and doesn't prompt again until a newer release. Settings shows "Update to vX.Y.Z" whenever one is available, and it opens the same sheet.
+- **Update** opens the APK URL in the system browser. Check on a device that `window.open` leaves the WebView; if it doesn't, `@capacitor/browser` is the fallback (a new dependency, so ask first).
+- `version.ts` is pure: parse `X.Y.Z`, `isNewer(a, b)`, and read the min-version marker. Its check script asserts the edge cases.
+
+### P6.6 Client info
+- Write `users/{uid}/meta/client` = `{ appVersion, platform, osVersion, model, locale, timeZone, lastSeen }` through `@/lib/db`. `osVersion` and `model` come from `navigator.userAgent`, and `locale` and `timeZone` from `Intl`. No IP-based location and no analytics SDK.
+- Write only when a value changes, compared against a local copy (about one write per update, not one per launch). No `firestore.rules` change, since the document is under the user's own path.
+- Settings states what's recorded: "kira records your app version and device type to help with updates."
+- Reading the data across users: the Firebase console, or a read-only script with a service account.
+
+## P7 — Going public (not scheduled)
+
+Things to settle before promoting kira beyond friends:
+- **Privacy notice (Malaysia PDPA 2010, amended 2024):** what is collected (financial records, client info), why, where it's stored, and how to delete it. Link it from sign-in and Settings.
+- **Account and data deletion** from inside the app.
+- **Spark limits:** 50k reads and 20k writes a day for the whole project. Measure reads per active user (mostly the listeners on date ranges) before promoting.
+- **Distribution:** the Play Store (one-time US$25) instead of sideloading. It handles updates itself, so P6.5 becomes only a fallback for GitHub installs.
