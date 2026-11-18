@@ -17,6 +17,7 @@ export {
   saveRecurring,
   useRecurring,
 } from './recurring'
+export { exportBackup, importBackup } from './backup'
 export { usePublicReceipt } from './shares'
 export { setPaymentQr, useSettings } from './settings'
 export { createShare, deleteSplit, saveSplit, SPLITS_PAGE, useOlderSplits, useRecentSplits } from './splits'

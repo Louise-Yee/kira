@@ -10,6 +10,9 @@ export function digitsToSen(text: string): number {
 export const formatSen = (sen: number): string =>
   `${Math.floor(Math.abs(sen) / 100).toLocaleString('en-US')}.${String(Math.abs(sen) % 100).padStart(2, '0')}`
 
+/** Integer sen -> "1234.50" (no grouping, for CSV and other machine-read output). */
+export const senToDecimal = (sen: number): string => `${Math.floor(sen / 100)}.${String(sen % 100).padStart(2, '0')}`
+
 /** Integer sen -> "RM 1,234.50". Negatives always get "−" (U+2212); `sign` adds "+" for positives. */
 export function formatRM(sen: number, { sign = false }: { sign?: boolean } = {}): string {
   const body = `RM ${formatSen(sen)}`
