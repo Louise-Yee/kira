@@ -9,7 +9,7 @@ import {
   type FirestoreDataConverter,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import type { Category, Recurring, Settings, Split, Transaction } from './types'
+import type { ClientDoc, Category, Recurring, Settings, Split, Transaction } from './types'
 
 type Collections = { categories: Category; transactions: Transaction; recurring: Recurring; splits: Split }
 
@@ -23,6 +23,9 @@ export const col = <K extends keyof Collections>(uid: string, name: K): Collecti
 
 export const settingsRef = (uid: string): DocumentReference<Settings> =>
   doc(db, 'users', uid, 'settings', 'main').withConverter(converter<Settings>())
+
+export const clientRef = (uid: string): DocumentReference<ClientDoc> =>
+  doc(db, 'users', uid, 'meta', 'client').withConverter(converter<ClientDoc>())
 
 /** A fresh document id without a network round trip. */
 export const newId = (uid: string, name: keyof Collections): string => doc(collection(db, 'users', uid, name)).id

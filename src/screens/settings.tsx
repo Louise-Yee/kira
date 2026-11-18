@@ -143,6 +143,7 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate }: Pro
           )
         }
       />
+      <p className="px-1 text-base text-muted-foreground">kira records your app version and device type to help with updates.</p>
       <PillButton variant="secondary" onClick={logOut}>
         Sign out
       </PillButton>

@@ -1,3 +1,4 @@
+import type { ClientInfo } from '@/lib/client-info'
 import type { RecurrenceRule } from '@/lib/recurrence'
 import type { Receipt } from '@/lib/receipt-data'
 import type { Charge, Share, SplitForm, SplitItem, SplitMode } from '@/lib/split'
@@ -78,6 +79,9 @@ export type Settings = {
   createdAt: number
   tngQr?: string
 }
+
+/** users/{uid}/meta/client: the app version and device last used. lastSeen is refreshed at least weekly. */
+export type ClientDoc = ClientInfo & { lastSeen: number }
 
 export type WithId<T> = T & { id: string }
 
