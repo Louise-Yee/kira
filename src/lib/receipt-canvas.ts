@@ -1,24 +1,24 @@
 import { drawAscii } from '@/lib/ascii-draw'
-import { coinField } from '@/lib/coin'
+import { haloField, identity, rotateWorld, shadeCoin } from '@/lib/coin3d'
 import { longDate } from '@/lib/date'
 import { formatRM } from '@/lib/money'
-import type { Receipt, ReceiptPerson } from '@/lib/receipt-data'
+import type { Receipt } from '@/lib/receipt-data'
 
 export const RECEIPT_WIDTH = 1080
 
-const PAD = 64
-const CARD_PAD = 40
-const HEADER = 320
+const MARGIN = 48 // grey page around the paper
+const PAD = 64 // paper edge to text
 const ROW = 52
+const COIN = 280
 const SANS = '"Inter Variable", system-ui, sans-serif'
 const HEAD = '"Bricolage Grotesque Variable", "Inter Variable", system-ui, sans-serif'
 
-type Palette = { background: string; foreground: string; card: string; muted: string; border: string; hero: string; heroText: string; primary: string }
+type Palette = { background: string; foreground: string; card: string; muted: string; border: string; primary: string }
 
-/** The receipt is always dark, whatever the app theme: read the colours from a hidden `.dark` element. */
+/** The receipt is always light paper, whatever the app theme: read the colours from a hidden `.light` element. */
 function readPalette(): Palette {
   const probe = document.createElement('div')
-  probe.className = 'dark'
+  probe.className = 'light'
   probe.hidden = true
   document.body.append(probe)
   const css = getComputedStyle(probe)
@@ -29,8 +29,6 @@ function readPalette(): Palette {
     card: get('--card'),
     muted: get('--muted-foreground'),
     border: get('--border'),
-    hero: get('--hero'),
-    heroText: get('--hero-foreground'),
     primary: get('--primary'),
   }
   probe.remove()
@@ -83,10 +81,20 @@ function wrap(g: CanvasRenderingContext2D, s: string, maxWidth: number, font: st
 
 const money = (sen: number) => formatRM(sen, { sign: sen < 0 })
 
-function personHeight(p: ReceiptPerson, r: Receipt): number {
-  const charge = r.chargeLabel && p.charge !== 0 ? ROW : 0
-  const divider = p.rows.length || charge ? 28 : 0
-  return CARD_PAD + 56 + 8 + p.rows.length * ROW + charge + divider + 84 + CARD_PAD
+const COIN_TILT = rotateWorld(identity(), 1, 0, 0, -0.35)
+
+/** A dashed rule across the paper's text area at `y`. */
+function dashed(g: CanvasRenderingContext2D, y: number, color: string) {
+  g.save()
+  g.strokeStyle = color
+  g.globalAlpha = 0.5
+  g.lineWidth = 2
+  g.setLineDash([12, 10])
+  g.beginPath()
+  g.moveTo(MARGIN + PAD, y)
+  g.lineTo(RECEIPT_WIDTH - MARGIN - PAD, y)
+  g.stroke()
+  g.restore()
 }
 
 /**
@@ -96,86 +104,103 @@ function personHeight(p: ReceiptPerson, r: Receipt): number {
  */
 function drawReceipt(g: CanvasRenderingContext2D, r: Receipt, qr: ImageBitmap | null, pal: Palette, t: number): number {
   const W = RECEIPT_WIDTH
+  const H = g.canvas.height
   g.fillStyle = pal.background
-  g.fillRect(0, 0, W, g.canvas.height)
+  g.fillRect(0, 0, W, H)
+  // The paper: a white card the full height of the canvas, less the margin.
+  roundRect(g, MARGIN, MARGIN, W - MARGIN * 2, H - MARGIN * 2, 40)
+  g.fillStyle = pal.card
+  g.fill()
+  g.strokeStyle = pal.border
+  g.lineWidth = 2
+  g.stroke()
 
-  // Header: the cobalt band with the coin texture peeking in from the right, like the Home card.
-  g.fillStyle = pal.hero
-  g.fillRect(0, 0, W, HEADER)
+  const left = MARGIN + PAD
+  const right = W - MARGIN - PAD
+  let y = MARGIN + 56
+
+  // The blue coin, centred like a shop logo.
   g.save()
+  g.translate((W - COIN) / 2, y)
   g.beginPath()
-  g.rect(0, 0, W, HEADER)
+  g.rect(0, 0, COIN, COIN)
   g.clip()
-  g.globalAlpha = 0.85
-  g.globalCompositeOperation = 'screen'
-  // A coin about as tall as the band, centred near the right edge: x scale 1.7 and y scale 0.5 make it round on a 1080x320 band.
-  drawAscii(g, W, HEADER, 13, 0.12, (nx, ny) => coinField((nx - 0.72) * 1.7, ny * 0.5, t))
+  drawAscii(
+    g,
+    COIN,
+    COIN,
+    7,
+    0.16,
+    (nx, ny) => {
+      const sx = nx * 1.05
+      const sy = ny * 1.05
+      const v = shadeCoin(COIN_TILT, sx, sy)
+      return v >= 0 ? v : haloField(sx, sy, t)
+    },
+    pal.primary,
+  )
   g.restore()
-  const titleFont = `800 76px ${HEAD}`
-  // The title stays left of the coin.
-  const lines = wrap(g, r.title, 680, titleFont, 2)
-  lines.forEach((l, i) => text(g, l, PAD, 96 + i * 88, titleFont, pal.heroText))
-  const sub = r.everyone ? `${longDate(r.date)} · ${r.people.length} people` : `${longDate(r.date)} · ${r.people[0].name}`
-  text(g, sub, PAD, 96 + lines.length * 88 + 14, `500 34px ${SANS}`, pal.heroText)
+  y += COIN + 40
 
-  let y = HEADER + 48
-  const left = PAD + CARD_PAD
-  const right = W - PAD - CARD_PAD
+  const titleFont = `800 64px ${HEAD}`
+  const lines = wrap(g, r.title, right - left, titleFont, 2)
+  lines.forEach((l, i) => text(g, l, W / 2, y + i * 76, titleFont, pal.foreground, 'center'))
+  y += (lines.length - 1) * 76 + 64
+  const sub = r.everyone ? `${longDate(r.date)} · ${r.people.length} people` : `${longDate(r.date)} · ${r.people[0].name}`
+  text(g, sub, W / 2, y, `500 32px ${SANS}`, pal.muted, 'center')
+  y += 52
+
   for (const p of r.people) {
-    const h = personHeight(p, r)
-    roundRect(g, PAD, y, W - PAD * 2, h, 36)
-    g.fillStyle = pal.card
-    g.fill()
-    let cy = y + CARD_PAD + 28
-    text(g, p.name, left, cy, `800 48px ${HEAD}`, pal.foreground)
-    cy += 28 + 8 + ROW / 2
+    dashed(g, y, pal.muted)
+    y += 40
+    text(g, p.name, left, y + 24, `800 46px ${HEAD}`, pal.foreground)
+    y += 24 + 28 + ROW / 2
     for (const row of p.rows) {
-      text(g, row.label, left, cy, `500 30px ${SANS}`, pal.muted)
-      text(g, money(row.amount), right, cy, `600 30px ${SANS}`, pal.foreground, 'right')
-      cy += ROW
+      text(g, row.label, left, y, `500 30px ${SANS}`, pal.muted)
+      text(g, money(row.amount), right, y, `600 30px ${SANS}`, pal.foreground, 'right')
+      y += ROW
     }
     if (r.chargeLabel && p.charge !== 0) {
-      text(g, r.chargeLabel, left, cy, `500 30px ${SANS}`, pal.muted)
-      text(g, money(p.charge), right, cy, `600 30px ${SANS}`, pal.foreground, 'right')
-      cy += ROW
+      text(g, r.chargeLabel, left, y, `500 30px ${SANS}`, pal.muted)
+      text(g, money(p.charge), right, y, `600 30px ${SANS}`, pal.foreground, 'right')
+      y += ROW
     }
-    if (p.rows.length || (r.chargeLabel && p.charge !== 0)) {
-      cy += 4
-      g.fillStyle = pal.border
-      g.fillRect(left, cy, right - left, 2)
-      cy += 24
-    }
-    cy += 28
-    text(g, 'Total', left, cy, `700 34px ${SANS}`, pal.foreground)
-    text(g, money(p.total), right, cy, `800 60px ${HEAD}`, pal.primary, 'right')
-    y += h + 24
+    y += 8
+    text(g, 'Total', left, y + 24, `700 34px ${SANS}`, pal.foreground)
+    text(g, money(p.total), right, y + 24, `800 60px ${HEAD}`, pal.primary, 'right')
+    y += 48 + 24
   }
 
   if (r.everyone && r.people.length > 1) {
-    y += 16
-    text(g, 'Bill total', PAD + CARD_PAD, y + 32, `700 34px ${SANS}`, pal.muted)
-    text(g, money(r.total), W - PAD - CARD_PAD, y + 32, `800 60px ${HEAD}`, pal.foreground, 'right')
-    y += 64 + 24
+    dashed(g, y, pal.muted)
+    y += 52
+    text(g, 'Bill total', left, y, `700 34px ${SANS}`, pal.muted)
+    text(g, money(r.total), right, y, `800 60px ${HEAD}`, pal.foreground, 'right')
+    y += 52
   }
 
   if (qr) {
-    y += 32
-    const box = 480
+    dashed(g, y, pal.muted)
+    y += 48
+    const box = 440
     const x = (W - box) / 2
-    roundRect(g, x, y, box, box, 36)
+    roundRect(g, x, y, box, box, 32)
     g.fillStyle = '#fff' // the QR image has its own white backdrop: keep it scannable
     g.fill()
-    const fit = Math.min(420 / qr.width, 420 / qr.height)
+    g.strokeStyle = pal.border
+    g.lineWidth = 2
+    g.stroke()
+    const fit = Math.min(390 / qr.width, 390 / qr.height)
     const w = qr.width * fit
     const h = qr.height * fit
     g.drawImage(qr, x + (box - w) / 2, y + (box - h) / 2, w, h)
-    text(g, 'Scan to pay (TNG)', W / 2, y + box + 52, `700 38px ${SANS}`, pal.foreground, 'center')
-    text(g, 'Type in your total from above', W / 2, y + box + 100, `500 28px ${SANS}`, pal.muted, 'center')
-    y += box + 100 + 24
+    text(g, 'Scan to pay (TNG)', W / 2, y + box + 48, `700 36px ${SANS}`, pal.foreground, 'center')
+    text(g, 'Type in your total from above', W / 2, y + box + 92, `500 28px ${SANS}`, pal.muted, 'center')
+    y += box + 92 + 28
   }
 
-  text(g, 'Split with kira', W / 2, y + 56, `500 26px ${SANS}`, pal.muted, 'center')
-  return y + 56 + 56
+  text(g, 'Split with kira', W / 2, y + 48, `500 26px ${SANS}`, pal.muted, 'center')
+  return y + 48 + 40 + MARGIN
 }
 
 const FONTS = [`800 76px "Bricolage Grotesque Variable"`, `500 30px "Inter Variable"`, `600 30px "Inter Variable"`, `700 34px "Inter Variable"`]

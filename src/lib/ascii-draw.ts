@@ -16,6 +16,7 @@ const color = (v: number) => {
 /**
  * Draw one ASCII frame into a w x h area (CSS pixels) of any 2D context: sample(nx, ny) in -1..1 gives a
  * brightness, which picks a glyph and a colour. Shared by the on-screen canvases and the receipt image.
+ * `ink` (any canvas colour, e.g. 'currentColor') draws in that one colour with brightness as opacity: for light grounds.
  */
 export function drawAscii(
   g: CanvasRenderingContext2D,
@@ -24,6 +25,7 @@ export function drawAscii(
   cell: number,
   floor: number,
   sample: (nx: number, ny: number) => number,
+  ink?: string,
 ) {
   g.font = `500 ${cell}px ui-monospace, Menlo, Consolas, monospace`
   g.textAlign = 'center'
@@ -32,7 +34,9 @@ export function drawAscii(
     for (let x = cell * 0.3; x < w; x += cell * 0.6) {
       const v = sample((x / w) * 2 - 1, (y / h) * 2 - 1) + (hash(x, y) - 0.5) * 0.25
       if (v < floor) continue
-      g.fillStyle = color(v)
+      g.fillStyle = ink ?? color(v)
+      if (ink) g.globalAlpha = Math.min(1, 0.45 + v * 1.1)
       g.fillText(RAMP[Math.min(RAMP.length - 1, Math.floor(v * RAMP.length))], x, y)
     }
+  g.globalAlpha = 1
 }
