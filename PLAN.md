@@ -9,7 +9,7 @@ Read `SPEC.md` first (the product spec) and `CLAUDE.md` (the rules). This file s
 4. Work on a branch named `feature/…`, `fix/…`, `chores/…` or `refactor/…` (kebab-case), and open a PR into `main`. The PR gets a preview URL, and merging deploys to the live site. If you changed `firestore.rules`, also run `firebase deploy --only firestore:rules`.
 5. Never commit or push unless the user asks.
 
-**Status:** P0 to P4 are done and deployed. Next up is P5.
+**Status:** P0 to P4 are done and deployed. P5.1 (export) and P5.2 (import) are done; P5.3 (polish pass) is next.
 
 **P0.5 (done):** floating glass nav (active tab shows its label), directional page slide on phones, nav position setting (left/right/bottom at `lg`, kept in localStorage).
 

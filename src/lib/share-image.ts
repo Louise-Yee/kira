@@ -4,13 +4,12 @@ export function canShareImages(): boolean {
 }
 
 /**
- * Send a PNG to the share sheet where there is one, otherwise download it.
- * Call it straight from a tap with a blob that is already rendered: browsers drop the "user gesture" if the
- * image is made after the tap, and sharing then fails.
+ * Send a file to the share sheet where there is one, otherwise download it.
+ * Call it straight from a tap with a file that is already made: browsers drop the "user gesture" if the
+ * file is made after the tap, and sharing then fails (it falls back to a download).
  */
-export async function shareImage(blob: Blob, filename: string, title: string): Promise<'shared' | 'downloaded' | 'cancelled'> {
-  const file = new File([blob], filename, { type: 'image/png' })
-  if (canShareImages()) {
+export async function shareFile(file: File, title: string): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title })
       return 'shared'
@@ -19,13 +18,17 @@ export async function shareImage(blob: Blob, filename: string, title: string): P
       // anything else (a browser that refuses): fall through to a download
     }
   }
-  const url = URL.createObjectURL(blob)
+  const url = URL.createObjectURL(file)
   const a = document.createElement('a')
   a.href = url
-  a.download = filename
+  a.download = file.name
   document.body.append(a)
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
   return 'downloaded'
 }
+
+/** A rendered PNG, shared or downloaded. */
+export const shareImage = (blob: Blob, filename: string, title: string) =>
+  shareFile(new File([blob], filename, { type: 'image/png' }), title)
