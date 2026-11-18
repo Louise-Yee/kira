@@ -24,7 +24,10 @@ export function ReceiptPage({ id }: { id: string }) {
                 <h1 className="font-heading text-3xl font-extrabold leading-tight tracking-tight">{found.receipt.title}</h1>
                 <p className="mt-2 text-base font-medium">{`${longDate(found.receipt.date)} · ${person.name}`}</p>
               </div>
-              <AsciiCoin className="-my-4 -mr-8 size-40 shrink-0" />
+              {/* The coin texture needs a dark ground, so it sits on its own dark tile. */}
+              <div className="size-32 shrink-0 overflow-hidden rounded-3xl bg-background">
+                <AsciiCoin className="size-full" />
+              </div>
             </header>
 
             <section className="rounded-3xl bg-card p-6">
