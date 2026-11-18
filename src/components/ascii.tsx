@@ -34,7 +34,7 @@ const TAP_PX = 6
 const TAP_MS = 300
 
 /** Interactive 3D ASCII coin: drag to spin (with inertia), tap to flip. */
-export function AsciiCoin({ className }: { className?: string }) {
+export function AsciiCoin({ className, cell = 6.5 }: { className?: string; cell?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const reduce = useReducedMotion()
 
@@ -68,7 +68,7 @@ export function AsciiCoin({ className }: { className?: string }) {
       m = orthonormalize(rotateWorld(m, 0, 1, 0, step))
 
       const t = reduce ? 0 : now / 1000
-      paint(cv, g, 6.5, 0.08, (nx, ny) => {
+      paint(cv, g, cell, 0.08, (nx, ny) => {
         const sx = nx * 1.05, sy = ny * 1.05
         const v = shadeCoin(m, sx, sy)
         return v >= 0 ? v : haloField(sx, sy, t)
@@ -124,7 +124,7 @@ export function AsciiCoin({ className }: { className?: string }) {
       cv.removeEventListener('pointerup', up)
       cv.removeEventListener('pointercancel', up)
     }
-  }, [reduce])
+  }, [reduce, cell])
 
   return (
     <canvas

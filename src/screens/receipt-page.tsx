@@ -25,8 +25,8 @@ export function ReceiptPage({ id }: { id: string }) {
                 <p className="mt-2 text-base font-medium">{`${longDate(found.receipt.date)} · ${person.name}`}</p>
               </div>
               {/* The coin texture needs a dark ground, so it sits on its own dark tile. */}
-              <div className="size-32 shrink-0 overflow-hidden rounded-3xl bg-background">
-                <AsciiCoin className="size-full" />
+              <div className="size-40 shrink-0 overflow-hidden rounded-3xl bg-background">
+                <AsciiCoin cell={3} className="size-full" />
               </div>
             </header>
 
