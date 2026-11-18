@@ -368,8 +368,8 @@ The web app and PWA stay as they are. The APK wraps the same `dist/` build. Andr
 - `version.ts` is pure: parse `X.Y.Z`, `isNewer(a, b)`, and read the min-version marker. Its check script asserts the edge cases.
 
 ### P6.6 Client info
-- Write `users/{uid}/meta/client` = `{ appVersion, platform, osVersion, model, locale, timeZone, lastSeen }` through `@/lib/db`. `osVersion` and `model` come from `navigator.userAgent`, and `locale` and `timeZone` from `Intl`. No IP-based location and no analytics SDK.
-- Write only when a value changes, compared against a local copy (about one write per update, not one per launch). No `firestore.rules` change, since the document is under the user's own path.
+- Write `users/{uid}/meta/client` = `{ appVersion, platform, os, model, locale, timeZone, lastSeen }` through `@/lib/db` (`useClientInfo`). `os` and `model` come from `navigator.userAgent` (parsed in `src/lib/client-info.ts`; the Android WebView sends the real model code), and `locale` and `timeZone` from `Intl`. No IP-based location and no analytics SDK.
+- Write only when a value changes, compared against a local copy or once a week so `lastSeen` stays meaningful (about one write per update, not one per launch). No `firestore.rules` change, since the document is under the user's own path.
 - Settings states what's recorded: "kira records your app version and device type to help with updates."
 - Reading the data across users: the Firebase console, or a read-only script with a service account.
 
