@@ -1,19 +1,26 @@
 import { useMemo } from 'react'
-import { doc, limit, orderBy, query, writeBatch } from 'firebase/firestore'
+import { doc, limit, orderBy, query, where, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { computeForm, resolveItems, type SplitItem } from '@/lib/split'
 import { col, newId, reportError } from './core'
 import type { Split, SplitDraft, WithId } from './types'
 import { useDocs } from './use-docs'
 
-/** Only the latest splits are loaded, so reads stay bounded. */
-export const SPLITS_LIMIT = 30
+/** Older splits load this many at a time, so reads stay bounded. */
+export const SPLITS_PAGE = 30
 
-export const splitsQuery = (uid: string) => query(col(uid, 'splits'), orderBy('date', 'desc'), limit(SPLITS_LIMIT))
+/** Splits dated `since` or later, newest first. The window is short, so it has no limit. */
+export function useRecentSplits(uid: string, since: string) {
+  const q = useMemo(() => query(col(uid, 'splits'), where('date', '>=', since), orderBy('date', 'desc')), [uid, since])
+  return useDocs(q)
+}
 
-/** The latest splits, newest first. */
-export function useSplits(uid: string) {
-  const q = useMemo(() => splitsQuery(uid), [uid])
+/** Up to `count` splits dated before `before`, newest first. `enabled` false opens no listener. */
+export function useOlderSplits(uid: string, before: string, count: number, enabled: boolean) {
+  const q = useMemo(
+    () => (enabled ? query(col(uid, 'splits'), where('date', '<', before), orderBy('date', 'desc'), limit(count)) : null),
+    [uid, before, count, enabled],
+  )
   return useDocs(q)
 }
 
