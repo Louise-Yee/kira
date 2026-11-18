@@ -18,7 +18,7 @@ npm run dev
 
 | Event | What CI does |
 |---|---|
-| Pull request | Lint, check scripts and build (`checks.yml`), then a preview URL that expires after 7 days (`preview.yml`). |
+| Pull request | Lint, check scripts and build (`checks.yml`), then a preview URL that expires after 1 hour (re-run the workflow for a fresh one) (`preview.yml`). |
 | Merge into `main` | The same checks, then deploys the live site (`deploy.yml`). The PWA updates itself on the next launch. |
 | Merge that bumps `version` in `package.json` | Also builds a signed APK and publishes it as release `vX.Y.Z` (`deploy.yml`). |
 
