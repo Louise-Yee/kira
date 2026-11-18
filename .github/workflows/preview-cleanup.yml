@@ -1,0 +1,29 @@
+name: Preview cleanup
+
+# Firebase Hosting allows 50 preview channels; free the PR's channel as soon as it closes.
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  delete-channel:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Delete pr<number>-* channels
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_EXPENSES_TRACKER_285FB }}
+          PREFIX: pr${{ github.event.pull_request.number }}-
+        run: |
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          printf '%s' "$SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
+          fb="npx -y firebase-tools@15.36.0 --project expenses-tracker-285fb"
+          for id in $($fb hosting:channel:list --json | jq -r '.result.channels[].name | split("/") | last' | grep "^$PREFIX" || true); do
+            $fb hosting:channel:delete "$id" --force
+          done
