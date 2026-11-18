@@ -16,6 +16,7 @@ import { Home } from '@/screens/home'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { RecurringScreen } from '@/screens/recurring'
 import { SettingsScreen } from '@/screens/settings'
+import { ReceiptPage } from '@/screens/receipt-page'
 import { SplitScreen } from '@/screens/split'
 import { SignIn } from '@/screens/sign-in'
 
@@ -33,6 +34,8 @@ export default function App() {
   const user = devUser ?? authUser
   useSeedDefaults(authUser?.uid) // real accounts only: ?dev has no Firebase uid
   usePostRecurring(authUser?.uid)
+  const shareId = /^\/r\/([\w-]+)$/.exec(location.pathname)?.[1]
+  if (shareId) return <MotionConfig reducedMotion="user"><ReceiptPage id={shareId} /></MotionConfig>
   if (devGallery) return <MotionConfig reducedMotion="user"><Gallery /></MotionConfig>
   return (
     <MotionConfig reducedMotion="user">
