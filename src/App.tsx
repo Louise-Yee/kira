@@ -8,10 +8,12 @@ import { soft } from '@/lib/motion'
 import { usePostRecurring } from '@/lib/post-recurring'
 import { useSeedDefaults } from '@/lib/seed'
 import { useAddLink } from '@/lib/widget'
+import { useUpdate } from '@/lib/update'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 import { SyncPill } from '@/components/sync-pill'
 import { TabBar, type TabItem } from '@/components/tab-bar'
+import { UpdateSheet } from '@/components/update-sheet'
 import { Gallery } from '@/screens/gallery'
 import { Home } from '@/screens/home'
 import { navPositions, type NavPos } from '@/lib/nav'
@@ -88,6 +90,7 @@ function Shell({ user }: { user: AppUser }) {
     document.documentElement.dataset.nav = navPos
   }, [navPos])
   const side = navPos !== 'bottom'
+  const update = useUpdate()
   const slide: Slide = { dir, lg }
 
   // The widget's "+" opens kira://add: jump to Home, then Home opens the add sheet.
@@ -128,12 +131,13 @@ function Shell({ user }: { user: AppUser }) {
             transition={soft}
           >
             {tab === 'home' && <Home user={user} today={today} ym={ym} onYm={setYm} addRequest={addRequest} />}
-            {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} />}
+            {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} update={update.update} onUpdate={update.show} />}
             {tab === 'recurring' && <RecurringScreen user={user} />}
             {tab === 'split' && <SplitScreen user={user} today={today} />}
           </motion.div>
         </AnimatePresence>
       </main>
+      <UpdateSheet open={update.open} update={update.update} onLater={update.later} />
     </div>
   )
 }

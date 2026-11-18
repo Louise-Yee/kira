@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { ChevronRight, DatabaseBackup, QrCode } from 'lucide-react'
+import { ChevronRight, DatabaseBackup, QrCode, Smartphone, type LucideIcon } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
 import {
   categoryInUse,
   deleteCategory,
@@ -13,6 +14,7 @@ import {
 import { logOut, type AppUser } from '@/lib/firebase'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { readTheme, setTheme, type Theme } from '@/lib/theme'
+import { APP_VERSION, type Update } from '@/lib/update'
 import { BackupSheet } from '@/components/backup-sheet'
 import { CategoryIcon } from '@/components/category-icon'
 import { ListRow } from '@/components/list-row'
@@ -27,7 +29,24 @@ const themeOptions = [
   { value: 'dark', label: 'Dark' },
 ] as const satisfies readonly { value: Theme; label: string }[]
 
-export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navPos: NavPos; onNavPos: (p: NavPos) => void }) {
+type Props = {
+  user: AppUser
+  navPos: NavPos
+  onNavPos: (p: NavPos) => void
+  /** A newer Android release, if the launch check found one. */
+  update: Update | null
+  onUpdate: () => void
+}
+
+function Tile({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary">
+      <Icon className="size-5" aria-hidden />
+    </span>
+  )
+}
+
+export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate }: Props) {
   const [theme, setThemeState] = useState<Theme>(readTheme)
   const categories = useCategories(user.uid) ?? []
   const [managing, setManaging] = useState(false)
@@ -73,11 +92,7 @@ export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navP
         onMove={(from, to) => moveAndDeleteCategory(user.uid, from, to)}
       />
       <ListRow
-        icon={
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary">
-            <QrCode className="size-5" aria-hidden />
-          </span>
-        }
+        icon={<Tile icon={QrCode} />}
         title="Payment QR"
         subtitle={settings === undefined ? undefined : settings?.tngQr ? 'On your split receipts' : 'Not set'}
         trailing={<ChevronRight className="size-5 text-muted-foreground" />}
@@ -91,11 +106,7 @@ export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navP
         onRemove={() => setPaymentQr(user.uid, null)}
       />
       <ListRow
-        icon={
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary">
-            <DatabaseBackup className="size-5" aria-hidden />
-          </span>
-        }
+        icon={<Tile icon={DatabaseBackup} />}
         title="Backup"
         subtitle="Export or import your data"
         trailing={<ChevronRight className="size-5 text-muted-foreground" />}
@@ -120,6 +131,18 @@ export function SettingsScreen({ user, navPos, onNavPos }: { user: AppUser; navP
           ))}
         </div>
       </div>
+      <ListRow
+        icon={<Tile icon={Smartphone} />}
+        title={`kira v${APP_VERSION}`}
+        subtitle={update ? `v${update.release.version} is available` : Capacitor.isNativePlatform() ? undefined : 'Updates automatically'}
+        trailing={
+          update && (
+            <PillButton size="pill-sm" onClick={onUpdate}>
+              Update
+            </PillButton>
+          )
+        }
+      />
       <PillButton variant="secondary" onClick={logOut}>
         Sign out
       </PillButton>
