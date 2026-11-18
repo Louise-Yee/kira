@@ -137,7 +137,7 @@ function ReceiptDemo() {
     createdAt: 1,
     updatedAt: 1,
   }
-  return <ReceiptSheet open onClose={() => {}} split={split} qr={qr} />
+  return <ReceiptSheet open onClose={() => {}} split={split} qr={qr} onCreateLink={() => 'demo'} />
 }
 
 function ComponentGallery() {

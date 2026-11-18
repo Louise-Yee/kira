@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { doc, limit, orderBy, query, where, writeBatch } from 'firebase/firestore'
+import { collection, doc, limit, orderBy, query, where, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { buildReceipt } from '@/lib/receipt-data'
 import { computeForm, resolveItems, type SplitItem } from '@/lib/split'
 import { col, newId, reportError } from './core'
-import type { Split, SplitDraft, WithId } from './types'
+import type { PublicReceipt, Split, SplitDraft, WithId } from './types'
 import { useDocs } from './use-docs'
 
 /** Older splits load this many at a time, so reads stay bounded. */
@@ -47,17 +48,33 @@ export function saveSplit(uid: string, draft: SplitDraft, existing?: WithId<Spli
   const mine = shares[0].total
   const txRef = doc(col(uid, 'transactions'), expenseId(id))
 
-  const batch = writeBatch(db)
-  batch.set(doc(col(uid, 'splits'), id), {
+  const data = {
     title: draft.title,
     date: draft.date,
     mode: form.mode,
     people: form.people,
     items: resolveItems(form).map(cleanItem),
-    charges: form.mode === 'exact' ? { type: 'percent', value: 0 } : form.charges,
+    charges: form.mode === 'exact' ? ({ type: 'percent', value: 0 } as const) : form.charges,
     shares,
+  }
+
+  const batch = writeBatch(db)
+  // Receipt links follow the split: refresh each one, but drop it if that position now holds someone else.
+  const shareIds: Record<string, string> = {}
+  for (const [i, shareId] of Object.entries(existing?.shareIds ?? {})) {
+    const person = Number(i)
+    if (form.people[person] !== undefined && form.people[person] === existing?.people[person]) {
+      shareIds[i] = shareId
+      batch.update(shareRef(shareId), { receipt: buildReceipt(data, person), updatedAt: now })
+    } else {
+      batch.delete(shareRef(shareId))
+    }
+  }
+  batch.set(doc(col(uid, 'splits'), id), {
+    ...data,
     categoryId: draft.categoryId,
     expenseTxId: mine > 0 ? txRef.id : null,
+    ...(Object.keys(shareIds).length ? { shareIds } : {}),
     createdAt,
     updatedAt: now,
   })
@@ -78,10 +95,30 @@ export function saveSplit(uid: string, draft: SplitDraft, existing?: WithId<Spli
   void batch.commit().catch(reportError)
 }
 
-/** Delete a split and the expense it created, together. */
-export function deleteSplit(uid: string, id: string) {
+const shareRef = (id: string) => doc(db, 'shares', id)
+
+/**
+ * The receipt link id for one person of a split, created on first use (the same id every time after).
+ * Returns at once, before the write reaches the server, so a share sheet can open straight from the tap.
+ */
+export function createShare(uid: string, split: WithId<Split>, person: number): string {
+  const existing = split.shareIds?.[person]
+  if (existing) return existing
+  const id = doc(collection(db, 'shares')).id
+  const now = Date.now()
   const batch = writeBatch(db)
-  batch.delete(doc(col(uid, 'splits'), id))
-  batch.delete(doc(col(uid, 'transactions'), expenseId(id)))
+  const receipt: PublicReceipt = { uid, splitId: split.id, person, receipt: buildReceipt(split, person), createdAt: now, updatedAt: now }
+  batch.set(shareRef(id), receipt)
+  batch.update(doc(col(uid, 'splits'), split.id), { [`shareIds.${person}`]: id })
+  void batch.commit().catch(reportError)
+  return id
+}
+
+/** Delete a split, the expense it created and its receipt links, together. */
+export function deleteSplit(uid: string, split: WithId<Split>) {
+  const batch = writeBatch(db)
+  batch.delete(doc(col(uid, 'splits'), split.id))
+  batch.delete(doc(col(uid, 'transactions'), expenseId(split.id)))
+  for (const shareId of Object.values(split.shareIds ?? {})) batch.delete(shareRef(shareId))
   void batch.commit().catch(reportError)
 }
