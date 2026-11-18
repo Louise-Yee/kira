@@ -120,6 +120,12 @@
   --glass-edge: #ffffff1f;
 }
 
+/* Capacitor injects --safe-area-inset-* on Android WebViews where env() reports 0; take whichever is larger. */
+:root {
+  --inset-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --inset-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
