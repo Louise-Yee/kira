@@ -7,7 +7,7 @@ export function TextField({ className, ...props }: ComponentProps<'input'>) {
     <input
       {...props}
       className={cn(
-        'h-12 w-full rounded-2xl bg-secondary px-4 text-base outline-none placeholder:text-muted-foreground',
+        'h-12 w-full rounded-2xl bg-secondary px-4 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
     />

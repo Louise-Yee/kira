@@ -29,7 +29,7 @@ export function TrendBars({ months, selected, onSelect }: Props) {
           <Key className="bg-chart-1" label="Out" />
         </p>
       </div>
-      <div className="mt-3 flex gap-1">
+      <div className="mt-3 flex gap-0">
         {months.map((m) => {
           const active = m.ym === selected
           return (

@@ -63,7 +63,7 @@ export function AmountInput({ value, onChange, autoFocus, size = 'lg', className
         aria-label="Amount"
         style={{ width: `${text.length}ch` }}
         className={cn(
-          'min-w-[4ch] bg-transparent font-extrabold tracking-tight tabular-nums outline-none',
+          'min-h-11 min-w-[4ch] bg-transparent font-extrabold tracking-tight tabular-nums outline-none',
           size === 'sm' ? 'text-2xl' : 'text-6xl',
           value === 0 ? 'text-muted-foreground' : 'text-foreground',
         )}
