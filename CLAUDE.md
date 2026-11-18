@@ -34,7 +34,7 @@ Personal expense tracker PWA. Product spec: `SPEC.md`. Task list: `PLAN.md`. Do 
 - The sign-in screen is always dark.
 
 ## Workflow
-- Never commit to `main` directly. Each task gets its own branch off `main`, named `<type>/<kebab-name>`. The type is `feature`, `fix`, `chores` or `refactor`, for example `feature/amount-input` or `fix/month-end-clamp`. The PR check rejects any other name.
+- Never commit to `main` directly. Each task gets its own branch off `main`, named `<type>/<kebab-name>`. The type is `feature`, `fix`, `chores` or `refactor`, for example `feature/amount-input` or `fix/month-end-clamp`. The PR check rejects any other name; the one exception is `chores/release-X.Y.Z`.
 - Open a PR into `main`. Every PR gets a preview deploy, and merging into `main` deploys the live site. Don't run `firebase deploy` by hand unless `firestore.rules` changed: CI deploys hosting only.
 - After each task, run `npm run build` and `npm run lint`, plus any check scripts the task touches. Report failures exactly as they appear.
 - Rules deploy (only when `firestore.rules` changed): `firebase deploy --only firestore:rules`.
