@@ -9,7 +9,7 @@ Read `SPEC.md` first (the product spec) and `CLAUDE.md` (the rules). This file s
 4. Work on a branch named `feature/…`, `fix/…`, `chores/…` or `refactor/…` (kebab-case), and open a PR into `main`. The PR gets a preview URL, and merging deploys to the live site. If you changed `firestore.rules`, also run `firebase deploy --only firestore:rules`.
 5. Never commit or push unless the user asks.
 
-**Status:** P0 to P4 are done and deployed. Next up is P5 (and, optionally, animated receipts, see the P4 notes).
+**Status:** P0 to P4 are done and deployed. Next up is P5.
 
 **P0.5 (done):** floating glass nav (active tab shows its label), directional page slide on phones, nav position setting (left/right/bottom at `lg`, kept in localStorage).
 
@@ -235,7 +235,12 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 - The split list is limited to the latest 30. An item with no people is blocked. A zero share means no expense is written.
 - Shared UI additions: `Sheet tall`, `AmountInput size="sm"`.
 - Not tested: the native phone share sheet and iPhone HEIC photos as the QR.
-- Deferred: animated receipts shared as a public link (needs a design decision).
+- Added after the plan (all done):
+  - **Split history:** the Split screen has Recent (last 30 days) and History (older, grouped by month, infinite scroll, 30 per page) tabs.
+  - **Receipt links:** per person, from the receipt sheet (Share link on phones, Copy link on desktop). Each is a public `shares/{id}` doc holding only that person's rows (no QR, no other people). `firestore.rules` allows `get` by id, no `list`, owner-only writes. Links follow split edits and are deleted with the split.
+  - **Public page** at `/r/{id}`: no login, white paper receipt with a blue spinning ASCII coin. WhatsApp shows one generic card (static og tags), since there is no server to make per-receipt previews on the free plan.
+  - **Paper look** for both the page and the PNG: a `.light` colour scope in `index.css`, and an `ink` mode on `drawAscii` / `AsciiCoin`.
+- Not tested: the native phone share sheet for links, and whether the link updates after editing a split.
 
 **Done when:** a receipt image is sent through WhatsApp from the phone.
 
