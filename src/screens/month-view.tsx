@@ -95,9 +95,9 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
       </div>
 
       {(breakdown.total > 0 || showTrend) && (
-        // The trend is first (left at lg) and each card keeps its own height, so nothing slides between
-        // columns or stretches when the month changes.
-        <div className="grid items-start gap-3 lg:grid-cols-2">
+        // The trend is first (left at lg). Phones keep each card's own height; at lg the category card
+        // stretches to the trend's (fixed) height, so it matches even with fewer rows.
+        <div className="grid items-start gap-3 lg:grid-cols-2 lg:items-stretch">
           {trend && showTrend && <TrendBars months={trend} selected={ym} onSelect={onMonthChange} />}
           {breakdown.total > 0 ? (
             <CategoryBars breakdown={breakdown} categories={byId} />

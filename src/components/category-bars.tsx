@@ -26,9 +26,9 @@ export function CategoryBars({ breakdown, categories }: Props) {
   ]
 
   return (
-    <section className="rounded-2xl bg-card p-4">
+    <section className="rounded-2xl bg-card p-4 lg:flex lg:flex-col">
       <h2 className="font-heading text-xl font-bold">Spending by category</h2>
-      <ul className="mt-3 flex flex-col gap-4">
+      <ul className="mt-3 flex flex-col gap-4 lg:flex-1 lg:justify-evenly">
         {items.map((it) => (
           <li key={it.key}>
             <div className="flex items-center gap-2">
