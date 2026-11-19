@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { Check, Users, X } from 'lucide-react'
+import { Check, UserPlus, Users, X } from 'lucide-react'
 import { AddFriendSheet } from '@/components/add-friend-sheet'
 import { Avatar } from '@/components/avatar'
 import { EmptyState } from '@/components/empty-state'
-import { Fab } from '@/components/fab'
 import { ListRow } from '@/components/list-row'
 import { PillButton } from '@/components/pill-button'
 import { Sheet } from '@/components/sheet'
@@ -29,7 +28,16 @@ export function PeopleScreen({ user, friendships }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="font-heading text-3xl font-extrabold tracking-tight">People</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-heading text-3xl font-extrabold tracking-tight">People</h1>
+        {/* With no friends yet, the empty state below carries the same action. */}
+        {!!friendships?.length && (
+          <PillButton size="pill-sm" onClick={() => setAdding(true)}>
+            <UserPlus className="size-5" />
+            Add friend
+          </PillButton>
+        )}
+      </div>
 
       {friendships?.length === 0 && (
         <EmptyState
@@ -90,7 +98,6 @@ export function PeopleScreen({ user, friendships }: Props) {
         </section>
       )}
 
-      <Fab label="Add friend" onClick={() => setAdding(true)} />
       <AddFriendSheet open={adding} onClose={() => setAdding(false)} me={me} friendships={friendships ?? []} />
       <Sheet
         open={removing.open}
