@@ -1,3 +1,4 @@
+import { format, parse } from 'date-fns'
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -69,3 +70,9 @@ export function dayLabel(iso: string, today: string): string {
   if (iso === todayISO(new Date(ty, tm - 1, td - 1))) return 'Yesterday'
   return `${WEEKDAYS[new Date(y, m - 1, d).getDay()]}, ${shortDate(iso)}`
 }
+
+/** "2026-11-17" -> local Date (for libraries that want one, e.g. the calendar). */
+export const isoToDate = (iso: string): Date => parse(iso, 'yyyy-MM-dd', new Date())
+
+/** Local Date -> "2026-11-17". Never toISOString(): that is UTC. */
+export const dateToISO = (d: Date): string => format(d, 'yyyy-MM-dd')

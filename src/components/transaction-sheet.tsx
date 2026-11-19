@@ -1,8 +1,8 @@
+import { DatePicker } from '@/components/date-picker'
 import { useState } from 'react'
 import { EntryFields, type Entry } from '@/components/entry-fields'
 import { PillButton } from '@/components/pill-button'
 import { Sheet } from '@/components/sheet'
-import { TextField } from '@/components/text-field'
 import { success, warning } from '@/lib/haptics'
 import { todayISO } from '@/lib/date'
 import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
@@ -51,7 +51,7 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
         </span>
       )}
       <EntryFields value={entry} onChange={setEntry} categories={categories} keepCategoryId={initial?.categoryId} autoFocus>
-        <TextField type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" />
+        <DatePicker value={date} onChange={setDate} aria-label="Date" />
       </EntryFields>
       <PillButton
         disabled={!draft}
