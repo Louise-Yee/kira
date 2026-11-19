@@ -7,6 +7,7 @@ import { useAppLock, type AppLock } from '@/lib/app-lock'
 import { useClientInfo, useDirectoryPublisher, useFriendships, useGroups, useSyncStatus } from '@/lib/db'
 import { splitFriendships } from '@/lib/friends'
 import { todayISO } from '@/lib/date'
+import { coinBurst } from '@/lib/haptics'
 import { soft } from '@/lib/motion'
 import { usePostRecurring } from '@/lib/post-recurring'
 import { useSeedDefaults } from '@/lib/seed'
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { FabSlideContext } from '@/lib/fab-slide'
 import { SyncPill } from '@/components/sync-pill'
 import { TabBar, type TabItem } from '@/components/tab-bar'
+import { CoinBurst } from '@/components/coin-burst'
 import { JoinGroupSheet } from '@/components/join-group-sheet'
 import { UpdateSheet } from '@/components/update-sheet'
 import { LockScreen } from '@/screens/lock'
@@ -99,6 +101,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   const navigate = useNavigate()
   const friendships = useFriendships(user.uid)
   const groups = useGroups(user.uid)
+  const [burst, setBurst] = useState(false)
   const requests = splitFriendships(friendships ?? [], user.uid).incoming.length
   const tabs = baseTabs.map((t) => (t.id === 'people' ? { ...t, badge: requests } : t))
   const current = tabs.find((t) => paths[t.id] === pathname)
@@ -181,9 +184,16 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
           me={user}
           groups={groups}
           onClose={() => navigate({ pathname: '/people', search })}
-          onJoined={(groupId) => navigate({ pathname: '/people', search }, { state: { groupId } })}
+          onJoined={(groupId, isNew) => {
+            if (isNew) {
+              coinBurst()
+              setBurst(true)
+            }
+            navigate({ pathname: '/people', search }, { state: { groupId } })
+          }}
         />
       )}
+      {burst && <CoinBurst onDone={() => setBurst(false)} />}
       <UpdateSheet open={update.open} update={update.update} onLater={update.later} />
     </div>
   )

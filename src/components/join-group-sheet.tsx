@@ -11,8 +11,8 @@ type Props = {
   /** The groups I'm already in; undefined while they load. */
   groups: readonly WithId<Group>[] | undefined
   onClose: () => void
-  /** I joined (or was already in) this group. */
-  onJoined: (groupId: string) => void
+  /** Open this group; `isNew` when I just joined it (rather than already being in it). */
+  onJoined: (groupId: string, isNew: boolean) => void
 }
 
 /** What opening a group invite link shows: "Join Dorm?" with Join or Decline. */
@@ -42,7 +42,7 @@ export function JoinGroupSheet({ token, me, groups, onClose, onJoined }: Props) 
               className="flex-1"
               onClick={() => {
                 if (!already) joinGroup(me, invite)
-                onJoined(invite.gid)
+                onJoined(invite.gid, !already)
               }}
             >
               {already ? 'Open' : 'Join'}
