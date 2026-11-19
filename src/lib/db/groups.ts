@@ -9,7 +9,7 @@ import { useDocs } from './use-docs'
 
 const groups = collection(db, 'groups').withConverter(converter<Group>())
 const invites = collection(db, 'invites').withConverter(converter<Invite>())
-const groupRef = (id: string) => doc(groups, id)
+export const groupRef = (id: string) => doc(groups, id)
 const inviteRef = (id: string) => doc(invites, id)
 
 const nameOf = (me: Me) => me.displayName ?? ''

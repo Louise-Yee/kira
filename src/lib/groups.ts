@@ -1,3 +1,5 @@
+import type { Totals } from './group-ledger.ts'
+
 export type GroupMember = { displayName: string; photoURL: string | null; joinedAt: number; /** The invite this person joined with (absent for the owner). */ via?: string }
 
 /** `groups/{id}`: a set of friends who split bills together. Only members can read it. */
@@ -9,6 +11,8 @@ export type Group = {
   /** The active invite link's token, if any. */
   inviteId: string | null
   inviteExpiresAt: number | null
+  /** Running totals of the expenses (missing until the first one). */
+  totals?: Totals
   createdAt: number
   updatedAt: number
 }
