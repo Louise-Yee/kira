@@ -1,0 +1,11 @@
+// Self-check for ISO <-> Date conversion: node scripts/check-date.ts
+import assert from 'node:assert/strict'
+import { dateToISO, isoToDate, todayISO } from '../src/lib/date.ts'
+
+for (const iso of ['2026-01-01', '2026-02-28', '2024-02-29', '2026-12-31']) assert.equal(dateToISO(isoToDate(iso)), iso)
+// Local midnight must survive (toISOString would shift it a day back east of UTC).
+const d = isoToDate('2026-11-17')
+assert.deepEqual([d.getFullYear(), d.getMonth(), d.getDate()], [2026, 10, 17])
+assert.equal(dateToISO(new Date(2026, 10, 17, 0, 5)), '2026-11-17')
+assert.equal(dateToISO(new Date(2026, 10, 17, 23, 59)), todayISO(new Date(2026, 10, 17, 23, 59)))
+console.log('check-date ok')

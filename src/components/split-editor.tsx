@@ -1,3 +1,4 @@
+import { DatePicker } from '@/components/date-picker'
 import { useState } from 'react'
 import { Share2, Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
@@ -137,7 +138,7 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
     <div className="flex flex-col gap-5 pb-1">
       <div className="flex flex-col gap-2">
         <TextField value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (e.g. Dinner at Sushi King)" aria-label="Title" maxLength={60} />
-        <TextField type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date" />
+        <DatePicker value={date} onChange={setDate} aria-label="Date" />
       </div>
 
       <Section title="People">

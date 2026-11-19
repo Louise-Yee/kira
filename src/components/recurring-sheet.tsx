@@ -1,3 +1,4 @@
+import { DatePicker } from '@/components/date-picker'
 import { useState } from 'react'
 import { EntryFields, type Entry } from '@/components/entry-fields'
 import { PillButton } from '@/components/pill-button'
@@ -151,12 +152,7 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
 
       <label className="flex flex-col gap-1">
         <span className="px-1 text-base font-semibold">Starts</span>
-        <TextField
-          type="date"
-          value={startDate}
-          min={restarts ? floor : undefined}
-          onChange={(e) => setPickedStart(e.target.value)}
-        />
+        <DatePicker value={startDate} min={restarts ? floor : undefined} onChange={setPickedStart} aria-label="Start date" />
         {tooEarly && (
           <span className="px-1 text-base text-destructive">
             A changed schedule can't start before {shortDate(floor)}, when the next payment was due.
@@ -168,7 +164,7 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
         <span className="px-1 text-base font-semibold">Ends</span>
         <Segmented options={endOptions} value={endType} onChange={setEndType} />
         {endType === 'date' && (
-          <TextField type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} aria-label="End date" />
+          <DatePicker value={endDate} min={startDate} onChange={setEndDate} aria-label="End date" />
         )}
         {endType === 'count' && (
           <TextField
