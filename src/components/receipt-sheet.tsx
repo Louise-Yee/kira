@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { PillButton } from '@/components/pill-button'
 import { Sheet } from '@/components/sheet'
+import { SheetActions } from '@/components/sheet-actions'
 import type { Split, WithId } from '@/lib/db'
 import { buildReceipt } from '@/lib/receipt-data'
 import { renderReceipt } from '@/lib/receipt-canvas'
@@ -103,14 +103,12 @@ function Body({ split, qr, onCreateLink }: Pick<Props, 'qr' | 'onCreateLink'> & 
       )}
       {!qr && <p className="px-1 text-base text-muted-foreground">Add your payment QR in Settings to show it on the receipt.</p>}
       {notice && <p className="px-1 text-base text-muted-foreground">{notice}</p>}
-      <PillButton disabled={!image} onClick={share}>
-        {canShareImages() ? 'Share image' : 'Download'}
-      </PillButton>
-      {only !== null && (
-        <PillButton variant="secondary" onClick={link}>
-          {canShareLinks() ? 'Share link' : 'Copy link'}
-        </PillButton>
-      )}
+      <SheetActions
+        label={canShareImages() ? 'Share image' : 'Download'}
+        disabled={!image}
+        onSave={share}
+        extras={only !== null ? [{ label: canShareLinks() ? 'Share link' : 'Copy link', onClick: link }] : undefined}
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { PillButton } from '@/components/pill-button'
-import { Sheet } from '@/components/sheet'
+import { Sheet, SheetFooter } from '@/components/sheet'
+import { SheetActions } from '@/components/sheet-actions'
 import { error as errorHaptic, success } from '@/lib/haptics'
 import { backupSummary, transactionsCsv, validateBackup, type Backup } from '@/lib/backup'
 import { todayISO } from '@/lib/date'
@@ -80,21 +81,15 @@ function Body({ uid, onClose }: { uid: string; onClose: () => void }) {
       <div className="flex flex-col gap-4 pb-1">
         <p className="text-base font-semibold">{backupSummary(pending)}</p>
         <p className="text-base text-muted-foreground">Existing items with the same ID will be overwritten. Nothing is deleted.</p>
-        <div className="flex gap-2">
-          <PillButton variant="secondary" className="flex-1" onClick={() => setPending(null)}>
-            Cancel
-          </PillButton>
-          <PillButton
-            className="flex-1"
-            onClick={() => {
-              success()
-              importBackup(uid, pending)
-              onClose()
-            }}
-          >
-            Import
-          </PillButton>
-        </div>
+        <SheetActions
+          label="Import"
+          extras={[{ label: 'Cancel', onClick: () => setPending(null) }]}
+          onSave={() => {
+            success()
+            importBackup(uid, pending)
+            onClose()
+          }}
+        />
       </div>
     )
   }
@@ -107,16 +102,18 @@ function Body({ uid, onClose }: { uid: string; onClose: () => void }) {
       </p>
       {error && <p className="text-base text-destructive">{error}</p>}
       {message && <p className="text-base text-muted-foreground">{message}</p>}
-      <PillButton disabled={busy} onClick={() => exportAs('json')}>
-        {busy ? 'Working…' : 'Export JSON'}
-      </PillButton>
-      <PillButton variant="secondary" disabled={busy} onClick={() => exportAs('csv')}>
-        Export CSV
-      </PillButton>
       <input ref={input} type="file" accept=".json,application/json" hidden onChange={(e) => pick(e.target.files?.[0])} />
-      <PillButton variant="secondary" disabled={busy} onClick={() => input.current?.click()}>
-        Import JSON
-      </PillButton>
+      <SheetFooter>
+        <PillButton disabled={busy} onClick={() => exportAs('json')}>
+          {busy ? 'Working…' : 'Export JSON'}
+        </PillButton>
+        <PillButton variant="secondary" disabled={busy} onClick={() => exportAs('csv')}>
+          Export CSV
+        </PillButton>
+        <PillButton variant="secondary" disabled={busy} onClick={() => input.current?.click()}>
+          Import JSON
+        </PillButton>
+      </SheetFooter>
     </div>
   )
 }

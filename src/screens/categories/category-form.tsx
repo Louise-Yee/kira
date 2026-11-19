@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { Check } from 'lucide-react'
 import { CategoryIcon } from '@/components/category-icon'
 import { PillButton } from '@/components/pill-button'
+import { SheetActions } from '@/components/sheet-actions'
 import { TextField } from '@/components/text-field'
 import { catColor, categoryIconNames } from '@/lib/category-icons'
 import type { Category, WithId } from '@/lib/db'
@@ -67,22 +68,19 @@ export function CategoryForm({ initial, onCancel, onSubmit, onDelete, onRestore 
           </motion.button>
         ))}
       </div>
-      <PillButton disabled={!trimmed} onClick={() => trimmed && onSubmit({ name: trimmed, icon, color })}>
-        Save
-      </PillButton>
       {onRestore && (
         <PillButton variant="secondary" onClick={onRestore}>
           Restore category
         </PillButton>
       )}
-      <PillButton variant="secondary" onClick={onCancel}>
-        Cancel
-      </PillButton>
-      {onDelete && (
-        <PillButton variant="destructive" onClick={onDelete}>
-          Delete category
-        </PillButton>
-      )}
+      <SheetActions
+        disabled={!trimmed}
+        onSave={() => trimmed && onSubmit({ name: trimmed, icon, color })}
+        extras={[{ label: 'Cancel', onClick: onCancel }]}
+        onDelete={onDelete}
+        deleteLabel="Delete category"
+        confirmDelete={false}
+      />
     </div>
   )
 }

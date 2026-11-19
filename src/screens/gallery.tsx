@@ -9,6 +9,7 @@ import { ListRow } from '@/components/list-row'
 import { Money } from '@/components/money'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
+import { SheetActions } from '@/components/sheet-actions'
 import { Sheet } from '@/components/sheet'
 import { SyncPill } from '@/components/sync-pill'
 import type { SyncStatus } from '@/lib/db'
@@ -276,9 +277,7 @@ function ComponentGallery() {
 
       <Sheet open={open} onClose={() => setOpen(false)} title="Add expense">
         <AmountInput value={amount} onChange={setAmount} autoFocus />
-        <PillButton className="mt-4 w-full" onClick={() => setOpen(false)}>
-          Done
-        </PillButton>
+        <SheetActions label="Done" onSave={() => setOpen(false)} />
       </Sheet>
     </main>
   )
