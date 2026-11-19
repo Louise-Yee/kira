@@ -6,32 +6,38 @@ import { COINS, isGone, spawnCoins, stepCoin } from '@/lib/coin-burst'
 import { identity, rotateWorld, shadeCoin } from '@/lib/coin3d'
 
 const FRAMES = 12 // a full turn of the coin
-const SPRITE = 96 // css px; drawn scaled down for smaller coins
+/** Coin sizes in css px. Each is drawn at its own size: scaling one big drawing down would shrink the letters to dust. */
+const TIERS = [24, 36, 48, 56]
 const GIVE_UP_MS = 4500 // never leave the overlay up longer than this
 const HIDE_MS = 600 // coins stay hidden behind the button this long, then fly free
 
-let sprites: HTMLCanvasElement[] | null = null
+const cache = new Map<string, HTMLCanvasElement[]>()
 
-/** The ASCII coin at each step of a turn, built once: ray-marching the lit 3D coin is too heavy to run per coin per frame. */
-function getSprites(): HTMLCanvasElement[] {
-  if (sprites) return sprites
+const nearestTier = (size: number) => TIERS.reduce((best, t) => (Math.abs(t - size) < Math.abs(best - size) ? t : best))
+
+/** The ASCII coin of one size at each step of a turn, built once: ray-marching the lit 3D coin is too heavy to run per coin per frame. */
+function getSprites(tier: number, dpr: number): HTMLCanvasElement[] {
+  const key = `${tier}@${dpr}`
+  const hit = cache.get(key)
+  if (hit) return hit
   const tilt = rotateWorld(identity(), 1, 0, 0, -0.35)
-  sprites = Array.from({ length: FRAMES }, (_, i) => {
+  const sprites = Array.from({ length: FRAMES }, (_, i) => {
     const m = rotateWorld(tilt, 0, 1, 0, (i / FRAMES) * Math.PI * 2)
     const cv = document.createElement('canvas')
-    cv.width = cv.height = SPRITE * 2
+    cv.width = cv.height = Math.round(tier * dpr)
     const g = cv.getContext('2d')
     if (g) {
-      g.scale(2, 2)
-      // A floor of brightness inside the coin keeps its silhouette solid, so small ones still read as coins. The cap keeps
-      // it in the cobalt part of the palette: only the shine reaches light blue, never white.
-      drawAscii(g, SPRITE, SPRITE, 5, 0.1, (nx, ny) => {
+      g.scale(dpr, dpr)
+      // Inside the coin the brightness stays between mid cobalt and light blue: bright enough to read on a dark page, and
+      // the cap keeps even the shine short of white.
+      drawAscii(g, tier, tier, Math.max(4, tier / 8), 0.1, (nx, ny) => {
         const v = shadeCoin(m, nx * 1.05, ny * 1.05)
-        return v < 0 ? 0 : Math.min(0.85, 0.3 + v * 0.75)
+        return v < 0 ? 0 : Math.min(0.9, 0.55 + v * 0.35)
       })
     }
     return cv
   })
+  cache.set(key, sprites)
   return sprites
 }
 
@@ -62,7 +68,7 @@ export function CoinBurst({ from, onDone }: { from: DOMRect; onDone: () => void 
     cv.width = Math.round(w * dpr)
     cv.height = Math.round(h * dpr)
     g.setTransform(dpr, 0, 0, dpr, 0, 0)
-    const frames = getSprites()
+    const byTier = new Map(TIERS.map((t) => [t, getSprites(t, dpr)]))
     let coins = spawnCoins(COINS, from.left + from.width / 2, from.top + from.height / 2, Math.random)
     let last = performance.now()
     const started = last
@@ -82,7 +88,9 @@ export function CoinBurst({ from, onDone }: { from: DOMRect; onDone: () => void 
       }
       for (const c of coins) {
         if (c.delay > 0) continue
-        g.drawImage(frames[Math.floor(c.phase) % FRAMES], c.x - c.size / 2, c.y - c.size / 2, c.size, c.size)
+        const tier = nearestTier(c.size)
+        const sprite = byTier.get(tier)?.[Math.floor(c.phase) % FRAMES]
+        if (sprite) g.drawImage(sprite, c.x - tier / 2, c.y - tier / 2, tier, tier)
       }
       g.restore()
       if (coins.length && now - started < GIVE_UP_MS) raf = requestAnimationFrame(frame)

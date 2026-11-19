@@ -11,7 +11,7 @@ for (const c of coins) {
   assert.ok(c.vy < 0, 'every coin launches upward')
   assert.ok(c.delay >= 0 && c.delay <= 0.25)
 }
-assert.ok(coins.filter((c) => c.size < 30).length > coins.length / 2, 'most coins are small')
+assert.ok(coins.filter((c) => c.size < 36).length > coins.length / 2, 'most coins are small')
 
 // A coin waits for its delay, then rises, peaks and falls out of the screen
 let c = { ...coins[0], delay: 0.1 }

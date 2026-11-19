@@ -16,8 +16,8 @@ export type Coin = {
 }
 
 export const COINS = 36
-export const MIN_SIZE = 12
-export const MAX_SIZE = 48
+export const MIN_SIZE = 24
+export const MAX_SIZE = 56
 const STAGGER = 0.25 // seconds the launches are spread over
 
 /**
