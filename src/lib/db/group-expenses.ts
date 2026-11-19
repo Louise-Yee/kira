@@ -32,11 +32,13 @@ export function useOlderExpenses(gid: string, before: string, count: number, ena
  * Add `d` to the group's running totals in the same batch as the expense, with increments so two members adding at
  * once can't overwrite each other. (Field paths are built with FieldPath: a month like 2026-11 isn't a plain name.)
  */
-function bumpTotals(batch: WriteBatch, gid: string, d: Totals, now: number) {
+export function bumpTotals(batch: WriteBatch, gid: string, d: Totals, now: number) {
   const more: (FieldPath | FieldValue)[] = []
   for (const [k, v] of Object.entries(d.paid)) more.push(new FieldPath('totals', 'paid', k), increment(v))
   for (const [k, v] of Object.entries(d.owed)) more.push(new FieldPath('totals', 'owed', k), increment(v))
   for (const [k, v] of Object.entries(d.months)) more.push(new FieldPath('totals', 'months', k), increment(v))
+  for (const [k, v] of Object.entries(d.sent ?? {})) more.push(new FieldPath('totals', 'sent', k), increment(v))
+  for (const [k, v] of Object.entries(d.received ?? {})) more.push(new FieldPath('totals', 'received', k), increment(v))
   batch.update(groupRef(gid), new FieldPath('totals', 'spent'), increment(d.spent), ...more, 'updatedAt', now)
 }
 

@@ -128,6 +128,36 @@ service cloud.firestore {
         && (resource.data.createdBy == request.auth.uid || group().ownerUid == request.auth.uid);
     }
 
+    // Settle-up payments: a member records that they paid another member back (it counts in the balances at once).
+    // Only the receiver confirms; the payer (undo) or the receiver (didn't get it) can remove it while it is pending.
+    match /groups/{gid}/settlements/{sid} {
+      function group() {
+        return get(/databases/$(database)/documents/groups/$(gid)).data;
+      }
+      function isMember() {
+        return request.auth.uid in group().memberUids;
+      }
+      allow read: if request.auth != null && isMember();
+      allow create: if request.auth != null && isMember()
+        && request.resource.data.keys().hasOnly(['from', 'to', 'amount', 'date', 'status', 'createdBy', 'createdAt'])
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.to in group().memberUids
+        && request.resource.data.to != request.resource.data.from
+        && request.resource.data.amount is int && request.resource.data.amount > 0
+        && request.resource.data.date is string && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt is int;
+      allow update: if request.auth != null && isMember()
+        && resource.data.to == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'confirmed'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmedAt']);
+      allow delete: if request.auth != null && isMember()
+        && resource.data.status == 'pending'
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+    }
+
     // Invite links: whoever holds the token (signed in) can read that one doc, to see what they are joining.
     // Only the group's owner can create, revoke or delete them.
     match /invites/{token} {

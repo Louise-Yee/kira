@@ -35,7 +35,8 @@ export type ExpenseDraft = Pick<GroupExpense, 'title' | 'date' | 'amount' | 'pai
 
 /**
  * Running totals kept on the group doc, so the audit view never has to read the whole history.
- * `paid[uid]` is what a member put in, `owed[uid]` their share of everything; both only ever change by increments.
+ * `paid[uid]` is what a member put in, `owed[uid]` their share of everything; `sent` and `received` are the
+ * settle-up payments they made and got. All only ever change by increments.
  */
 export type Totals = {
   spent: number
@@ -43,9 +44,29 @@ export type Totals = {
   owed: Record<string, number>
   /** Spent per month, by YYYY-MM. */
   months: Record<string, number>
+  /** Settle-up payments made / received (missing on groups from before settle-up existed). */
+  sent?: Record<string, number>
+  received?: Record<string, number>
 }
 
-export const emptyTotals = (): Totals => ({ spent: 0, paid: {}, owed: {}, months: {} })
+export const emptyTotals = (): Totals => ({ spent: 0, paid: {}, owed: {}, months: {}, sent: {}, received: {} })
+
+/** `groups/{gid}/settlements/{id}`: `from` paid `to` back. Counts in the balances at once; `to` confirms they got it. */
+export type Settlement = {
+  from: string
+  to: string
+  /** Integer sen. */
+  amount: number
+  /** Local YYYY-MM-DD. */
+  date: string
+  status: 'pending' | 'confirmed'
+  createdBy: string
+  createdAt: number
+  confirmedAt?: number
+}
+
+/** One payment that would square things up. */
+export type Transfer = { from: string; to: string; amount: number }
 
 /** Edits keep this many earlier versions. */
 export const MAX_HISTORY = 10
@@ -87,6 +108,11 @@ export function totalsDelta(before: Counted | null, after: Counted | null): Tota
   return delta
 }
 
+/** What recording (sign 1) or taking back (sign -1) a settle-up payment does to the totals. */
+export function settlementDelta(s: Pick<Settlement, 'from' | 'to' | 'amount'>, sign: 1 | -1): Totals {
+  return { ...emptyTotals(), sent: { [s.from]: sign * s.amount }, received: { [s.to]: sign * s.amount } }
+}
+
 /** Totals with a delta applied (what the increments add up to on the server). */
 export function applyDelta(totals: Totals, delta: Totals): Totals {
   const merge = (a: Record<string, number>, b: Record<string, number>) => {
@@ -94,11 +120,45 @@ export function applyDelta(totals: Totals, delta: Totals): Totals {
     for (const [k, v] of Object.entries(b)) out[k] = (out[k] ?? 0) + v
     return out
   }
-  return { spent: totals.spent + delta.spent, paid: merge(totals.paid, delta.paid), owed: merge(totals.owed, delta.owed), months: merge(totals.months, delta.months) }
+  return {
+    spent: totals.spent + delta.spent,
+    paid: merge(totals.paid, delta.paid),
+    owed: merge(totals.owed, delta.owed),
+    months: merge(totals.months, delta.months),
+    sent: merge(totals.sent ?? {}, delta.sent ?? {}),
+    received: merge(totals.received ?? {}, delta.received ?? {}),
+  }
 }
 
-/** What the group owes this member (positive) or what they owe the group (negative). */
-export const netOf = (totals: Pick<Totals, 'paid' | 'owed'>, uid: string) => (totals.paid[uid] ?? 0) - (totals.owed[uid] ?? 0)
+/** What the group owes this member (positive) or what they owe the group (negative), settle-up payments included. */
+export const netOf = (totals: Pick<Totals, 'paid' | 'owed' | 'sent' | 'received'>, uid: string) =>
+  (totals.paid[uid] ?? 0) - (totals.owed[uid] ?? 0) + (totals.sent?.[uid] ?? 0) - (totals.received?.[uid] ?? 0)
+
+/**
+ * The fewest simple payments that square everyone up: the biggest debtor pays the biggest creditor, and so on (at most
+ * one fewer payment than people). Ties go by uid, so everyone in the group sees the same list. `nets` sums to zero.
+ */
+export function suggestTransfers(nets: Record<string, number>): Transfer[] {
+  const side = (sign: 1 | -1) =>
+    Object.entries(nets)
+      .filter(([, n]) => n * sign > 0)
+      .map(([uid, n]) => ({ uid, left: Math.abs(n) }))
+      .toSorted((a, b) => b.left - a.left || a.uid.localeCompare(b.uid))
+  const debtors = side(-1)
+  const creditors = side(1)
+  const out: Transfer[] = []
+  let d = 0
+  let c = 0
+  while (d < debtors.length && c < creditors.length) {
+    const amount = Math.min(debtors[d].left, creditors[c].left)
+    out.push({ from: debtors[d].uid, to: creditors[c].uid, amount })
+    debtors[d].left -= amount
+    creditors[c].left -= amount
+    if (debtors[d].left === 0) d++
+    if (creditors[c].left === 0) c++
+  }
+  return out
+}
 
 /** The edit history after `old` is replaced by an edit of `by` at `at`: old goes in front, the list stays short. */
 export function nextHistory(old: GroupExpense, by: string, at: number): ExpenseVersion[] {

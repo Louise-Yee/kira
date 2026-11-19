@@ -5,12 +5,14 @@ import { ConfirmSheet } from '@/components/confirm-sheet'
 import { GroupExpenseDetailSheet } from '@/components/group-expense-detail-sheet'
 import { GroupExpenseSheet } from '@/components/group-expense-sheet'
 import { GroupNameSheet } from '@/components/group-name-sheet'
+import { GroupSettleUp } from '@/components/group-settle-up'
 import { ListRow } from '@/components/list-row'
 import { Money } from '@/components/money'
 import { PillButton } from '@/components/pill-button'
 import { addDays, monthLabel, shortDate, todayISO } from '@/lib/date'
 import {
   EXPENSES_PAGE,
+  confirmSettlement,
   deleteGroupExpense,
   deleteGroup,
   leaveGroup,
@@ -18,13 +20,19 @@ import {
   renameGroup,
   revokeInvite,
   saveGroupExpense,
+  settleUp,
+  takeBackSettlement,
   useOlderExpenses,
+  useOlderSettlements,
+  usePendingSettlements,
   useRecentExpenses,
+  useRecentSettlements,
   type Group,
   type Me,
   type WithId,
 } from '@/lib/db'
-import { emptyTotals, netOf, type GroupExpense } from '@/lib/group-ledger'
+import { emptyTotals, netOf, suggestTransfers, type GroupExpense } from '@/lib/group-ledger'
+import { success } from '@/lib/haptics'
 import { hasActiveInvite, membersOf } from '@/lib/groups'
 import { formatRM } from '@/lib/money'
 import { joinUrl, shareLink } from '@/lib/share-link'
@@ -164,8 +172,17 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
   const [pages, setPages] = useState(0)
   const recent = useRecentExpenses(group.id, since)
   const older = useOlderExpenses(group.id, since, pages * EXPENSES_PAGE, pages > 0)
-  const expenses = [...(recent ?? []), ...(older ?? [])]
-  const canLoadMore = recent !== undefined && (pages === 0 || (older?.length ?? 0) >= pages * EXPENSES_PAGE)
+  const recentPays = useRecentSettlements(group.id, since)
+  const olderPays = useOlderSettlements(group.id, since, pages * EXPENSES_PAGE, pages > 0)
+  const pending = usePendingSettlements(group.id)
+  // Expenses and settle-up payments share one feed, newest first.
+  const feed = [
+    ...[...(recent ?? []), ...(older ?? [])].map((e) => ({ kind: 'expense' as const, date: e.date, at: e.createdAt, e })),
+    ...[...(recentPays ?? []), ...(olderPays ?? [])].map((s) => ({ kind: 'payment' as const, date: s.date, at: s.createdAt, s })),
+  ].toSorted((a, b) => b.date.localeCompare(a.date) || b.at - a.at)
+  const canLoadMore =
+    recent !== undefined &&
+    (pages === 0 || (older?.length ?? 0) >= pages * EXPENSES_PAGE || (olderPays?.length ?? 0) >= pages * EXPENSES_PAGE)
 
   // `open` and `expense` are separate so a sheet keeps its content while it slides out.
   const [form, setForm] = useState<{ open: boolean; expense?: WithId<GroupExpense> }>({ open: false })
@@ -174,6 +191,7 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
   const totals = group.totals ?? emptyTotals()
   const nameOf = (uid: string) => group.members[uid]?.displayName || (group.memberUids.includes(uid) ? 'Someone' : 'Someone who left')
   const people = [...new Set([...group.memberUids, ...Object.keys(totals.paid), ...Object.keys(totals.owed)])]
+  const transfers = suggestTransfers(Object.fromEntries(people.map((uid) => [uid, netOf(totals, uid)])))
   const months = Object.entries(totals.months)
     .filter(([, sen]) => sen !== 0)
     .toSorted(([a], [b]) => b.localeCompare(a))
@@ -211,21 +229,49 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
         <p className="text-base text-muted-foreground">+ is what they are owed, − is what they owe.</p>
       </section>
 
+      <GroupSettleUp
+        group={group}
+        meUid={me.uid}
+        transfers={transfers}
+        pending={pending ?? []}
+        allSettled={totals.spent > 0}
+        onSettle={(t) => {
+          success()
+          settleUp(me, group.id, t, today)
+        }}
+        onConfirm={(s) => {
+          success()
+          confirmSettlement(group.id, s)
+        }}
+        onTakeBack={(s) => takeBackSettlement(group.id, s)}
+      />
+
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold text-muted-foreground">Expenses</h2>
-        {recent?.length === 0 && pages === 0 && <p className="text-base text-muted-foreground">Nothing in the last 60 days. Add the first one.</p>}
-        {expenses.map((e) => (
-          <ListRow
-            key={e.id}
-            title={e.title}
-            subtitle={`${shortDate(e.date)} · paid by ${nameOf(e.paidBy)}`}
-            trailing={<Money sen={e.amount} className="text-base font-semibold" />}
-            onClick={() => setDetail({ open: true, expense: e })}
-          />
-        ))}
+        {recent?.length === 0 && recentPays?.length === 0 && pages === 0 && (
+          <p className="text-base text-muted-foreground">Nothing in the last 60 days. Add the first expense.</p>
+        )}
+        {feed.map((item) =>
+          item.kind === 'expense' ? (
+            <ListRow
+              key={`e-${item.e.id}`}
+              title={item.e.title}
+              subtitle={`${shortDate(item.date)} · paid by ${nameOf(item.e.paidBy)}`}
+              trailing={<Money sen={item.e.amount} className="text-base font-semibold" />}
+              onClick={() => setDetail({ open: true, expense: item.e })}
+            />
+          ) : (
+            <ListRow
+              key={`p-${item.s.id}`}
+              title={`${nameOf(item.s.from)} paid ${nameOf(item.s.to)}`}
+              subtitle={`${shortDate(item.date)} · ${item.s.status === 'confirmed' ? 'confirmed' : 'waiting for confirmation'}`}
+              trailing={<Money sen={item.s.amount} className="text-base font-semibold" />}
+            />
+          ),
+        )}
         {canLoadMore && (
           <PillButton variant="secondary" size="pill-sm" onClick={() => setPages((p) => p + 1)}>
-            Show older expenses
+            Show older
           </PillButton>
         )}
       </section>

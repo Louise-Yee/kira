@@ -5,6 +5,7 @@ import { CategoryIcon } from '@/components/category-icon'
 import { CategoryPicker } from '@/components/category-picker'
 import { CoinBurst } from '@/components/coin-burst'
 import { GroupExpenseSheet } from '@/components/group-expense-sheet'
+import { GroupSettleUp } from '@/components/group-settle-up'
 import { EmptyState } from '@/components/empty-state'
 import { Fab } from '@/components/fab'
 import { ListRow } from '@/components/list-row'
@@ -178,6 +179,7 @@ const fakeGroup: WithId<Group> = {
 }
 
 function ComponentGallery() {
+  const [settleLog, setSettleLog] = useState('none')
   const [groupExpense, setGroupExpense] = useState('none')
   const [groupOpen, setGroupOpen] = useState(false)
   const [open, setOpen] = useState(false)
@@ -219,6 +221,23 @@ function ComponentGallery() {
         Coin burst
       </PillButton>
       {burst && <CoinBurst from={burst} onDone={() => setBurst(null)} />}
+      <GroupSettleUp
+        group={fakeGroup}
+        meUid="a"
+        transfers={[
+          { from: 'a', to: 'b', amount: 2340 },
+          { from: 'c', to: 'b', amount: 1000 },
+        ]}
+        pending={[
+          { id: 'p1', from: 'c', to: 'a', amount: 5000, date: '2026-11-18', status: 'pending', createdBy: 'c', createdAt: 1 },
+          { id: 'p2', from: 'a', to: 'c', amount: 700, date: '2026-11-19', status: 'pending', createdBy: 'a', createdAt: 2 },
+        ]}
+        allSettled
+        onSettle={(t) => setSettleLog(`settle ${t.from}->${t.to} ${t.amount}`)}
+        onConfirm={(s) => setSettleLog(`confirm ${s.id}`)}
+        onTakeBack={(s) => setSettleLog(`take back ${s.id}`)}
+      />
+      <p data-testid="settle-log">settle: {settleLog}</p>
       <PillButton onClick={() => setGroupOpen(true)}>Group expense</PillButton>
       <p data-testid="group-expense">group expense: {groupExpense}</p>
       <GroupExpenseSheet
