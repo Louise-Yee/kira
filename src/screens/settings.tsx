@@ -11,6 +11,7 @@ import {
   useCategories,
   useSettings,
 } from '@/lib/db'
+import { lockSupported, type AppLock } from '@/lib/app-lock'
 import { logOut, type AppUser } from '@/lib/firebase'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { readTheme, setTheme, type Theme } from '@/lib/theme'
@@ -21,6 +22,7 @@ import { ListRow } from '@/components/list-row'
 import { PaymentQrSheet } from '@/components/payment-qr-sheet'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
+import { Toggle } from '@/components/toggle'
 import { CategoriesManager } from '@/screens/categories/manager'
 
 const themeOptions = [
@@ -36,6 +38,7 @@ type Props = {
   /** A newer Android release, if the launch check found one. */
   update: Update | null
   onUpdate: () => void
+  lock: AppLock
 }
 
 function Tile({ icon: Icon }: { icon: LucideIcon }) {
@@ -46,7 +49,7 @@ function Tile({ icon: Icon }: { icon: LucideIcon }) {
   )
 }
 
-export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate }: Props) {
+export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock }: Props) {
   const [theme, setThemeState] = useState<Theme>(readTheme)
   const categories = useCategories(user.uid) ?? []
   const [managing, setManaging] = useState(false)
@@ -126,6 +129,12 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate }: Pro
         onClick={() => setBackupOpen(true)}
       />
       <BackupSheet open={backupOpen} onClose={() => setBackupOpen(false)} uid={user.uid} />
+      {lockSupported && (
+        <div className="rounded-3xl bg-card p-5">
+          <Toggle label="App lock" checked={!!lock.enabled} onChange={lock.set} />
+          <p className="px-1 text-base text-muted-foreground">Ask for fingerprint, face or phone PIN each time kira is opened.</p>
+        </div>
+      )}
       {/* Only matters at lg: phones always use the floating bottom bar. */}
       <div className="hidden rounded-3xl bg-card p-5 lg:block">
         <p className="text-base font-semibold">Navigation position</p>
