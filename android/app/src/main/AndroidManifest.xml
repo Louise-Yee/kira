@@ -24,6 +24,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="kira" android:host="add" />
             </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="expenses-tracker-285fb.web.app" android:pathPrefix="/r/" />
+            </intent-filter>
         </activity>
 
         <receiver android:name=".KiraWidget" android:exported="false">
