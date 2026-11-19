@@ -78,7 +78,12 @@ export type Settings = {
   currency: 'MYR'
   createdAt: number
   tngQr?: string
+  /** Friends can find this account by email. Missing means on. */
+  discoverable?: boolean
 }
+
+/** directory/{email}: how a friend's contact list finds this account. Holds only what a friend request shows. */
+export type DirectoryEntry = { uid: string; displayName: string; photoURL: string | null }
 
 /** users/{uid}/meta/client: the app version and device last used. lastSeen is refreshed at least weekly. */
 export type ClientDoc = ClientInfo & { lastSeen: number }

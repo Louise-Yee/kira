@@ -17,3 +17,8 @@ export function useSettings(uid: string) {
 export function setPaymentQr(uid: string, dataUrl: string | null) {
   void setDoc(settingsRef(uid), { tngQr: dataUrl ?? deleteField() }, { merge: true }).catch(reportError)
 }
+
+/** Let friends find this account by email (or not). The directory entry follows in `useDirectoryPublisher`. */
+export function setDiscoverable(uid: string, on: boolean) {
+  void setDoc(settingsRef(uid), { discoverable: on }, { merge: true }).catch(reportError)
+}

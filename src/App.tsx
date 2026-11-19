@@ -4,7 +4,7 @@ import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/rea
 import { House, ReceiptText, Repeat, Settings } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
 import { useAppLock, type AppLock } from '@/lib/app-lock'
-import { useClientInfo, useSyncStatus } from '@/lib/db'
+import { useClientInfo, useDirectoryPublisher, useSyncStatus } from '@/lib/db'
 import { todayISO } from '@/lib/date'
 import { soft } from '@/lib/motion'
 import { usePostRecurring } from '@/lib/post-recurring'
@@ -44,6 +44,7 @@ export default function App() {
   useSeedDefaults(authUser?.uid) // real accounts only: ?dev has no Firebase uid
   usePostRecurring(authUser?.uid)
   useClientInfo(authUser?.uid)
+  useDirectoryPublisher(authUser)
   useReceiptLink()
   const shareId = useMatch('/r/:id')?.params.id
   if (shareId) return <MotionConfig reducedMotion="user"><ReceiptPage id={shareId} /></MotionConfig>
