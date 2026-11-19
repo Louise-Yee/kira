@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { ReceiptText, User, Users } from "lucide-react";
+import { ReceiptText, Share2, User, Users } from "lucide-react";
+import { motion } from "motion/react";
 import { EmptyState } from "@/components/empty-state";
 import { Fab } from "@/components/fab";
 import { ListRow } from "@/components/list-row";
@@ -107,6 +108,7 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
               label="Share"
               onSwipe={() => setReceipt({ open: true, split: s })}
             >
+              <div className="flex gap-2">
               <ListRow
                 icon={
                   <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary">
@@ -133,6 +135,16 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
                 }
                 onClick={() => open(s)}
               />
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.85 }} // a small target needs a deeper press to read like the row's 0.96
+                aria-label={`Share ${s.title}`}
+                onClick={() => setReceipt({ open: true, split: s })}
+                className="flex w-14 shrink-0 items-center justify-center rounded-2xl bg-card text-muted-foreground transition-colors active:bg-secondary active:text-foreground"
+              >
+                <Share2 className="size-5" aria-hidden />
+              </motion.button>
+              </div>
             </SwipeRow>
           </Fragment>
         ))}
@@ -148,10 +160,6 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
         initial={sheet.split}
         onSave={(draft) => saveSplit(user.uid, draft, sheet.split)}
         onDelete={() => sheet.split && deleteSplit(user.uid, sheet.split)}
-        onShare={() => {
-          setReceipt({ open: true, split: sheet.split });
-          setSheet((s) => ({ ...s, open: false }));
-        }}
       />
       <ReceiptSheet
         open={receipt.open}

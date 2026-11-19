@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
-import { PillButton } from '@/components/pill-button'
 import { Sheet } from '@/components/sheet'
+import { SheetActions } from '@/components/sheet-actions'
 import { error as errorHaptic, success } from '@/lib/haptics'
 import { compressToDataUrl } from '@/lib/compress-image'
 
@@ -27,7 +27,6 @@ function Body({ qr, onSave, onRemove, onClose }: Omit<Props, 'open'>) {
   const input = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [confirming, setConfirming] = useState(false)
 
   const pick = async (file: File | undefined) => {
     if (!file) return
@@ -54,31 +53,20 @@ function Body({ qr, onSave, onRemove, onClose }: Omit<Props, 'open'>) {
       {qr && <img src={qr} alt="Your payment QR" className="mx-auto size-64 rounded-2xl bg-white object-contain" />}
       {error && <p className="text-base text-destructive">{error}</p>}
       <input ref={input} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
-      <PillButton disabled={busy} onClick={() => input.current?.click()}>
-        {busy ? 'Processing…' : qr ? 'Replace QR' : 'Upload QR'}
-      </PillButton>
-      {qr &&
-        (confirming ? (
-          <div className="flex gap-2">
-            <PillButton variant="secondary" className="flex-1" onClick={() => setConfirming(false)}>
-              Keep
-            </PillButton>
-            <PillButton
-              variant="destructive"
-              className="flex-1"
-              onClick={() => {
+      <SheetActions
+        label={busy ? 'Processing…' : qr ? 'Replace QR' : 'Upload QR'}
+        disabled={busy}
+        onSave={() => input.current?.click()}
+        onDelete={
+          qr
+            ? () => {
                 onRemove()
                 onClose()
-              }}
-            >
-              Remove
-            </PillButton>
-          </div>
-        ) : (
-          <PillButton variant="destructive" onClick={() => setConfirming(true)}>
-            Remove QR
-          </PillButton>
-        ))}
+              }
+            : undefined
+        }
+        deleteLabel="Remove QR"
+      />
     </div>
   )
 }

@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { EntryFields, type Entry } from '@/components/entry-fields'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
-import { Sheet } from '@/components/sheet'
+import { Sheet, SheetFooter } from '@/components/sheet'
+import { SheetActions } from '@/components/sheet-actions'
 import { TextField } from '@/components/text-field'
 import { error, success, warning } from '@/lib/haptics'
 import { shortDate, todayISO } from '@/lib/date'
@@ -192,26 +193,34 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
         </p>
       )}
 
-      <PillButton
+      <Actions
         disabled={!draft}
-        onClick={() => {
+        onSave={() => {
           if (!draft) return
           success()
           onSave(draft)
           onClose()
         }}
-      >
-        Save
-      </PillButton>
-      {initial && <DeleteFlow countTransactions={countTransactions} onDelete={onDelete} onClose={onClose} />}
+        canDelete={!!initial}
+        countTransactions={countTransactions}
+        onDelete={onDelete}
+        onClose={onClose}
+      />
     </div>
   )
 }
 
 type Del = { phase: 'idle' } | { phase: 'checking' } | { phase: 'offline' } | { phase: 'ready'; count: number }
 
-/** Delete needs the server (it counts what was posted), so it is blocked while offline. */
-function DeleteFlow({ countTransactions, onDelete, onClose }: Pick<Props, 'countTransactions' | 'onDelete' | 'onClose'>) {
+/** Save + trash. Delete needs the server (it counts what was posted), so it is blocked while offline. */
+function Actions({
+  disabled,
+  onSave,
+  canDelete,
+  countTransactions,
+  onDelete,
+  onClose,
+}: Pick<Props, 'countTransactions' | 'onDelete' | 'onClose'> & { disabled: boolean; onSave: () => void; canDelete: boolean }) {
   const [del, setDel] = useState<Del>({ phase: 'idle' })
   const run = (withTransactions: boolean) => {
     warning()
@@ -224,35 +233,40 @@ function DeleteFlow({ countTransactions, onDelete, onClose }: Pick<Props, 'count
 
   if (del.phase === 'idle') {
     return (
-      <PillButton
-        variant="destructive"
-        onClick={() => {
-          setDel({ phase: 'checking' })
-          countTransactions().then(
-            (count) => setDel({ phase: 'ready', count }),
-            () => setDel({ phase: 'offline' }),
-          )
-        }}
-      >
-        Delete rule
-      </PillButton>
+      <SheetActions
+        disabled={disabled}
+        onSave={onSave}
+        deleteLabel="Delete rule"
+        confirmDelete={false}
+        onDelete={
+          canDelete
+            ? () => {
+                setDel({ phase: 'checking' })
+                countTransactions().then(
+                  (count) => setDel({ phase: 'ready', count }),
+                  () => setDel({ phase: 'offline' }),
+                )
+              }
+            : undefined
+        }
+      />
     )
   }
-  if (del.phase === 'checking') return <PillButton disabled>Checking…</PillButton>
+  if (del.phase === 'checking') return <SheetFooter><PillButton disabled>Checking…</PillButton></SheetFooter>
   if (del.phase === 'offline') {
     return (
-      <>
+      <SheetFooter>
         <p className="px-1 text-base text-muted-foreground">
           Can't delete right now (you may be offline). It has to check what the rule posted first.
         </p>
         <PillButton variant="secondary" onClick={() => setDel({ phase: 'idle' })}>
           Back
         </PillButton>
-      </>
+      </SheetFooter>
     )
   }
   return (
-    <>
+    <SheetFooter>
       <PillButton variant="destructive" onClick={() => run(false)}>
         {del.count > 0 ? 'Delete rule, keep past transactions' : 'Delete rule'}
       </PillButton>
@@ -264,6 +278,6 @@ function DeleteFlow({ countTransactions, onDelete, onClose }: Pick<Props, 'count
       <PillButton variant="secondary" onClick={() => setDel({ phase: 'idle' })}>
         Keep
       </PillButton>
-    </>
+    </SheetFooter>
   )
 }

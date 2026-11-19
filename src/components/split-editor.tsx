@@ -1,9 +1,10 @@
 import { DatePicker } from '@/components/date-picker'
 import { useState } from 'react'
-import { Share2, Trash2, X } from 'lucide-react'
+import { Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
 import { CategoryPicker } from '@/components/category-picker'
 import { Money } from '@/components/money'
+import { SheetActions } from '@/components/sheet-actions'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
@@ -34,8 +35,6 @@ type Props = {
   initial?: WithId<Split>
   onSave: (draft: SplitDraft) => void
   onDelete?: () => void
-  /** Open the receipt for the saved split (editing only). */
-  onShare?: () => void
 }
 
 const modeOptions = [
@@ -55,30 +54,17 @@ const emptyForm: SplitForm = {
   items: [],
   evenTotal: 0,
   exact: [0],
-  // 16% = 10% service charge + 6% SST, the usual restaurant bill.
-  charges: { type: 'percent', value: 1600 },
+  // 6% = 6% SST, the usual restaurant bill.
+  charges: { type: 'percent', value: 600 },
 }
 
-export function SplitEditor({ open, onClose, initial, onShare, ...rest }: Props) {
+export function SplitEditor({ open, onClose, initial, ...rest }: Props) {
   return (
     <Sheet
       open={open}
       onClose={onClose}
       title={initial ? 'Edit split' : 'New split'}
       tall
-      action={
-        initial &&
-        onShare && (
-          <button
-            type="button"
-            aria-label="Share receipt (as saved)"
-            onClick={onShare}
-            className="flex size-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground"
-          >
-            <Share2 className="size-5" aria-hidden />
-          </button>
-        )
-      }
     >
       {/* Mounted only while open, so the form starts fresh each time. */}
       <Form initial={initial} onClose={onClose} {...rest} />
@@ -86,17 +72,16 @@ export function SplitEditor({ open, onClose, initial, onShare, ...rest }: Props)
   )
 }
 
-function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: Omit<Props, 'open' | 'onShare'>) {
+function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: Omit<Props, 'open'>) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial?.date ?? todayISO())
   const [form, setForm] = useState<SplitForm>(initial ? formFromSplit(initial) : emptyForm)
-  const [percentText, setPercentText] = useState(initial?.charges.type === 'percent' ? formatPercent(initial.charges.value) : '16')
+  const [percentText, setPercentText] = useState(initial?.charges.type === 'percent' ? formatPercent(initial.charges.value) : '6')
   const [newName, setNewName] = useState('')
   const choices = categories.filter((c) => c.kind === 'expense' && (!c.archived || c.id === initial?.categoryId))
   const [categoryId, setCategoryId] = useState<string | null>(
     initial?.categoryId ?? (choices.find((c) => c.name === 'Food') ?? choices[0])?.id ?? null,
   )
-  const [confirming, setConfirming] = useState(false)
 
   // The percentage is typed as text; an unreadable value counts as 0 for the preview and blocks saving.
   const percent = parsePercent(percentText)
@@ -277,7 +262,7 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
           <Segmented
             options={chargeOptions}
             value={form.charges.type}
-            onChange={(type) => patch({ charges: type === 'percent' ? { type, value: percent ?? 1600 } : { type, value: 0 } })}
+            onChange={(type) => patch({ charges: type === 'percent' ? { type, value: percent ?? 600 } : { type, value: 0 } })}
           />
           {form.charges.type === 'percent' ? (
             <div className="flex items-center gap-2">
@@ -298,6 +283,10 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
               </p>
             </>
           )}
+          <div className="flex items-baseline justify-between px-1 pt-1">
+            <span className="text-base text-muted-foreground">Total</span>
+            <Money sen={result.total} className="font-heading text-xl font-bold" />
+          </div>
         </Section>
       )}
 
@@ -327,41 +316,25 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
       </Section>
 
       {problem && <p className="px-1 text-base text-muted-foreground">{problem}</p>}
-      <PillButton
+      <SheetActions
         disabled={!!problem}
-        onClick={() => {
+        onSave={() => {
           if (problem || !categoryId) return
           success()
           onSave({ title: title.trim(), date, categoryId, form: effective })
           onClose()
         }}
-      >
-        Save
-      </PillButton>
-      {initial &&
-        onDelete &&
-        (confirming ? (
-          <div className="flex gap-2">
-            <PillButton variant="secondary" className="flex-1" onClick={() => setConfirming(false)}>
-              Keep
-            </PillButton>
-            <PillButton
-              variant="destructive"
-              className="flex-1"
-              onClick={() => {
+        onDelete={
+          initial && onDelete
+            ? () => {
                 warning()
                 onDelete()
                 onClose()
-              }}
-            >
-              Delete
-            </PillButton>
-          </div>
-        ) : (
-          <PillButton variant="destructive" onClick={() => setConfirming(true)}>
-            Delete split
-          </PillButton>
-        ))}
+              }
+            : undefined
+        }
+        deleteLabel="Delete split"
+      />
     </div>
   )
 }

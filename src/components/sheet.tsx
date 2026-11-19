@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { Dialog } from 'radix-ui'
 import { sheet } from '@/lib/haptics'
@@ -18,6 +19,17 @@ type Props = {
   action?: ReactNode
 }
 
+const FooterSlot = createContext<HTMLElement | null>(null)
+
+/**
+ * Pins its children (the sheet's actions) under the scrolling content, so they never need a scroll.
+ * Render it anywhere inside a `<Sheet>`; it portals into the sheet's footer slot.
+ */
+export function SheetFooter({ children }: { children: ReactNode }) {
+  const slot = useContext(FooterSlot)
+  return slot && createPortal(children, slot)
+}
+
 const CLOSE_DISTANCE = 120
 const CLOSE_VELOCITY = 500
 
@@ -26,6 +38,7 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
   const lg = useMediaQuery('(min-width: 1024px)')
   const touch = useTouch()
   const controls = useDragControls()
+  const [footer, setFooter] = useState<HTMLElement | null>(null)
   useBackClose(open, onClose)
   useEffect(() => {
     if (open) sheet()
@@ -96,8 +109,9 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
                     setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)
                   }}
                 >
-                  {children}
+                  <FooterSlot value={footer}>{children}</FooterSlot>
                 </div>
+                <div ref={setFooter} className="flex shrink-0 flex-col gap-2 px-5 pt-3 empty:hidden" />
               </motion.div>
             </Dialog.Content>
           </Dialog.Portal>
