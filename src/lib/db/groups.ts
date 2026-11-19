@@ -103,17 +103,14 @@ export function revokeInvite(group: WithId<Group>) {
   void batch.commit().catch(reportError)
 }
 
-/**
- * Join a group from its invite. The rules check the invite (not revoked, not expired). Resolves once the server
- * accepts it, so a caller can react to a refusal; the UI never waits on it.
- */
+/** Join a group from its invite. The rules check the invite (not revoked, not expired); a refusal is only logged. */
 export function joinGroup(me: Me, invite: WithId<Invite>) {
   const now = Date.now()
-  return updateDoc(groupRef(invite.gid), {
+  void updateDoc(groupRef(invite.gid), {
     memberUids: arrayUnion(me.uid),
     [`members.${me.uid}`]: { displayName: nameOf(me), photoURL: me.photoURL, joinedAt: now, via: invite.id },
     updatedAt: now,
-  })
+  }).catch(reportError)
 }
 
 /** Leave a group (not the owner: an owner deletes the group instead). */
