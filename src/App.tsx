@@ -101,7 +101,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   const navigate = useNavigate()
   const friendships = useFriendships(user.uid)
   const groups = useGroups(user.uid)
-  const [burst, setBurst] = useState(false)
+  const [burst, setBurst] = useState<DOMRect | null>(null)
   const requests = splitFriendships(friendships ?? [], user.uid).incoming.length
   const tabs = baseTabs.map((t) => (t.id === 'people' ? { ...t, badge: requests } : t))
   const current = tabs.find((t) => paths[t.id] === pathname)
@@ -184,16 +184,16 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
           me={user}
           groups={groups}
           onClose={() => navigate({ pathname: '/people', search })}
-          onJoined={(groupId, isNew) => {
+          onJoined={(groupId, isNew, button) => {
             if (isNew) {
               coinBurst()
-              setBurst(true)
+              setBurst(button)
             }
             navigate({ pathname: '/people', search }, { state: { groupId } })
           }}
         />
       )}
-      {burst && <CoinBurst onDone={() => setBurst(false)} />}
+      {burst && <CoinBurst from={burst} onDone={() => setBurst(null)} />}
       <UpdateSheet open={update.open} update={update.update} onLater={update.later} />
     </div>
   )

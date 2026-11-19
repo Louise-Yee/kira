@@ -10,6 +10,7 @@ const GRID = 12 // the coin is GRID x GRID chunky pixels
 const SHADES = [0.3, 0.55, 0.8, 1] // flat shades, dark to light: no gradients, so it reads as pixel art
 
 const GIVE_UP_MS = 4500 // never leave the overlay up longer than this
+const HIDE_MS = 600 // coins stay hidden behind the button this long, then fly free
 
 let sprites: HTMLCanvasElement[] | null = null
 
@@ -36,10 +37,11 @@ function getSprites(): HTMLCanvasElement[] {
 }
 
 /**
- * A shower of pixel-art coins fired up from the bottom of the screen. Covers the page without taking taps, and calls
- * `onDone` when the last coin has fallen out (or straight away with reduced motion, which gets no animation).
+ * A small shower of pixel-art coins that pops out from behind `from` (the button that was tapped), which stays in front
+ * of them. Covers the page without taking taps, and calls `onDone` when the last coin has fallen out (or straight away
+ * with reduced motion, which gets no animation).
  */
-export function CoinBurst({ onDone }: { onDone: () => void }) {
+export function CoinBurst({ from, onDone }: { from: DOMRect; onDone: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const reduce = useReducedMotion()
   const done = useRef(onDone)
@@ -63,7 +65,7 @@ export function CoinBurst({ onDone }: { onDone: () => void }) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0)
     const frames = getSprites()
     g.imageSmoothingEnabled = false // hard pixel edges when the sprite is scaled up
-    let coins = spawnCoins(COINS, w / 2, h * 0.85, Math.random)
+    let coins = spawnCoins(COINS, from.left + from.width / 2, from.top + from.height / 2, Math.random)
     let last = performance.now()
     const started = last
     let raf = 0
@@ -72,6 +74,14 @@ export function CoinBurst({ onDone }: { onDone: () => void }) {
       last = now
       coins = coins.map((c) => stepCoin(c, dt)).filter((c) => !isGone(c, h))
       g.clearRect(0, 0, w, h)
+      g.save()
+      if (now - started < HIDE_MS) {
+        // Draw everywhere except over the button (even-odd: the screen rectangle minus the pill), so coins come out from behind it.
+        const hole = new Path2D()
+        hole.rect(0, 0, w, h)
+        hole.roundRect(from.left, from.top, from.width, from.height, from.height / 2)
+        g.clip(hole, 'evenodd')
+      }
       for (const c of coins) {
         if (c.delay > 0) continue
         // Whole pixels only (each sprite pixel is `px` screen pixels, positions snap to them), so no coin is ever blurry.
@@ -79,11 +89,13 @@ export function CoinBurst({ onDone }: { onDone: () => void }) {
         const size = px * GRID
         g.drawImage(frames[Math.floor(c.phase) % FRAMES], Math.round((c.x - size / 2) / px) * px, Math.round((c.y - size / 2) / px) * px, size, size)
       }
+      g.restore()
       if (coins.length && now - started < GIVE_UP_MS) raf = requestAnimationFrame(frame)
       else done.current()
     }
     raf = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one burst per mount; `from` is read once at the start
   }, [reduce])
 
   return createPortal(<canvas ref={ref} aria-hidden className="pointer-events-none fixed inset-0 z-50 size-full" />, document.body)

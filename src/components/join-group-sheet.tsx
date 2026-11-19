@@ -11,8 +11,8 @@ type Props = {
   /** The groups I'm already in; undefined while they load. */
   groups: readonly WithId<Group>[] | undefined
   onClose: () => void
-  /** Open this group; `isNew` when I just joined it (rather than already being in it). */
-  onJoined: (groupId: string, isNew: boolean) => void
+  /** Open this group; `isNew` when I just joined it (rather than already being in it). `button` is where the tap landed. */
+  onJoined: (groupId: string, isNew: boolean, button: DOMRect) => void
 }
 
 /** What opening a group invite link shows: "Join Dorm?" with Join or Decline. */
@@ -40,9 +40,9 @@ export function JoinGroupSheet({ token, me, groups, onClose, onJoined }: Props) 
           {ready && (
             <PillButton
               className="flex-1"
-              onClick={() => {
+              onClick={(e) => {
                 if (!already) joinGroup(me, invite)
-                onJoined(invite.gid, !already)
+                onJoined(invite.gid, !already, e.currentTarget.getBoundingClientRect())
               }}
             >
               {already ? 'Open' : 'Join'}

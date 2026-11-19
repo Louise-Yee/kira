@@ -15,10 +15,10 @@ export type Coin = {
   delay: number
 }
 
-export const COINS = 80
+export const COINS = 36
 export const MIN_SIZE = 12
-export const MAX_SIZE = 64
-const STAGGER = 0.3 // seconds the launches are spread over
+export const MAX_SIZE = 48
+const STAGGER = 0.25 // seconds the launches are spread over
 
 /**
  * Coins fired up and out from (ox, oy). Most are small and a few big; big ones fall faster, like they are nearer.
@@ -27,8 +27,8 @@ const STAGGER = 0.3 // seconds the launches are spread over
 export function spawnCoins(count: number, ox: number, oy: number, rand: () => number): Coin[] {
   return Array.from({ length: count }, () => {
     const size = MIN_SIZE + rand() ** 2 * (MAX_SIZE - MIN_SIZE)
-    const angle = -Math.PI / 2 + (rand() - 0.5) * Math.PI * 0.9
-    const speed = 600 + rand() * 900
+    const angle = -Math.PI / 2 + (rand() - 0.5) * Math.PI * 0.7
+    const speed = 450 + rand() * 450
     return {
       x: ox,
       y: oy,

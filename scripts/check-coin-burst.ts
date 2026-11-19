@@ -9,7 +9,7 @@ assert.equal(coins.length, COINS)
 for (const c of coins) {
   assert.ok(c.size >= MIN_SIZE && c.size <= MAX_SIZE)
   assert.ok(c.vy < 0, 'every coin launches upward')
-  assert.ok(c.delay >= 0 && c.delay <= 0.3)
+  assert.ok(c.delay >= 0 && c.delay <= 0.25)
 }
 assert.ok(coins.filter((c) => c.size < 30).length > coins.length / 2, 'most coins are small')
 

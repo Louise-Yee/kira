@@ -167,7 +167,7 @@ function ComponentGallery() {
   const [cat, setCat] = useState<string | null>(null)
   const [total, setTotal] = useState(123450)
   const [taps, setTaps] = useState(0)
-  const [burst, setBurst] = useState(false)
+  const [burst, setBurst] = useState<DOMRect | null>(null)
   const [tx, setTx] = useState<'add' | 'edit' | null>(null)
   const [saved, setSaved] = useState<TransactionDraft | null>(null)
   const [deletes, setDeletes] = useState(0)
@@ -192,14 +192,14 @@ function ComponentGallery() {
       <PillButton onClick={() => setOpen(true)}>Open sheet</PillButton>
       <PillButton variant="secondary">Secondary</PillButton>
       <PillButton
-        onClick={() => {
+        onClick={(e) => {
           coinBurst()
-          setBurst(true)
+          setBurst(e.currentTarget.getBoundingClientRect())
         }}
       >
         Coin burst
       </PillButton>
-      {burst && <CoinBurst onDone={() => setBurst(false)} />}
+      {burst && <CoinBurst from={burst} onDone={() => setBurst(null)} />}
 
       <CategoryPicker categories={cats} value={cat} onChange={setCat} />
       <p data-testid="cat">category: {cat ?? 'none'}</p>
