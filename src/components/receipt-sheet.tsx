@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Sheet } from '@/components/sheet'
 import { SheetActions } from '@/components/sheet-actions'
+import { Toggle } from '@/components/toggle'
 import type { Split, WithId } from '@/lib/db'
 import { buildReceipt } from '@/lib/receipt-data'
 import { renderReceipt } from '@/lib/receipt-canvas'
@@ -34,12 +35,14 @@ function Body({ split, qr, onCreateLink }: Pick<Props, 'qr' | 'onCreateLink'> & 
   const [image, setImage] = useState<{ blob: Blob; url: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [includeQr, setIncludeQr] = useState(true)
+  const shownQr = includeQr ? qr : undefined
 
   // Render ahead of the tap: sharing has to start straight from the user's gesture.
   useEffect(() => {
     let cancelled = false
     let url: string | null = null
-    renderReceipt(buildReceipt(split, only ?? undefined), qr).then(
+    renderReceipt(buildReceipt(split, only ?? undefined), shownQr).then(
       (blob) => {
         if (cancelled) return
         url = URL.createObjectURL(blob)
@@ -52,7 +55,7 @@ function Body({ split, qr, onCreateLink }: Pick<Props, 'qr' | 'onCreateLink'> & 
       cancelled = true
       if (url) URL.revokeObjectURL(url)
     }
-  }, [split, only, qr])
+  }, [split, only, shownQr])
 
   const share = async () => {
     if (!image) return
@@ -91,6 +94,7 @@ function Body({ split, qr, onCreateLink }: Pick<Props, 'qr' | 'onCreateLink'> & 
           </button>
         ))}
       </div>
+      <Toggle label="Include payment QR" checked={!!shownQr} onChange={setIncludeQr} disabled={!qr} />
       {only !== null && (
         <p className="px-1 text-base text-muted-foreground">Only {split.people[only]}'s items and total are shown.</p>
       )}
