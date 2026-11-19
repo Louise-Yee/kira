@@ -3,34 +3,37 @@ import { createPortal } from 'react-dom'
 import { useReducedMotion } from 'motion/react'
 import { rgb } from '@/lib/ascii-draw'
 import { COINS, isGone, spawnCoins, stepCoin } from '@/lib/coin-burst'
-import { identity, rotateWorld, shadeCoin } from '@/lib/coin3d'
 
 const FRAMES = 12 // a full turn of the coin
 const GRID = 12 // the coin is GRID x GRID chunky pixels
-const SHADES = [0.3, 0.55, 0.8, 1] // flat shades, dark to light: no gradients, so it reads as pixel art
-
 const GIVE_UP_MS = 4500 // never leave the overlay up longer than this
 const HIDE_MS = 600 // coins stay hidden behind the button this long, then fly free
 
+// Three flat tones from the app's cobalt ramp. No light source and no gradients: it is drawn, not rendered, so it reads as pixel art.
+const [EDGE, BODY, SHINE] = [0.3, 0.62, 0.92].map((v) => `rgb(${rgb(v).join()})`)
+
 let sprites: HTMLCanvasElement[] | null = null
 
-/** The coin as a tiny pixel-art sprite at each step of a turn, built once: ray-marching is too heavy to run per coin per frame. */
+/** The coin as a flat pixel-art sprite at each step of a turn (squashed sideways as it spins), built once. */
 function getSprites(): HTMLCanvasElement[] {
   if (sprites) return sprites
-  const tilt = rotateWorld(identity(), 1, 0, 0, -0.35)
+  const r = GRID / 2 - 0.5
   sprites = Array.from({ length: FRAMES }, (_, i) => {
-    const m = rotateWorld(tilt, 0, 1, 0, (i / FRAMES) * Math.PI * 2)
     const cv = document.createElement('canvas')
     cv.width = cv.height = GRID
     const g = cv.getContext('2d')
-    if (g)
-      for (let y = 0; y < GRID; y++)
-        for (let x = 0; x < GRID; x++) {
-          const v = shadeCoin(m, ((x + 0.5) / GRID) * 2.1 - 1.05, ((y + 0.5) / GRID) * 2.1 - 1.05)
-          if (v < 0) continue
-          g.fillStyle = `rgb(${rgb(SHADES[Math.min(SHADES.length - 1, Math.floor(v * 1.6 * SHADES.length))]).join()})`
-          g.fillRect(x, y, 1, 1)
-        }
+    if (!g) return cv
+    const halfW = Math.max(0.6, Math.abs(Math.cos((i / FRAMES) * Math.PI * 2)) * r) // edge-on is a one-pixel bar
+    for (let y = 0; y < GRID; y++)
+      for (let x = 0; x < GRID; x++) {
+        const nx = (x + 0.5 - GRID / 2) / halfW
+        const ny = (y + 0.5 - GRID / 2) / r
+        const d = nx * nx + ny * ny
+        if (d > 1) continue
+        // Rim, a fixed shine patch at the top-left (it turns with the coin), the rest body.
+        g.fillStyle = d > 0.6 ? EDGE : nx < -0.1 && ny < -0.1 && d < 0.4 ? SHINE : BODY
+        g.fillRect(x, y, 1, 1)
+      }
     return cv
   })
   return sprites
