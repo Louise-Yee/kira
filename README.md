@@ -1,10 +1,37 @@
-# kira
+<p align="center">
+  <img src="assets/banner.png" alt="kira: every ringgit, accounted for." width="720">
+</p>
 
-Every ringgit, accounted for. A personal expense tracker PWA: offline-first, synced through Firebase (free Spark plan), Google sign-in.
+kira is a free expense tracker for your phone that works without signal, syncs across your devices, and makes splitting a bill with friends painless. Log spending in a few taps, let rent and salary post themselves, and send a clean receipt to the group chat.
+
+Install it as an app on Android or add it to your home screen from the browser. Sign in with Google and your data follows you to any device.
+
+## What you can do
+
+- **Log in seconds.** A TNG-style amount pad, a searchable category picker and a quick-add button within thumb reach.
+- **See where it goes.** Monthly income, expense and net, spending by category and a six-month trend.
+- **Automate the repeats.** Rent, salary, subscriptions and installments post on their own, even if you were offline when they came due.
+- **Split a bill without the maths.** Itemized or even splits, service charge and SST handled, with shares that add up to the sen. Your own share is logged as an expense.
+- **Send a receipt.** Turn a split into an image with your TNG QR on it and share it to WhatsApp. People you split with don't need an account to view it.
+- **Split with friends and groups.** Add friends, make groups, track who owes whom and settle up with suggested payments.
+- **Work offline.** Everything is instant and queues up while you have no signal, then syncs when you reconnect.
+- **Keep it private.** Your data lives under your account only. There's an optional biometric or PIN app lock, and you can export a full backup any time.
+
+## Who it's for
+
+- **Anyone who wants a simple, honest record of their money** without ads, bank logins or a subscription.
+- **Friends, housemates and colleagues who split bills** at restaurants, on trips and for shared rent, especially in Malaysia (ringgit, TNG and SST are built in).
+- **People who want it to work on a bad connection**: on the LRT, in a basement car park or abroad.
+
+kira is a personal tracker, not a budgeting suite. It is MYR-only for now and doesn't connect to your bank.
+
+## Project docs
 
 - Product spec: [SPEC.md](SPEC.md)
 - Build plan: [PLAN.md](PLAN.md)
 - Rules for contributors and agents: [CLAUDE.md](CLAUDE.md)
+
+Built with Vite, React, TypeScript, Tailwind and Firebase on the free Spark plan, so it costs nothing to run.
 
 ## Run locally
 
