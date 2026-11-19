@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ArrowLeft, Link2, Pencil, Plus } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { ConfirmSheet } from '@/components/confirm-sheet'
+import { GroupAutoLogCard } from '@/components/group-auto-log-card'
 import { GroupExpenseDetailSheet } from '@/components/group-expense-detail-sheet'
 import { GroupExpenseSheet } from '@/components/group-expense-sheet'
 import { GroupNameSheet } from '@/components/group-name-sheet'
@@ -20,6 +21,7 @@ import {
   renameGroup,
   revokeInvite,
   saveGroupExpense,
+  setGroupLog,
   settleUp,
   takeBackSettlement,
   useOlderExpenses,
@@ -27,7 +29,9 @@ import {
   usePendingSettlements,
   useRecentExpenses,
   useRecentSettlements,
+  type Category,
   type Group,
+  type GroupLog,
   type Me,
   type WithId,
 } from '@/lib/db'
@@ -41,12 +45,15 @@ type Props = {
   me: Me
   /** Undefined while the group hasn't arrived yet (just joined, or still loading). */
   group: WithId<Group> | undefined
+  /** My auto-log setting for this group. */
+  log: GroupLog | undefined
+  categories: readonly WithId<Category>[]
   onBack: () => void
 }
 
 const day = 24 * 60 * 60 * 1000
 
-export function GroupScreen({ me, group, onBack }: Props) {
+export function GroupScreen({ me, group, log, categories, onBack }: Props) {
   const [renaming, setRenaming] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -94,6 +101,8 @@ export function GroupScreen({ me, group, onBack }: Props) {
       </div>
 
       <GroupLedger me={me} group={group} />
+
+      <GroupAutoLogCard log={log} categories={categories} onChange={(next) => setGroupLog(me.uid, group.id, next)} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold text-muted-foreground">{group.memberUids.length} members</h2>

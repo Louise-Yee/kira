@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { collection, doc, limit, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore'
+import { useEffect, useMemo, useState } from 'react'
+import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { settlementDelta, type Settlement, type Transfer } from '@/lib/group-ledger'
 import { converter, reportError } from './core'
@@ -29,6 +29,29 @@ export function useOlderSettlements(gid: string, before: string, count: number, 
 export function usePendingSettlements(gid: string) {
   const q = useMemo(() => query(settlements(gid), where('status', '==', 'pending')), [gid])
   return useDocs(q)
+}
+
+/** A payment waiting for me to confirm, with the group it belongs to. */
+export type PendingForMe = WithId<Settlement> & { gid: string }
+
+/**
+ * Payments in any of my groups that were made to me and wait for me to confirm: for the inbox and the tab's dot.
+ * One small listener per group (people are in a handful of groups).
+ */
+export function usePendingForMe(uid: string, groupIds: readonly string[]): PendingForMe[] {
+  const key = groupIds.join(',')
+  const [byGroup, setByGroup] = useState<Record<string, WithId<Settlement>[]>>({})
+  useEffect(() => {
+    const stops = (key ? key.split(',') : []).map((gid) =>
+      onSnapshot(
+        query(settlements(gid), where('to', '==', uid), where('status', '==', 'pending')),
+        (snap) => setByGroup((m) => ({ ...m, [gid]: snap.docs.map((d) => ({ ...d.data(), id: d.id })) })),
+        reportError,
+      ),
+    )
+    return () => stops.forEach((stop) => stop())
+  }, [uid, key])
+  return groupIds.flatMap((gid) => (byGroup[gid] ?? []).map((s) => ({ ...s, gid })))
 }
 
 /**

@@ -28,6 +28,9 @@ export type Transaction = {
   /** Index of the recurring occurrence this was posted for. */
   occurrence?: number
   splitId?: string
+  /** Set on a transaction made from my share of a group expense (see group-autolog). */
+  groupId?: string
+  groupExpenseId?: string
   /** Epoch ms (not serverTimestamp, which reads back null while a write is pending). */
   createdAt: number
   updatedAt: number
