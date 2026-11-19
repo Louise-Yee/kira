@@ -44,6 +44,68 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid in resource.data.uids;
     }
 
+    // Groups: members read them; any signed-in user with a valid invite can add only themselves.
+    // The owner renames the group and manages its invite; members can leave; only the owner deletes.
+    match /groups/{gid} {
+      function isMember() {
+        return request.auth.uid in resource.data.memberUids;
+      }
+      function nameOk() {
+        return request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40;
+      }
+      function onlyMemberChanged(uid) {
+        return request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([uid]);
+      }
+      function inviteOk(token) {
+        let inv = get(/databases/$(database)/documents/invites/$(token)).data;
+        return inv.gid == gid && inv.revoked == false && inv.expiresAt > request.time.toMillis();
+      }
+      allow read: if request.auth != null && isMember();
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'memberUids', 'members', 'inviteId', 'inviteExpiresAt', 'createdAt', 'updatedAt'])
+        && nameOk()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.memberUids == [request.auth.uid]
+        && request.resource.data.members.keys().hasOnly([request.auth.uid]);
+      allow update: if request.auth != null && (
+        // Owner: rename and manage the invite.
+        (resource.data.ownerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'inviteId', 'inviteExpiresAt', 'updatedAt'])
+          && nameOk())
+        // Join: add only myself, with a working invite.
+        || (!isMember()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids', 'members', 'updatedAt'])
+          && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
+          && request.resource.data.memberUids.size() <= 30
+          && onlyMemberChanged(request.auth.uid)
+          && request.resource.data.members[request.auth.uid].keys().hasOnly(['displayName', 'photoURL', 'joinedAt', 'via'])
+          && inviteOk(request.resource.data.members[request.auth.uid].via))
+        // Leave: remove only myself (the owner deletes the group instead).
+        || (isMember()
+          && resource.data.ownerUid != request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids', 'members', 'updatedAt'])
+          && request.resource.data.memberUids == resource.data.memberUids.removeAll([request.auth.uid])
+          && onlyMemberChanged(request.auth.uid)
+          && !(request.auth.uid in request.resource.data.members))
+      );
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Invite links: whoever holds the token (signed in) can read that one doc, to see what they are joining.
+    // Only the group's owner can create, revoke or delete them.
+    match /invites/{token} {
+      allow get: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['gid', 'groupName', 'ownerName', 'ownerUid', 'expiresAt', 'revoked', 'createdAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.revoked == false
+        && getAfter(/databases/$(database)/documents/groups/$(request.resource.data.gid)).data.ownerUid == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revoked', 'groupName']);
+      allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+    }
+
     // Receipt links: anyone holding the (long, random) id can read that one doc, nobody can list them.
     // Only the owner can create, change or delete their own.
     match /shares/{id} {

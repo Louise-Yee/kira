@@ -3,6 +3,7 @@ import { Inbox } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
 import { CategoryIcon } from '@/components/category-icon'
 import { CategoryPicker } from '@/components/category-picker'
+import { CoinBurst } from '@/components/coin-burst'
 import { EmptyState } from '@/components/empty-state'
 import { Fab } from '@/components/fab'
 import { ListRow } from '@/components/list-row'
@@ -16,6 +17,7 @@ import type { SyncStatus } from '@/lib/db'
 import { TransactionSheet } from '@/components/transaction-sheet'
 import { ReceiptSheet } from '@/components/receipt-sheet'
 import { UpdateSheet } from '@/components/update-sheet'
+import { coinBurst } from '@/lib/haptics'
 import { buildReceipt } from '@/lib/receipt-data'
 import { ReceiptCard } from '@/screens/receipt-page'
 import { monthlyTotals } from '@/lib/chart-data'
@@ -165,6 +167,7 @@ function ComponentGallery() {
   const [cat, setCat] = useState<string | null>(null)
   const [total, setTotal] = useState(123450)
   const [taps, setTaps] = useState(0)
+  const [burst, setBurst] = useState<DOMRect | null>(null)
   const [tx, setTx] = useState<'add' | 'edit' | null>(null)
   const [saved, setSaved] = useState<TransactionDraft | null>(null)
   const [deletes, setDeletes] = useState(0)
@@ -188,6 +191,15 @@ function ComponentGallery() {
       <p data-testid="amount">sen: {amount}</p>
       <PillButton onClick={() => setOpen(true)}>Open sheet</PillButton>
       <PillButton variant="secondary">Secondary</PillButton>
+      <PillButton
+        onClick={(e) => {
+          coinBurst()
+          setBurst(e.currentTarget.getBoundingClientRect())
+        }}
+      >
+        Coin burst
+      </PillButton>
+      {burst && <CoinBurst from={burst} onDone={() => setBurst(null)} />}
 
       <CategoryPicker categories={cats} value={cat} onChange={setCat} />
       <p data-testid="cat">category: {cat ?? 'none'}</p>

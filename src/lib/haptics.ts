@@ -36,5 +36,11 @@ export const success = () => fire(Haptics.notification({ type: NotificationType.
 /** A point of no return (delete confirm). */
 export const warning = () => fire(Haptics.notification({ type: NotificationType.Warning }))
 
+/** A small shower of coins (joining a group): a few light ticks, then one soft thump as they land. */
+export function coinBurst() {
+  for (let i = 0; i < 5; i++) setTimeout(() => tick('light'), i * 60)
+  setTimeout(() => tick('medium'), 520)
+}
+
 /** Something failed. */
 export const error = () => fire(Haptics.notification({ type: NotificationType.Error }))

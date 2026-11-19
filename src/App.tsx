@@ -4,9 +4,10 @@ import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/rea
 import { House, ReceiptText, Repeat, Settings, Users } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
 import { useAppLock, type AppLock } from '@/lib/app-lock'
-import { useClientInfo, useDirectoryPublisher, useFriendships, useSyncStatus } from '@/lib/db'
+import { useClientInfo, useDirectoryPublisher, useFriendships, useGroups, useSyncStatus } from '@/lib/db'
 import { splitFriendships } from '@/lib/friends'
 import { todayISO } from '@/lib/date'
+import { coinBurst } from '@/lib/haptics'
 import { soft } from '@/lib/motion'
 import { usePostRecurring } from '@/lib/post-recurring'
 import { useSeedDefaults } from '@/lib/seed'
@@ -18,6 +19,8 @@ import { cn } from '@/lib/utils'
 import { FabSlideContext } from '@/lib/fab-slide'
 import { SyncPill } from '@/components/sync-pill'
 import { TabBar, type TabItem } from '@/components/tab-bar'
+import { CoinBurst } from '@/components/coin-burst'
+import { JoinGroupSheet } from '@/components/join-group-sheet'
 import { UpdateSheet } from '@/components/update-sheet'
 import { LockScreen } from '@/screens/lock'
 import { Gallery } from '@/screens/gallery'
@@ -93,13 +96,18 @@ const page: Variants = {
 }
 
 function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
-  const { pathname, search } = useLocation()
+  const { pathname, search, state } = useLocation()
+  const joinToken = useMatch('/join/:token')?.params.token
   const navigate = useNavigate()
   const friendships = useFriendships(user.uid)
+  const groups = useGroups(user.uid)
+  const [burst, setBurst] = useState<DOMRect | null>(null)
   const requests = splitFriendships(friendships ?? [], user.uid).incoming.length
   const tabs = baseTabs.map((t) => (t.id === 'people' ? { ...t, badge: requests } : t))
   const current = tabs.find((t) => paths[t.id] === pathname)
-  const tab: Tab = current?.id ?? 'home'
+  // A group invite link (/join/…) opens its sheet over the People tab.
+  const tab: Tab = current?.id ?? (joinToken ? 'people' : 'home')
+  const openGroupId = (state as { groupId?: string } | null)?.groupId
   // Slide direction and previous tab follow the URL, so back/forward and refresh animate like a tap.
   const [nav, setNav] = useState<{ tab: Tab; from: Tab; dir: number }>({ tab, from: tab, dir: 1 })
   if (nav.tab !== tab) {
@@ -142,7 +150,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
     }
   }
 
-  if (!current) return <Navigate to={{ pathname: '/', search }} replace />
+  if (!current && !joinToken) return <Navigate to={{ pathname: '/', search }} replace />
 
   return (
     <div className={cn('mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6', navPos === 'right' && 'lg:flex-row-reverse')}>
@@ -165,11 +173,27 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
             {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} update={update.update} onUpdate={update.show} lock={lock} />}
             {tab === 'recurring' && <RecurringScreen user={user} />}
             {tab === 'split' && <SplitScreen user={user} today={today} />}
-            {tab === 'people' && <PeopleScreen user={user} friendships={friendships} />}
+            {tab === 'people' && <PeopleScreen key={openGroupId ?? ''} user={user} friendships={friendships} groups={groups} openGroupId={openGroupId} />}
           </motion.div>
         </AnimatePresence>
       </main>
       </FabSlideContext>
+      {joinToken && (
+        <JoinGroupSheet
+          token={joinToken}
+          me={user}
+          groups={groups}
+          onClose={() => navigate({ pathname: '/people', search })}
+          onJoined={(groupId, isNew, button) => {
+            if (isNew) {
+              coinBurst()
+              setBurst(button)
+            }
+            navigate({ pathname: '/people', search }, { state: { groupId } })
+          }}
+        />
+      )}
+      {burst && <CoinBurst from={burst} onDone={() => setBurst(null)} />}
       <UpdateSheet open={update.open} update={update.update} onLater={update.later} />
     </div>
   )
