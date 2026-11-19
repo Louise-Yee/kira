@@ -86,7 +86,7 @@ function Body({ onClose, me, friendships }: Omit<Props, 'open'>) {
   return (
     <div className="flex flex-col gap-4 pb-1">
       <form
-        className="flex gap-2"
+        className="flex items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault()
           if (email.trim() && !busy) findTyped()
