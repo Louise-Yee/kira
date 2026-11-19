@@ -21,7 +21,18 @@ export { exportBackup, importBackup } from './backup'
 export { usePublicReceipt } from './shares'
 export { findByEmails, useDirectoryPublisher } from './directory'
 export { EXPENSES_PAGE, deleteGroupExpense, saveGroupExpense, useOlderExpenses, useRecentExpenses } from './group-expenses'
-export { confirmSettlement, settleUp, takeBackSettlement, useOlderSettlements, usePendingSettlements, useRecentSettlements } from './group-settlements'
+export { setGroupLog, useGroupAutoLog, useGroupLogs } from './group-autolog'
+export type { GroupLog } from '@/lib/group-autolog'
+export {
+  confirmSettlement,
+  settleUp,
+  takeBackSettlement,
+  useOlderSettlements,
+  usePendingForMe,
+  usePendingSettlements,
+  useRecentSettlements,
+  type PendingForMe,
+} from './group-settlements'
 export { createGroup, deleteGroup, joinGroup, leaveGroup, newInvite, renameGroup, revokeInvite, useGroups, useInvite } from './groups'
 export { acceptFriendRequest, removeFriendship, sendFriendRequest, useFriendships, type Me } from './friends'
 export type { Group, Invite } from '@/lib/groups'

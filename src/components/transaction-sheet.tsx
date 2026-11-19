@@ -40,7 +40,7 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
     entry.amount > 0 && entry.categoryId && date
       ? { kind: entry.kind, amount: entry.amount, categoryId: entry.categoryId, date, note: entry.note.trim() }
       : null
-  const badge = initial?.recurringId ? 'Recurring' : initial?.splitId ? 'Split' : null
+  const badge = initial?.recurringId ? 'Recurring' : initial?.splitId ? 'Split' : initial?.groupId ? 'Group' : null
 
   return (
     <div className="flex flex-col gap-4 pb-1">

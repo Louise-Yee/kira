@@ -3,14 +3,30 @@ import { Check, UserPlus, Users, X } from 'lucide-react'
 import { AddFriendSheet } from '@/components/add-friend-sheet'
 import { Avatar } from '@/components/avatar'
 import { ConfirmSheet } from '@/components/confirm-sheet'
+import { PendingSettlementRow } from '@/components/pending-settlement-row'
 import { EmptyState } from '@/components/empty-state'
 import { GroupNameSheet } from '@/components/group-name-sheet'
 import { ListRow } from '@/components/list-row'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
-import { acceptFriendRequest, createGroup, removeFriendship, type Group, type Me, type WithId } from '@/lib/db'
+import {
+  acceptFriendRequest,
+  confirmSettlement,
+  createGroup,
+  removeFriendship,
+  takeBackSettlement,
+  useCategories,
+  type Group,
+  type GroupLog,
+  type Me,
+  type PendingForMe,
+  type WithId,
+} from '@/lib/db'
 import { otherUid, splitFriendships, type Friendship } from '@/lib/friends'
 import type { AppUser } from '@/lib/firebase'
+import { Money } from '@/components/money'
+import { shortDate } from '@/lib/date'
+import { success } from '@/lib/haptics'
 import { useBackClose } from '@/lib/use-back-close'
 import { GroupScreen } from '@/screens/group'
 
@@ -18,6 +34,10 @@ type Props = {
   user: AppUser
   friendships: readonly WithId<Friendship>[] | undefined
   groups: readonly WithId<Group>[] | undefined
+  /** Payments made to me that wait for me to confirm, from all my groups. */
+  toConfirm: readonly PendingForMe[]
+  /** My auto-log settings, by group id. */
+  logs: readonly (GroupLog & { id: string })[] | undefined
   /** A group to open straight away (after joining by link). */
   openGroupId?: string
 }
@@ -29,7 +49,8 @@ const segments = [
 
 const Heading = ({ children }: { children: string }) => <h2 className="text-base font-semibold text-muted-foreground">{children}</h2>
 
-export function PeopleScreen({ user, friendships, groups, openGroupId }: Props) {
+export function PeopleScreen({ user, friendships, groups, toConfirm, logs, openGroupId }: Props) {
+  const categories = useCategories(user.uid) ?? []
   const me: Me = user
   const joined = openGroupId ?? null
   const [segment, setSegment] = useState<(typeof segments)[number]['value']>(joined ? 'groups' : 'friends')
@@ -42,7 +63,15 @@ export function PeopleScreen({ user, friendships, groups, openGroupId }: Props) 
   const { friends, incoming, outgoing } = splitFriendships(friendships ?? [], user.uid)
 
   if (groupId !== null) {
-    return <GroupScreen me={me} group={groups?.find((g) => g.id === groupId)} onBack={() => setGroupId(null)} />
+    return (
+      <GroupScreen
+        me={me}
+        group={groups?.find((g) => g.id === groupId)}
+        log={logs?.find((l) => l.id === groupId)}
+        categories={categories}
+        onBack={() => setGroupId(null)}
+      />
+    )
   }
 
   const who = (f: Friendship) => f.names[otherUid(f, user.uid)]
@@ -67,6 +96,30 @@ export function PeopleScreen({ user, friendships, groups, openGroupId }: Props) 
           </PillButton>
         )}
       </div>
+      {toConfirm.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <Heading>To confirm</Heading>
+          {toConfirm.map((s) => {
+            const group = groups?.find((g) => g.id === s.gid)
+            return (
+              <PendingSettlementRow
+                key={`${s.gid}-${s.id}`}
+                title={`${group?.members[s.from]?.displayName || 'Someone'} says they paid you`}
+                subtitle={
+                  <>
+                    <Money sen={s.amount} /> · {group?.name ?? 'a group'} · {shortDate(s.date)}
+                  </>
+                }
+                onConfirm={() => {
+                  success()
+                  confirmSettlement(s.gid, s)
+                }}
+                takeBack={{ label: 'Not received', onClick: () => takeBackSettlement(s.gid, s) }}
+              />
+            )
+          })}
+        </section>
+      )}
       <Segmented options={segments} value={segment} onChange={setSegment} />
 
       {segment === 'friends' && (

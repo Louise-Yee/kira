@@ -9,9 +9,10 @@ import {
   type FirestoreDataConverter,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import type { GroupLog } from '@/lib/group-autolog'
 import type { ClientDoc, Category, Recurring, Settings, Split, Transaction } from './types'
 
-type Collections = { categories: Category; transactions: Transaction; recurring: Recurring; splits: Split }
+type Collections = { categories: Category; transactions: Transaction; recurring: Recurring; splits: Split; groupLogs: GroupLog }
 
 export const converter = <T extends DocumentData>(): FirestoreDataConverter<T> => ({
   toFirestore: (data) => data,

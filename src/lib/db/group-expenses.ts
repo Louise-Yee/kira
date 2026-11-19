@@ -13,9 +13,12 @@ export const EXPENSES_PAGE = 30
 
 const expenses = (gid: string) => collection(db, 'groups', gid, 'expenses').withConverter(converter<GroupExpense>())
 
+/** Expenses dated `since` or later, newest first. */
+export const recentExpensesQuery = (gid: string, since: string) => query(expenses(gid), where('date', '>=', since), orderBy('date', 'desc'))
+
 /** Expenses dated `since` or later, newest first. The window is short, so it has no limit. */
 export function useRecentExpenses(gid: string, since: string) {
-  const q = useMemo(() => query(expenses(gid), where('date', '>=', since), orderBy('date', 'desc')), [gid, since])
+  const q = useMemo(() => recentExpensesQuery(gid, since), [gid, since])
   return useDocs(q)
 }
 

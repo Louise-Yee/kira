@@ -43,7 +43,7 @@ export function transactionsCsv(transactions: readonly Transaction[], categories
         senToDecimal(t.amount),
         names.get(t.categoryId) ?? '',
         t.note,
-        t.recurringId ? 'recurring' : t.splitId ? 'split' : 'manual',
+        t.recurringId ? 'recurring' : t.splitId ? 'split' : t.groupId ? 'group' : 'manual',
       ]
         .map(csvField)
         .join(','),
@@ -116,6 +116,8 @@ function parseTransaction(o: Rec): Transaction {
     ...(has(o, 'recurringId') ? { recurringId: str(o, 'recurringId') } : {}),
     ...(has(o, 'occurrence') ? { occurrence: int(o, 'occurrence') } : {}),
     ...(has(o, 'splitId') ? { splitId: str(o, 'splitId') } : {}),
+    ...(has(o, 'groupId') ? { groupId: str(o, 'groupId') } : {}),
+    ...(has(o, 'groupExpenseId') ? { groupExpenseId: str(o, 'groupExpenseId') } : {}),
     createdAt: int(o, 'createdAt'),
     updatedAt: int(o, 'updatedAt'),
   }

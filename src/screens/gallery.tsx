@@ -4,6 +4,7 @@ import { AmountInput } from '@/components/amount-input'
 import { CategoryIcon } from '@/components/category-icon'
 import { CategoryPicker } from '@/components/category-picker'
 import { CoinBurst } from '@/components/coin-burst'
+import { GroupAutoLogCard } from '@/components/group-auto-log-card'
 import { GroupExpenseSheet } from '@/components/group-expense-sheet'
 import { GroupSettleUp } from '@/components/group-settle-up'
 import { EmptyState } from '@/components/empty-state'
@@ -26,7 +27,7 @@ import { monthlyTotals } from '@/lib/chart-data'
 import { computeShares } from '@/lib/split'
 import { trendMonths } from '@/lib/date'
 import { defaultCategories } from '@/lib/default-categories'
-import type { Category, Group, Split, Transaction, TransactionDraft, WithId } from '@/lib/db'
+import type { Category, Group, GroupLog, Split, Transaction, TransactionDraft, WithId } from '@/lib/db'
 import { categoryIconNames } from '@/lib/category-icons'
 import { CategoriesManager } from '@/screens/categories/manager'
 import { MonthView } from '@/screens/month-view'
@@ -179,6 +180,7 @@ const fakeGroup: WithId<Group> = {
 }
 
 function ComponentGallery() {
+  const [autoLog, setAutoLog] = useState<GroupLog | undefined>()
   const [settleLog, setSettleLog] = useState('none')
   const [groupExpense, setGroupExpense] = useState('none')
   const [groupOpen, setGroupOpen] = useState(false)
@@ -238,6 +240,8 @@ function ComponentGallery() {
         onTakeBack={(s) => setSettleLog(`take back ${s.id}`)}
       />
       <p data-testid="settle-log">settle: {settleLog}</p>
+      <GroupAutoLogCard log={autoLog} categories={defaultCategories} onChange={setAutoLog} />
+      <p data-testid="auto-log">auto-log: {autoLog ? `${autoLog.enabled} ${autoLog.categoryId}` : 'none'}</p>
       <PillButton onClick={() => setGroupOpen(true)}>Group expense</PillButton>
       <p data-testid="group-expense">group expense: {groupExpense}</p>
       <GroupExpenseSheet

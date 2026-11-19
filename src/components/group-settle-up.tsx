@@ -1,4 +1,5 @@
 import { Money } from '@/components/money'
+import { PendingSettlementRow } from '@/components/pending-settlement-row'
 import { PillButton } from '@/components/pill-button'
 import { shortDate } from '@/lib/date'
 import type { Group, WithId } from '@/lib/db'
@@ -52,25 +53,17 @@ export function GroupSettleUp({ group, meUid, transfers, pending, allSettled, on
         <section className="flex flex-col gap-2">
           <h2 className="text-base font-semibold text-muted-foreground">Waiting for confirmation</h2>
           {pending.map((s) => (
-            <div key={s.id} className="flex min-h-14 flex-wrap items-center gap-3 rounded-2xl bg-card p-3">
-              {/* The buttons wrap under the text when there is no room, so a name is never cut short. */}
-              <span className="min-w-48 flex-1">
-                <span className="block truncate text-base font-semibold">{line(s.from, s.to, 'paid')}</span>
-                <span className="block truncate text-base text-muted-foreground">
+            <PendingSettlementRow
+              key={s.id}
+              title={line(s.from, s.to, 'paid')}
+              subtitle={
+                <>
                   <Money sen={s.amount} /> · {shortDate(s.date)}
-                </span>
-              </span>
-              {s.to === meUid && (
-                <PillButton size="pill-sm" onClick={() => onConfirm(s)}>
-                  Got it
-                </PillButton>
-              )}
-              {(s.to === meUid || s.from === meUid) && (
-                <PillButton variant="secondary" size="pill-sm" onClick={() => onTakeBack(s)}>
-                  {s.to === meUid ? 'Not received' : 'Undo'}
-                </PillButton>
-              )}
-            </div>
+                </>
+              }
+              onConfirm={s.to === meUid ? () => onConfirm(s) : undefined}
+              takeBack={s.to === meUid || s.from === meUid ? { label: s.to === meUid ? 'Not received' : 'Undo', onClick: () => onTakeBack(s) } : undefined}
+            />
           ))}
         </section>
       )}
