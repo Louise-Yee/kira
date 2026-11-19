@@ -17,6 +17,7 @@ import { logOut, type AppUser } from '@/lib/firebase'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { readTheme, setTheme, type Theme } from '@/lib/theme'
 import { APP_VERSION, type Update } from '@/lib/update'
+import { Avatar } from '@/components/avatar'
 import { BackupSheet } from '@/components/backup-sheet'
 import { CategoryIcon } from '@/components/category-icon'
 import { ListRow } from '@/components/list-row'
@@ -56,26 +57,13 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
   const [managing, setManaging] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [backupOpen, setBackupOpen] = useState(false)
-  const [photoFailed, setPhotoFailed] = useState(false)
   const settings = useSettings(user.uid)
   const isUsed = useCallback((id: string) => categoryInUse(user.uid, id), [user.uid])
   return (
     <div className="flex flex-col gap-5">
       <h1 className="font-heading text-3xl font-extrabold tracking-tight">Settings</h1>
       <div className="flex items-center gap-4 rounded-3xl bg-card p-5">
-        {user.photoURL && !photoFailed ? (
-          <img
-            src={user.photoURL}
-            alt=""
-            referrerPolicy="no-referrer"
-            onError={() => setPhotoFailed(true)}
-            className="size-12 rounded-full"
-          />
-        ) : (
-          <div className="flex size-12 items-center justify-center rounded-full bg-primary font-heading text-xl font-bold text-primary-foreground">
-            {(user.displayName ?? user.email ?? '?').charAt(0).toUpperCase()}
-          </div>
-        )}
+        <Avatar photoURL={user.photoURL} name={user.displayName ?? user.email ?? '?'} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-semibold">{user.displayName}</p>
           <p className="truncate text-base text-muted-foreground">{user.email}</p>

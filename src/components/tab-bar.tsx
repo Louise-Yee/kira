@@ -4,7 +4,7 @@ import { select } from '@/lib/haptics'
 import { press, soft } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
-export type TabItem<Id extends string> = { id: Id; label: string; icon: LucideIcon }
+export type TabItem<Id extends string> = { id: Id; label: string; icon: LucideIcon; /** A count dot on the icon when above 0. */ badge?: number }
 
 type Props<Id extends string> = {
   tabs: readonly TabItem<Id>[]
@@ -56,7 +56,10 @@ export function TabBar<Id extends string>({ tabs, active: current, onChange, sid
               transition={soft}
               className={cn('absolute bottom-1.5 h-0.5 w-5 rounded-full bg-foreground', side && 'lg:hidden')}
             />
-            <t.icon className="relative size-6 shrink-0 lg:size-5" />
+            <span className="relative">
+              <t.icon className="size-6 shrink-0 lg:size-5" />
+              {!!t.badge && <span className="absolute -top-0.5 -right-1 size-3 rounded-full bg-destructive" aria-label={`${t.badge} new`} />}
+            </span>
             <span className={cn('relative hidden', side && 'lg:block lg:pl-3')}>{t.label}</span>
           </motion.button>
         )
