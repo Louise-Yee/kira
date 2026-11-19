@@ -1,24 +1,49 @@
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useReducedMotion } from 'motion/react'
-import { rgb } from '@/lib/ascii-draw'
+import { drawAscii, rgb } from '@/lib/ascii-draw'
 import { COINS, isGone, spawnCoins, stepCoin } from '@/lib/coin-burst'
+import { identity, rotateWorld, shadeCoin } from '@/lib/coin3d'
 
 const FRAMES = 12 // a full turn of the coin
-const GRID = 12 // the coin is GRID x GRID chunky pixels
+const GRID = 12 // the pixel coin is GRID x GRID chunky pixels
+const ASCII_SPRITE = 96 // css px; the ASCII coin is drawn scaled down for smaller coins
+
+/** `pixel`: flat chunky pixels. `ascii`: the 3D coin drawn in ASCII letters. */
+export type CoinStyle = 'pixel' | 'ascii'
 const GIVE_UP_MS = 4500 // never leave the overlay up longer than this
 const HIDE_MS = 600 // coins stay hidden behind the button this long, then fly free
 
 // Three flat tones from the app's cobalt ramp. No light source and no gradients: it is drawn, not rendered, so it reads as pixel art.
 const [EDGE, BODY, SHINE] = [0.3, 0.62, 0.92].map((v) => `rgb(${rgb(v).join()})`)
 
-let sprites: HTMLCanvasElement[] | null = null
+const cache: Partial<Record<CoinStyle, HTMLCanvasElement[]>> = {}
 
-/** The coin as a flat pixel-art sprite at each step of a turn (squashed sideways as it spins), built once. */
-function getSprites(): HTMLCanvasElement[] {
-  if (sprites) return sprites
+/** The ASCII coin at each step of a turn: the lit 3D coin ray-marched once into letters (too heavy to run per coin per frame). */
+function asciiSprites(): HTMLCanvasElement[] {
+  const tilt = rotateWorld(identity(), 1, 0, 0, -0.35)
+  return Array.from({ length: FRAMES }, (_, i) => {
+    const m = rotateWorld(tilt, 0, 1, 0, (i / FRAMES) * Math.PI * 2)
+    const cv = document.createElement('canvas')
+    cv.width = cv.height = ASCII_SPRITE * 2
+    const g = cv.getContext('2d')
+    if (g) {
+      g.scale(2, 2)
+      // A floor of brightness inside the coin keeps its silhouette solid, so small ones still read as coins. The cap keeps
+      // it in the cobalt part of the palette: only the shine reaches light blue, never white.
+      drawAscii(g, ASCII_SPRITE, ASCII_SPRITE, 5, 0.1, (nx, ny) => {
+        const v = shadeCoin(m, nx * 1.05, ny * 1.05)
+        return v < 0 ? 0 : Math.min(0.85, 0.3 + v * 0.75)
+      })
+    }
+    return cv
+  })
+}
+
+/** The coin as a flat pixel-art sprite at each step of a turn (squashed sideways as it spins). */
+function pixelSprites(): HTMLCanvasElement[] {
   const r = GRID / 2 - 0.5
-  sprites = Array.from({ length: FRAMES }, (_, i) => {
+  return Array.from({ length: FRAMES }, (_, i) => {
     const cv = document.createElement('canvas')
     cv.width = cv.height = GRID
     const g = cv.getContext('2d')
@@ -36,15 +61,16 @@ function getSprites(): HTMLCanvasElement[] {
       }
     return cv
   })
-  return sprites
 }
 
+const getSprites = (style: CoinStyle) => (cache[style] ??= style === 'ascii' ? asciiSprites() : pixelSprites())
+
 /**
- * A small shower of pixel-art coins that pops out from behind `from` (the button that was tapped), which stays in front
+ * A small shower of coins that pops out from behind `from` (the button that was tapped), which stays in front
  * of them. Covers the page without taking taps, and calls `onDone` when the last coin has fallen out (or straight away
  * with reduced motion, which gets no animation).
  */
-export function CoinBurst({ from, onDone }: { from: DOMRect; onDone: () => void }) {
+export function CoinBurst({ from, style = 'pixel', onDone }: { from: DOMRect; style?: CoinStyle; onDone: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const reduce = useReducedMotion()
   const done = useRef(onDone)
@@ -66,8 +92,8 @@ export function CoinBurst({ from, onDone }: { from: DOMRect; onDone: () => void 
     cv.width = Math.round(w * dpr)
     cv.height = Math.round(h * dpr)
     g.setTransform(dpr, 0, 0, dpr, 0, 0)
-    const frames = getSprites()
-    g.imageSmoothingEnabled = false // hard pixel edges when the sprite is scaled up
+    const frames = getSprites(style)
+    g.imageSmoothingEnabled = style === 'ascii' // pixel coins keep hard edges when scaled up
     let coins = spawnCoins(COINS, from.left + from.width / 2, from.top + from.height / 2, Math.random)
     let last = performance.now()
     const started = last
@@ -87,10 +113,15 @@ export function CoinBurst({ from, onDone }: { from: DOMRect; onDone: () => void 
       }
       for (const c of coins) {
         if (c.delay > 0) continue
-        // Whole pixels only (each sprite pixel is `px` screen pixels, positions snap to them), so no coin is ever blurry.
-        const px = Math.max(2, Math.round(c.size / GRID))
-        const size = px * GRID
-        g.drawImage(frames[Math.floor(c.phase) % FRAMES], Math.round((c.x - size / 2) / px) * px, Math.round((c.y - size / 2) / px) * px, size, size)
+        const frame = frames[Math.floor(c.phase) % FRAMES]
+        if (style === 'ascii') {
+          g.drawImage(frame, c.x - c.size / 2, c.y - c.size / 2, c.size, c.size)
+        } else {
+          // Whole pixels only (each sprite pixel is `px` screen pixels, positions snap to them), so no coin is ever blurry.
+          const px = Math.max(2, Math.round(c.size / GRID))
+          const size = px * GRID
+          g.drawImage(frame, Math.round((c.x - size / 2) / px) * px, Math.round((c.y - size / 2) / px) * px, size, size)
+        }
       }
       g.restore()
       if (coins.length && now - started < GIVE_UP_MS) raf = requestAnimationFrame(frame)
