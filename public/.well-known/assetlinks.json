@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.kira",
+      "sha256_cert_fingerprints": [
+        "9F:A1:1E:87:C8:7A:6A:57:A6:A1:DB:FA:1D:6B:29:E4:2C:E9:00:AD:B0:AC:EF:6C:CC:5B:D6:43:AA:68:23:37"
+      ]
+    }
+  }
+]

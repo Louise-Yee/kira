@@ -10,6 +10,7 @@ import { soft } from '@/lib/motion'
 import { usePostRecurring } from '@/lib/post-recurring'
 import { useSeedDefaults } from '@/lib/seed'
 import { useAddLink } from '@/lib/widget'
+import { useReceiptLink } from '@/lib/receipt-link'
 import { useUpdate } from '@/lib/update'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
@@ -43,6 +44,7 @@ export default function App() {
   useSeedDefaults(authUser?.uid) // real accounts only: ?dev has no Firebase uid
   usePostRecurring(authUser?.uid)
   useClientInfo(authUser?.uid)
+  useReceiptLink()
   const shareId = useMatch('/r/:id')?.params.id
   if (shareId) return <MotionConfig reducedMotion="user"><ReceiptPage id={shareId} /></MotionConfig>
   if (devGallery) return <MotionConfig reducedMotion="user"><Gallery /></MotionConfig>
