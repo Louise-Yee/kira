@@ -1,12 +1,32 @@
 import { useState } from 'react'
-import { ArrowLeft, Link2, Pencil } from 'lucide-react'
+import { ArrowLeft, Link2, Pencil, Plus } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { ConfirmSheet } from '@/components/confirm-sheet'
+import { GroupExpenseDetailSheet } from '@/components/group-expense-detail-sheet'
+import { GroupExpenseSheet } from '@/components/group-expense-sheet'
 import { GroupNameSheet } from '@/components/group-name-sheet'
 import { ListRow } from '@/components/list-row'
+import { Money } from '@/components/money'
 import { PillButton } from '@/components/pill-button'
-import { deleteGroup, leaveGroup, newInvite, renameGroup, revokeInvite, type Group, type Me, type WithId } from '@/lib/db'
+import { addDays, monthLabel, shortDate, todayISO } from '@/lib/date'
+import {
+  EXPENSES_PAGE,
+  deleteGroupExpense,
+  deleteGroup,
+  leaveGroup,
+  newInvite,
+  renameGroup,
+  revokeInvite,
+  saveGroupExpense,
+  useOlderExpenses,
+  useRecentExpenses,
+  type Group,
+  type Me,
+  type WithId,
+} from '@/lib/db'
+import { emptyTotals, netOf, type GroupExpense } from '@/lib/group-ledger'
 import { hasActiveInvite, membersOf } from '@/lib/groups'
+import { formatRM } from '@/lib/money'
 import { joinUrl, shareLink } from '@/lib/share-link'
 
 type Props = {
@@ -64,6 +84,8 @@ export function GroupScreen({ me, group, onBack }: Props) {
           </PillButton>
         )}
       </div>
+
+      <GroupLedger me={me} group={group} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold text-muted-foreground">{group.memberUids.length} members</h2>
@@ -131,5 +153,103 @@ export function GroupScreen({ me, group, onBack }: Props) {
         }}
       />
     </div>
+  )
+}
+
+/** Adding expenses, and the audit view: totals, who is ahead or behind, and every expense, newest first. */
+function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
+  // ponytail: read once per mount, so the feed window can lag past midnight if the screen stays open.
+  const [today] = useState(todayISO)
+  const since = addDays(today, -60)
+  const [pages, setPages] = useState(0)
+  const recent = useRecentExpenses(group.id, since)
+  const older = useOlderExpenses(group.id, since, pages * EXPENSES_PAGE, pages > 0)
+  const expenses = [...(recent ?? []), ...(older ?? [])]
+  const canLoadMore = recent !== undefined && (pages === 0 || (older?.length ?? 0) >= pages * EXPENSES_PAGE)
+
+  // `open` and `expense` are separate so a sheet keeps its content while it slides out.
+  const [form, setForm] = useState<{ open: boolean; expense?: WithId<GroupExpense> }>({ open: false })
+  const [detail, setDetail] = useState<{ open: boolean; expense?: WithId<GroupExpense> }>({ open: false })
+
+  const totals = group.totals ?? emptyTotals()
+  const nameOf = (uid: string) => group.members[uid]?.displayName || (group.memberUids.includes(uid) ? 'Someone' : 'Someone who left')
+  const people = [...new Set([...group.memberUids, ...Object.keys(totals.paid), ...Object.keys(totals.owed)])]
+  const months = Object.entries(totals.months)
+    .filter(([, sen]) => sen !== 0)
+    .toSorted(([a], [b]) => b.localeCompare(a))
+    .slice(0, 6)
+
+  return (
+    <>
+      <PillButton onClick={() => setForm({ open: true })}>
+        <Plus className="size-5" />
+        Add expense
+      </PillButton>
+
+      <section className="flex flex-col gap-3 rounded-3xl bg-card p-5">
+        <h2 className="text-base font-semibold text-muted-foreground">Total spent</h2>
+        <Money sen={totals.spent} className="font-heading text-4xl font-extrabold" />
+        {months.map(([ym, sen]) => (
+          <div key={ym} className="flex items-center justify-between gap-3 text-base text-muted-foreground">
+            <span>{monthLabel(ym)}</span>
+            <Money sen={sen} />
+          </div>
+        ))}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-base font-semibold text-muted-foreground">Balances</h2>
+        {people.map((uid) => (
+          <ListRow
+            key={uid}
+            icon={<Avatar photoURL={group.members[uid]?.photoURL} name={nameOf(uid)} className="size-11 text-lg" />}
+            title={nameOf(uid)}
+            subtitle={`Paid ${formatRM(totals.paid[uid] ?? 0)} · Share ${formatRM(totals.owed[uid] ?? 0)}`}
+            trailing={<Money sen={netOf(totals, uid)} sign className="text-base font-semibold" />}
+          />
+        ))}
+        <p className="text-base text-muted-foreground">+ is what they are owed, − is what they owe.</p>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-base font-semibold text-muted-foreground">Expenses</h2>
+        {recent?.length === 0 && pages === 0 && <p className="text-base text-muted-foreground">Nothing in the last 60 days. Add the first one.</p>}
+        {expenses.map((e) => (
+          <ListRow
+            key={e.id}
+            title={e.title}
+            subtitle={`${shortDate(e.date)} · paid by ${nameOf(e.paidBy)}`}
+            trailing={<Money sen={e.amount} className="text-base font-semibold" />}
+            onClick={() => setDetail({ open: true, expense: e })}
+          />
+        ))}
+        {canLoadMore && (
+          <PillButton variant="secondary" size="pill-sm" onClick={() => setPages((p) => p + 1)}>
+            Show older expenses
+          </PillButton>
+        )}
+      </section>
+
+      <GroupExpenseSheet
+        open={form.open}
+        onClose={() => setForm({ open: false, expense: form.expense })}
+        group={group}
+        meUid={me.uid}
+        initial={form.expense}
+        onSave={(draft) => saveGroupExpense(me, group.id, draft, form.expense)}
+      />
+      <GroupExpenseDetailSheet
+        open={detail.open}
+        onClose={() => setDetail({ open: false, expense: detail.expense })}
+        group={group}
+        meUid={me.uid}
+        expense={detail.expense}
+        onEdit={(expense) => {
+          setDetail({ open: false, expense })
+          setForm({ open: true, expense })
+        }}
+        onDelete={(expense) => deleteGroupExpense(group.id, expense)}
+      />
+    </>
   )
 }

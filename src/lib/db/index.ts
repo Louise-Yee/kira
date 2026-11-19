@@ -20,6 +20,7 @@ export {
 export { exportBackup, importBackup } from './backup'
 export { usePublicReceipt } from './shares'
 export { findByEmails, useDirectoryPublisher } from './directory'
+export { EXPENSES_PAGE, deleteGroupExpense, saveGroupExpense, useOlderExpenses, useRecentExpenses } from './group-expenses'
 export { createGroup, deleteGroup, joinGroup, leaveGroup, newInvite, renameGroup, revokeInvite, useGroups, useInvite } from './groups'
 export { acceptFriendRequest, removeFriendship, sendFriendRequest, useFriendships, type Me } from './friends'
 export type { Group, Invite } from '@/lib/groups'

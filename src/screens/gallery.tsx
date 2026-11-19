@@ -4,6 +4,7 @@ import { AmountInput } from '@/components/amount-input'
 import { CategoryIcon } from '@/components/category-icon'
 import { CategoryPicker } from '@/components/category-picker'
 import { CoinBurst } from '@/components/coin-burst'
+import { GroupExpenseSheet } from '@/components/group-expense-sheet'
 import { EmptyState } from '@/components/empty-state'
 import { Fab } from '@/components/fab'
 import { ListRow } from '@/components/list-row'
@@ -24,7 +25,7 @@ import { monthlyTotals } from '@/lib/chart-data'
 import { computeShares } from '@/lib/split'
 import { trendMonths } from '@/lib/date'
 import { defaultCategories } from '@/lib/default-categories'
-import type { Category, Split, Transaction, TransactionDraft, WithId } from '@/lib/db'
+import type { Category, Group, Split, Transaction, TransactionDraft, WithId } from '@/lib/db'
 import { categoryIconNames } from '@/lib/category-icons'
 import { CategoriesManager } from '@/screens/categories/manager'
 import { MonthView } from '@/screens/month-view'
@@ -160,7 +161,25 @@ function ReceiptPageDemo() {
   return <ReceiptCard receipt={buildReceipt(demoSplit(), 1)} />
 }
 
+const fakeGroup: WithId<Group> = {
+  id: 'g',
+  name: 'Dorm',
+  ownerUid: 'a',
+  memberUids: ['a', 'b', 'c'],
+  members: {
+    a: { displayName: 'Louise', photoURL: null, joinedAt: 1 },
+    b: { displayName: 'Aiman', photoURL: null, joinedAt: 2 },
+    c: { displayName: 'Mei Ling', photoURL: null, joinedAt: 3 },
+  },
+  inviteId: null,
+  inviteExpiresAt: null,
+  createdAt: 1,
+  updatedAt: 1,
+}
+
 function ComponentGallery() {
+  const [groupExpense, setGroupExpense] = useState('none')
+  const [groupOpen, setGroupOpen] = useState(false)
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<'expense' | 'income'>('expense')
   const [amount, setAmount] = useState(0)
@@ -200,6 +219,15 @@ function ComponentGallery() {
         Coin burst
       </PillButton>
       {burst && <CoinBurst from={burst} onDone={() => setBurst(null)} />}
+      <PillButton onClick={() => setGroupOpen(true)}>Group expense</PillButton>
+      <p data-testid="group-expense">group expense: {groupExpense}</p>
+      <GroupExpenseSheet
+        open={groupOpen}
+        onClose={() => setGroupOpen(false)}
+        group={fakeGroup}
+        meUid="a"
+        onSave={(d) => setGroupExpense(`${d.title} ${d.amount} paid by ${d.paidBy} ${JSON.stringify(d.shares)}`)}
+      />
 
       <CategoryPicker categories={cats} value={cat} onChange={setCat} />
       <p data-testid="cat">category: {cat ?? 'none'}</p>
