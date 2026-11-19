@@ -35,4 +35,5 @@ jobs:
         with:
           name: dist
           path: dist
+          include-hidden-files: true # without this .well-known/assetlinks.json never reaches the deploy
           retention-days: 7
