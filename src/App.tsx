@@ -3,6 +3,7 @@ import { Navigate, useLocation, useMatch, useNavigate } from 'react-router'
 import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/react'
 import { House, ReceiptText, Repeat, Settings } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
+import { useAppLock, type AppLock } from '@/lib/app-lock'
 import { useClientInfo, useSyncStatus } from '@/lib/db'
 import { todayISO } from '@/lib/date'
 import { soft } from '@/lib/motion'
@@ -16,6 +17,7 @@ import { FabSlideContext } from '@/lib/fab-slide'
 import { SyncPill } from '@/components/sync-pill'
 import { TabBar, type TabItem } from '@/components/tab-bar'
 import { UpdateSheet } from '@/components/update-sheet'
+import { LockScreen } from '@/screens/lock'
 import { Gallery } from '@/screens/gallery'
 import { Home } from '@/screens/home'
 import { navPositions, type NavPos } from '@/lib/nav'
@@ -37,6 +39,7 @@ const devGallery = import.meta.env.DEV && new URLSearchParams(location.search).h
 export default function App() {
   const authUser = useUser()
   const user = devUser ?? authUser
+  const lock = useAppLock()
   useSeedDefaults(authUser?.uid) // real accounts only: ?dev has no Firebase uid
   usePostRecurring(authUser?.uid)
   useClientInfo(authUser?.uid)
@@ -45,7 +48,9 @@ export default function App() {
   if (devGallery) return <MotionConfig reducedMotion="user"><Gallery /></MotionConfig>
   return (
     <MotionConfig reducedMotion="user">
-      {user === undefined ? null : user ? <Shell user={user} /> : <SignIn />}
+      {user === undefined || lock.enabled === undefined ? null : user ? (
+        lock.enabled && !lock.unlocked ? <LockScreen onUnlock={lock.unlock} onReset={lock.reset} /> : <Shell user={user} lock={lock} />
+      ) : <SignIn />}
     </MotionConfig>
   )
 }
@@ -81,7 +86,7 @@ const page: Variants = {
   exit: ({ dir, lg }: Slide) => (lg ? { opacity: 0, y: -8 } : { x: `${-dir * 100}%`, opacity: 0 }),
 }
 
-function Shell({ user }: { user: AppUser }) {
+function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const current = tabs.find((t) => paths[t.id] === pathname)
@@ -148,7 +153,7 @@ function Shell({ user }: { user: AppUser }) {
             transition={soft}
           >
             {tab === 'home' && <Home user={user} today={today} ym={ym} onYm={setYm} addRequest={addRequest} />}
-            {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} update={update.update} onUpdate={update.show} />}
+            {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} update={update.update} onUpdate={update.show} lock={lock} />}
             {tab === 'recurring' && <RecurringScreen user={user} />}
             {tab === 'split' && <SplitScreen user={user} today={today} />}
           </motion.div>
