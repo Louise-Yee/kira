@@ -73,6 +73,9 @@ const baseTabs = [
 
 type Tab = (typeof baseTabs)[number]['id']
 
+/** The screens that have no floating Add button: going to or from one of them is when the button slides. */
+const hasNoFab = (t: Tab) => t === 'settings' || t === 'people'
+
 const paths: Record<Tab, string> = { home: '/', recurring: '/recurring', split: '/split', people: '/people', settings: '/settings' }
 
 const NAV_KEY = 'kira.navPos'
@@ -165,7 +168,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
       <SyncPill status={sync} />
       <TabBar tabs={tabs} active={tab} onChange={go} side={side} />
 
-      <FabSlideContext value={tab === 'settings' || from === 'settings'}>
+      <FabSlideContext value={hasNoFab(tab) || hasNoFab(from)}>
       <main className={cn('relative flex-1 overflow-x-clip px-5 pt-[calc(1.5rem+var(--inset-top))] pb-32', side && 'lg:p-0 lg:pb-24')}>
         <AnimatePresence mode="popLayout" initial={false} custom={slide}>
           <motion.div
