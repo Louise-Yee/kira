@@ -6,6 +6,7 @@ import {
   deleteCategory,
   moveAndDeleteCategory,
   saveCategory,
+  setDiscoverable,
   setPaymentQr,
   swapCategoryOrder,
   useCategories,
@@ -129,6 +130,10 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
         onClick={() => setBackupOpen(true)}
       />
       <BackupSheet open={backupOpen} onClose={() => setBackupOpen(false)} uid={user.uid} />
+      <div className="rounded-3xl bg-card p-5">
+        <Toggle label="Findable by email" checked={settings?.discoverable !== false} onChange={(on) => setDiscoverable(user.uid, on)} disabled={settings === undefined} />
+        <p className="px-1 text-base text-muted-foreground">Let friends who have your email in their contacts find you on kira. Only your name and photo are shown.</p>
+      </div>
       {lockSupported && (
         <div className="rounded-3xl bg-card p-5">
           <Toggle label="App lock" checked={!!lock.enabled} onChange={lock.set} />
