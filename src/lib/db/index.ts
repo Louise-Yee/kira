@@ -20,6 +20,7 @@ export {
 export { exportBackup, importBackup } from './backup'
 export { usePublicReceipt } from './shares'
 export { findByEmails, useDirectoryPublisher } from './directory'
+export { acceptFriendRequest, removeFriendship, sendFriendRequest, useFriendships, type Me } from './friends'
 export { setDiscoverable, setPaymentQr, useSettings } from './settings'
 export { createShare, deleteSplit, saveSplit, SPLITS_PAGE, useOlderSplits, useRecentSplits } from './splits'
 export { useSyncStatus } from './sync'

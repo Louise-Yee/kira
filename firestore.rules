@@ -18,6 +18,32 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
+    // Friends: one doc per pair, id = the two uids sorted and joined by "_". Only the two people can read it.
+    // The sender creates it as pending; only the other person can accept it (and only change their own name);
+    // either can delete it (decline, cancel, unfriend).
+    match /friendships/{id} {
+      function other(uid) {
+        return resource.data.uids[0] == uid ? resource.data.uids[1] : resource.data.uids[0];
+      }
+      allow read: if request.auth != null && request.auth.uid in resource.data.uids;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['uids', 'requester', 'status', 'names', 'createdAt', 'updatedAt'])
+        && request.resource.data.uids.size() == 2
+        && request.resource.data.uids[0] < request.resource.data.uids[1]
+        && id == request.resource.data.uids[0] + '_' + request.resource.data.uids[1]
+        && request.auth.uid in request.resource.data.uids
+        && request.resource.data.requester == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.uids
+        && request.auth.uid != resource.data.requester
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'names', 'updatedAt'])
+        && request.resource.data.names[other(request.auth.uid)] == resource.data.names[other(request.auth.uid)];
+      allow delete: if request.auth != null && request.auth.uid in resource.data.uids;
+    }
+
     // Receipt links: anyone holding the (long, random) id can read that one doc, nobody can list them.
     // Only the owner can create, change or delete their own.
     match /shares/{id} {

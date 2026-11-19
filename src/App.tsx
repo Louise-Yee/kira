@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useLocation, useMatch, useNavigate } from 'react-router'
 import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/react'
-import { House, ReceiptText, Repeat, Settings } from 'lucide-react'
+import { House, ReceiptText, Repeat, Settings, Users } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
 import { useAppLock, type AppLock } from '@/lib/app-lock'
-import { useClientInfo, useDirectoryPublisher, useSyncStatus } from '@/lib/db'
+import { useClientInfo, useDirectoryPublisher, useFriendships, useSyncStatus } from '@/lib/db'
+import { splitFriendships } from '@/lib/friends'
 import { todayISO } from '@/lib/date'
 import { soft } from '@/lib/motion'
 import { usePostRecurring } from '@/lib/post-recurring'
@@ -25,6 +26,7 @@ import { navPositions, type NavPos } from '@/lib/nav'
 import { RecurringScreen } from '@/screens/recurring'
 import { SettingsScreen } from '@/screens/settings'
 import { ReceiptPage } from '@/screens/receipt-page'
+import { PeopleScreen } from '@/screens/people'
 import { SplitScreen } from '@/screens/split'
 import { SignIn } from '@/screens/sign-in'
 
@@ -58,16 +60,17 @@ export default function App() {
   )
 }
 
-const tabs = [
+const baseTabs = [
   { id: 'home', label: 'Home', icon: House },
   { id: 'recurring', label: 'Recurring', icon: Repeat },
   { id: 'split', label: 'Split', icon: ReceiptText },
+  { id: 'people', label: 'People', icon: Users },
   { id: 'settings', label: 'Settings', icon: Settings },
 ] as const satisfies readonly TabItem<string>[]
 
-type Tab = (typeof tabs)[number]['id']
+type Tab = (typeof baseTabs)[number]['id']
 
-const paths: Record<Tab, string> = { home: '/', recurring: '/recurring', split: '/split', settings: '/settings' }
+const paths: Record<Tab, string> = { home: '/', recurring: '/recurring', split: '/split', people: '/people', settings: '/settings' }
 
 const NAV_KEY = 'kira.navPos'
 
@@ -92,6 +95,9 @@ const page: Variants = {
 function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
+  const friendships = useFriendships(user.uid)
+  const requests = splitFriendships(friendships ?? [], user.uid).incoming.length
+  const tabs = baseTabs.map((t) => (t.id === 'people' ? { ...t, badge: requests } : t))
   const current = tabs.find((t) => paths[t.id] === pathname)
   const tab: Tab = current?.id ?? 'home'
   // Slide direction and previous tab follow the URL, so back/forward and refresh animate like a tap.
@@ -159,6 +165,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
             {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} update={update.update} onUpdate={update.show} lock={lock} />}
             {tab === 'recurring' && <RecurringScreen user={user} />}
             {tab === 'split' && <SplitScreen user={user} today={today} />}
+            {tab === 'people' && <PeopleScreen user={user} friendships={friendships} />}
           </motion.div>
         </AnimatePresence>
       </main>

@@ -13,7 +13,7 @@ import type { ClientDoc, Category, Recurring, Settings, Split, Transaction } fro
 
 type Collections = { categories: Category; transactions: Transaction; recurring: Recurring; splits: Split }
 
-const converter = <T extends DocumentData>(): FirestoreDataConverter<T> => ({
+export const converter = <T extends DocumentData>(): FirestoreDataConverter<T> => ({
   toFirestore: (data) => data,
   fromFirestore: (snap) => snap.data() as T,
 })
