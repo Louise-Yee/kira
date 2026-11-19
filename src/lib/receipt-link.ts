@@ -3,14 +3,14 @@ import { Capacitor } from '@capacitor/core'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 
-/** Opens a tapped receipt link (https://…/r/id) inside the app, on a cold start and while it is running. Native only. */
+/** Opens a tapped receipt or group invite link (https://…/r/id, /join/token) inside the app, on a cold start and while it is running. Native only. */
 export function useReceiptLink() {
   const navigate = useNavigate()
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
     const open = (url: string) => {
       const { pathname } = new URL(url)
-      if (pathname.startsWith('/r/')) navigate(pathname)
+      if (pathname.startsWith('/r/') || pathname.startsWith('/join/')) navigate(pathname)
     }
     CapApp.getLaunchUrl().then((r) => r && open(r.url))
     const handle = CapApp.addListener('appUrlOpen', (e) => open(e.url))

@@ -29,6 +29,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="expenses-tracker-285fb.web.app" android:pathPrefix="/r/" />
+                <data android:pathPrefix="/join/" />
             </intent-filter>
         </activity>
 
