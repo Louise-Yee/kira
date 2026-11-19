@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useDragControls } from 'motion/react'
 import { Dialog } from 'radix-ui'
 import { sheet } from '@/lib/haptics'
-import { pop, soft } from '@/lib/motion'
+import { glide, pop, soft } from '@/lib/motion'
 import { useBackClose } from '@/lib/use-back-close'
 import { useMediaQuery, useTouch } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
@@ -76,7 +76,8 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
                 initial={lg ? { opacity: 0, scale: 0.94 } : { y: '100%' }}
                 animate={lg ? { opacity: 1, scale: 1 } : { y: 0 }}
                 exit={lg ? { opacity: 0, scale: 0.94 } : { y: '100%' }}
-                transition={pop}
+                // Phones: no overshoot, or the bottom-anchored sheet lifts off the screen edge.
+                transition={lg ? pop : glide}
                 drag={lg ? false : 'y'}
                 dragControls={controls}
                 dragListener={false}

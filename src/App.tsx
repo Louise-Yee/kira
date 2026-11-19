@@ -130,6 +130,10 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
     document.documentElement.dataset.nav = navPos
   }, [navPos])
   const side = navPos !== 'bottom'
+  // The window scroll carries over between tabs; reset it so the new page doesn't land mid-scroll.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [tab])
   const update = useUpdate()
   const slide: Slide = { dir, lg }
 
