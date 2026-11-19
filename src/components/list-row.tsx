@@ -5,7 +5,7 @@ import { press } from '@/lib/motion'
 type Props = {
   icon?: ReactNode
   title: string
-  subtitle?: string
+  subtitle?: ReactNode
   trailing?: ReactNode
   onClick?: () => void
 }
