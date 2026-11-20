@@ -108,7 +108,7 @@ async function leave(u: User) {
 test('a member leaves: everyone else sees them gone, and the group leaves their list', async ({ signIn }) => {
   const [alice, bob, carol] = [await signIn('Alice'), await signIn('Bob'), await signIn('Carol')]
   await tripWith(alice, bob, carol)
-  // Bob opens the group from his list (see the next test for leaving straight after joining by link).
+  // Bob opens the group from his list (leaving straight after joining by link is #125, the next test).
   await tab(bob, 'Home')
   await openGroup(bob, 'Trip')
 
@@ -121,7 +121,7 @@ test('a member leaves: everyone else sees them gone, and the group leaves their 
 })
 
 test('leaving a group right after joining it by link goes back to People', async ({ signIn }) => {
-  // Found by e2e, no issue yet: the leaver is often bounced back to "Joining the group…" (seen on desktop every run,
+  // #125: the leaver is often bounced back to "Joining the group…" (seen on desktop every run,
   // on phone only sometimes), and their leave can reach the server late. Skipped until fixed, since a race would make
   // test.fail() flip between pass and fail. Remove fixme with the fix.
   test.fixme()
