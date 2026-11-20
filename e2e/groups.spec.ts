@@ -61,14 +61,14 @@ test('settle up: Bob pays, Alice confirms from her inbox, everyone is square', a
 })
 
 test('#120 settle up does not say "settled up" while a payment waits for confirmation', async ({ signIn }) => {
-  test.fail(true, '#120: shows "Everyone is settled up." while the payment is pending')
   const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
   await tripWith(alice, bob)
   await addGroupExpense(alice, 'Dinner', '3000')
 
   await section(bob, 'Settle up').getByRole('button', { name: 'I paid' }).click()
   await expect(section(bob, 'Waiting for confirmation')).toBeVisible()
-  await expect(section(bob, 'Settle up')).not.toContainText('Everyone is settled up', { timeout: 3000 })
+  await expect(section(bob, 'Settle up')).toContainText('All paid, waiting for confirmation.')
+  await expect(section(alice, 'Settle up')).toContainText('All paid, waiting for confirmation.')
 })
 
 test('#121 the payer is told when their payment is marked "Not received"', async ({ signIn }) => {
