@@ -91,11 +91,15 @@ test('auto-log puts my share of a group expense in my own transactions', async (
   await expect(alice.page.getByRole('switch', { name: 'Add my share to my transactions' })).toHaveAttribute('aria-checked', 'true')
   await addGroupExpense(bob, 'Groceries run', '4000')
 
+  // The transaction row reads "<title> <category> <amount>" (the group's own expense row, on the People page still
+  // sliding out, reads "<title> <date> · paid by …").
+  const logged = (u: User) => u.page.getByRole('button', { name: /^Groceries run Other/ })
   await tab(alice, 'Home')
-  await expect(alice.page.getByRole('button', { name: /Groceries run/ })).toContainText('−RM 20.00')
+  await expect(logged(alice)).toContainText('−RM 20.00')
   // Bob never turned it on, so his own transactions stay empty.
   await tab(bob, 'Home')
-  await expect(bob.page.getByRole('button', { name: /Groceries run/ })).toBeHidden()
+  await expect(bob.page.getByRole('heading', { name: 'Hi, Bob' })).toBeVisible()
+  await expect(logged(bob)).toBeHidden()
 })
 
 const noGroups = 'Make a group for the people you hang out with'
@@ -121,10 +125,7 @@ test('a member leaves: everyone else sees them gone, and the group leaves their 
 })
 
 test('leaving a group right after joining it by link goes back to People', async ({ signIn }) => {
-  // #125: the leaver is often bounced back to "Joining the group…" (seen on desktop every run,
-  // on phone only sometimes), and their leave can reach the server late. Skipped until fixed, since a race would make
-  // test.fail() flip between pass and fail. Remove fixme with the fix.
-  test.fixme()
+  // #125: the leaver used to be bounced back to the group they just left.
   const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
   await tripWith(alice, bob)
 

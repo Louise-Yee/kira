@@ -99,7 +99,7 @@ const page: Variants = {
 }
 
 function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
-  const { pathname, search, state } = useLocation()
+  const { pathname, search } = useLocation()
   const joinToken = useMatch('/join/:token')?.params.token
   const navigate = useNavigate()
   const friendships = useFriendships(user.uid)
@@ -114,7 +114,12 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   const current = tabs.find((t) => paths[t.id] === pathname)
   // A group invite link (/join/…) opens its sheet over the People tab.
   const tab: Tab = current?.id ?? (joinToken ? 'people' : 'home')
-  const openGroupId = (state as { groupId?: string } | null)?.groupId
+  // The group just joined by link, opened once. Not in the history state: a sheet's back entry has none, so going
+  // back through it would drop it and bring it back, remounting People into the group again (#125). `at` reopens it
+  // when the same link is opened twice.
+  const [joined, setJoined] = useState<{ gid: string; at: number }>()
+  // Only for this visit to People: coming back from another tab shows People as usual.
+  if (joined && tab !== 'people') setJoined(undefined)
   // Slide direction and previous tab follow the URL, so back/forward and refresh animate like a tap.
   const [nav, setNav] = useState<{ tab: Tab; from: Tab; dir: number }>({ tab, from: tab, dir: 1 })
   if (nav.tab !== tab) {
@@ -184,7 +189,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
             {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} update={update.update} onUpdate={update.show} lock={lock} />}
             {tab === 'recurring' && <RecurringScreen user={user} />}
             {tab === 'split' && <SplitScreen user={user} today={today} />}
-            {tab === 'people' && <PeopleScreen key={openGroupId ?? ''} user={user} friendships={friendships} groups={groups} toConfirm={toConfirm} logs={logs} openGroupId={openGroupId} />}
+            {tab === 'people' && <PeopleScreen key={joined?.at} user={user} friendships={friendships} groups={groups} toConfirm={toConfirm} logs={logs} openGroupId={joined?.gid} />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -200,7 +205,8 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
               coinBurst()
               setBurst(button)
             }
-            navigate({ pathname: '/people', search }, { state: { groupId } })
+            setJoined({ gid: groupId, at: Date.now() })
+            navigate({ pathname: '/people', search })
           }}
         />
       )}

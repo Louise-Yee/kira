@@ -36,17 +36,16 @@ export function useBackClose(open: boolean, onClose: () => void) {
   useEffect(() => {
     if (!open) return
     let active = true
-    let pushed = false
-    let popped = false
+    // Our history entry's own id (random, so it can't match an entry left from before a reload): a sheet only ever
+    // pops its own entry.
+    const id = Math.random()
     const onPop = () => {
       if (skip > 0) return
-      popped = true
       close.current()
     }
     const start = () => {
       if (!active) return
-      history.pushState({ sheet: true }, '')
-      pushed = true
+      history.pushState({ sheet: id }, '')
       window.addEventListener('popstate', onPop, true)
     }
     if (backing) backing.then(start)
@@ -54,8 +53,14 @@ export function useBackClose(open: boolean, onClose: () => void) {
     return () => {
       active = false
       window.removeEventListener('popstate', onPop, true)
-      // A route change replaces history.state, leaving our entry behind; popping then would undo the navigation.
-      if (pushed && !popped && history.state?.sheet) backSilently()
+      // Pop our entry only if it's the current one: after a route change or a back press it isn't, and popping then
+      // would undo something else. Two sheets closing at once (a confirm and the screen under it) each wait for the
+      // other's pop to land first, or the second pop would go past the page into an older one (#125).
+      const undo = () => {
+        if (history.state?.sheet === id) backSilently()
+      }
+      if (backing) void backing.then(undo)
+      else undo()
     }
   }, [open])
 }
