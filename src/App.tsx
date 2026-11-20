@@ -15,6 +15,7 @@ import { useAddLink } from '@/lib/widget'
 import { useReceiptLink } from '@/lib/receipt-link'
 import { useUpdate } from '@/lib/update'
 import { useMediaQuery } from '@/lib/use-media-query'
+import { useTabSwipe } from '@/lib/use-tab-swipe'
 import { cn } from '@/lib/utils'
 import { FabSlideContext } from '@/lib/fab-slide'
 import { SyncPill } from '@/components/sync-pill'
@@ -157,6 +158,11 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   const go = (id: Tab) => {
     if (id !== tab) navigate({ pathname: paths[id], search })
   }
+  // Flick sideways for the next or previous tab (phones and tablets; not beside the lg sidebar).
+  useTabSwipe(!(lg && side), (d) => {
+    const next = tabs[tabs.findIndex((t) => t.id === tab) + d]
+    if (next) go(next.id)
+  })
   const changeNavPos = (p: NavPos) => {
     setNavPos(p)
     try {
