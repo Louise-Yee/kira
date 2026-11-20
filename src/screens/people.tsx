@@ -140,7 +140,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
                     <Money sen={s.amount} /> · {group?.name ?? 'a group'} · {shortDate(s.date)}
                   </>
                 }
-                takeBack={{ label: 'OK', onClick: () => dismissSettlement(s.gid, s) }}
+                takeBack={{ label: 'OK', onClick: () => dismissSettlement(me, s.gid, s) }}
               />
             )
           })}
@@ -196,7 +196,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
                       <PillButton size="pill-sm" className="w-11 px-0" aria-label={`Accept ${nameOf(f)}`} onClick={() => acceptFriendRequest(me, f)}>
                         <Check className="size-5" />
                       </PillButton>
-                      <PillButton variant="secondary" size="pill-sm" className="w-11 px-0" aria-label={`Decline ${nameOf(f)}`} onClick={() => removeFriendship(f.id)}>
+                      <PillButton variant="secondary" size="pill-sm" className="w-11 px-0" aria-label={`Decline ${nameOf(f)}`} onClick={() => removeFriendship(me, f.id)}>
                         <X className="size-5" />
                       </PillButton>
                     </span>
@@ -224,7 +224,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
                   icon={avatar(f)}
                   title={nameOf(f)}
                   trailing={
-                    <PillButton variant="secondary" size="pill-sm" onClick={() => removeFriendship(f.id)}>
+                    <PillButton variant="secondary" size="pill-sm" onClick={() => removeFriendship(me, f.id)}>
                       Cancel
                     </PillButton>
                   }
@@ -275,7 +275,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
         text="Removing a friend stops new bills with them. Bills you already shared stay."
         confirmLabel="Remove friend"
         onConfirm={() => {
-          if (removing.friend) removeFriendship(removing.friend.id)
+          if (removing.friend) removeFriendship(me, removing.friend.id)
           setRemoving({ open: false })
         }}
       />

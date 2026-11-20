@@ -76,6 +76,8 @@ export function GroupExpenseDetailSheet({ open, onClose, group, meUid, expense, 
                 : undefined
             }
             deleteLabel="Delete expense"
+            // Undo on the toast replaces asking first.
+            confirmDelete={false}
           />
         </div>
       )}

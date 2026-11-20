@@ -359,6 +359,8 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
             : undefined
         }
         deleteLabel="Delete split"
+        // Undo on the toast replaces asking first.
+        confirmDelete={false}
       />
     </div>
   )

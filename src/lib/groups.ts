@@ -1,3 +1,4 @@
+import type { Deletion } from './deletion.ts'
 import type { Totals } from './group-ledger.ts'
 
 export type GroupMember = {
@@ -29,7 +30,7 @@ export type Group = {
   invited?: Record<string, GroupInvitee>
   createdAt: number
   updatedAt: number
-}
+} & Deletion
 
 /** `invites/{token}`: what a link shows before the person joins. Anyone signed in who has the token can read it. */
 export type Invite = {

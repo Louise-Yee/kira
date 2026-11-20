@@ -12,6 +12,7 @@ import {
   useCategories,
   useSettings,
 } from '@/lib/db'
+import { toastUndo } from '@/lib/toast'
 import { lockSupported, type AppLock } from '@/lib/app-lock'
 import { logOut, type AppUser } from '@/lib/firebase'
 import { navPositions, type NavPos } from '@/lib/nav'
@@ -93,7 +94,7 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
         onSave={(data, id) => saveCategory(user.uid, data, id)}
         onSwap={(a, b) => swapCategoryOrder(user.uid, a, b)}
         isUsed={isUsed}
-        onDelete={(id) => deleteCategory(user.uid, id)}
+        onDelete={(id) => toastUndo('Category deleted', deleteCategory(user.uid, id))}
         onMove={(from, to) => moveAndDeleteCategory(user.uid, from, to)}
       />
       <ListRow

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { FieldPath, collection, doc, increment, limit, orderBy, query, where, writeBatch, type FieldValue, type WriteBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { nextHistory, totalsDelta, type ExpenseDraft, type GroupExpense, type Totals } from '@/lib/group-ledger'
-import { converter, reportError } from './core'
+import { converter, deletion, reportError, restoration } from './core'
 import type { Me } from './friends'
 import { groupRef } from './groups'
 import type { WithId } from './types'
@@ -66,11 +66,15 @@ export function saveGroupExpense(me: Me, gid: string, draft: ExpenseDraft, exist
   void batch.commit().catch(reportError)
 }
 
-/** Delete an expense (its author, or the group's owner) and take it back out of the totals. */
-export function deleteGroupExpense(gid: string, expense: WithId<GroupExpense>) {
-  const batch = writeBatch(db)
-  batch.delete(doc(expenses(gid), expense.id))
-  bumpTotals(batch, gid, totalsDelta(expense, null), Date.now())
-  void batch.commit().catch(reportError)
+/** Delete an expense (its author, or the group's owner; soft-deleted) and take it back out of the totals. Returns the undo. */
+export function deleteGroupExpense(me: Me, gid: string, expense: WithId<GroupExpense>) {
+  const move = (from: GroupExpense | null, to: GroupExpense | null, fields: ReturnType<typeof deletion> | ReturnType<typeof restoration>) => {
+    const batch = writeBatch(db)
+    batch.update(doc(expenses(gid), expense.id), fields)
+    bumpTotals(batch, gid, totalsDelta(from, to), Date.now())
+    void batch.commit().catch(reportError)
+  }
+  move(expense, null, deletion(me.uid))
+  return () => move(null, expense, restoration())
 }
 

@@ -35,9 +35,19 @@ test('add, edit and delete a transaction', async ({ signIn }) => {
   await expect(row).toContainText('−RM 20.00')
   await expect(out).toContainText('RM 20.00')
 
+  // Delete has no "are you sure": the toast offers Undo instead.
   await row.click()
-  await edit.getByRole('button', { name: 'Delete transaction' }).click()
   await edit.getByRole('button', { name: 'Delete transaction' }).click()
   await expect(row).toBeHidden()
   await expect(out).toContainText('RM 0.00')
+  const toast = page.getByRole('status').filter({ hasText: 'Transaction deleted' })
+  await toast.getByRole('button', { name: 'Undo' }).click()
+  await expect(row).toContainText('−RM 20.00')
+  await expect(out).toContainText('RM 20.00')
+
+  // Left alone, it stays deleted once the toast is gone.
+  await row.click()
+  await edit.getByRole('button', { name: 'Delete transaction' }).click()
+  await expect(toast).toBeHidden({ timeout: 6000 })
+  await expect(row).toBeHidden()
 })

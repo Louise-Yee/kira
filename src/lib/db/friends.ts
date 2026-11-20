@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import { collection, deleteDoc, doc, query, setDoc, updateDoc, where } from 'firebase/firestore'
+import { collection, doc, query, setDoc, updateDoc, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { friendshipId, sortedUids, type Friendship } from '@/lib/friends'
-import { converter, reportError } from './core'
+import { converter, reportError, softDelete } from './core'
 import type { DirectoryEntry, WithId } from './types'
 import { useDocs } from './use-docs'
 
@@ -20,7 +20,7 @@ export function useFriendships(uid: string) {
   return useDocs(q)
 }
 
-/** Ask `to` to be friends. Never awaited, like every write. */
+/** Ask `to` to be friends. Never awaited, like every write. Overwrites a deleted friendship between the two. */
 export function sendFriendRequest(me: Me, to: DirectoryEntry) {
   const now = Date.now()
   const request: Friendship = {
@@ -39,7 +39,7 @@ export function acceptFriendRequest(me: Me, f: WithId<Friendship>) {
   void updateDoc(ref(f.id), { status: 'accepted', [`names.${me.uid}`]: nameOf(me), updatedAt: Date.now() }).catch(reportError)
 }
 
-/** Decline a request, cancel one I sent, or unfriend: all remove the document. */
-export function removeFriendship(id: string) {
-  void deleteDoc(ref(id)).catch(reportError)
+/** Decline a request, cancel one I sent, or unfriend: all soft-delete the document. */
+export function removeFriendship(me: Me, id: string) {
+  softDelete(ref(id), me.uid)
 }

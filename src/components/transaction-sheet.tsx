@@ -62,6 +62,8 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
             : undefined
         }
         deleteLabel="Delete transaction"
+        // Undo on the toast replaces asking first.
+        confirmDelete={false}
       />
       {badge && (
         <span className="w-fit rounded-full bg-accent px-3 py-1 text-base font-semibold text-accent-foreground">

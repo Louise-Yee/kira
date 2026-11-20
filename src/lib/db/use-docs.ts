@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { Query } from 'firebase/firestore'
-import { listen } from './core'
+import { listen, liveDocs } from './core'
 import type { WithId } from './types'
 
 /**
- * Live query results; undefined until the first snapshot (cache-first, so instant when offline).
+ * Live query results, without soft-deleted documents; undefined until the first snapshot (cache-first, so instant when offline).
  * `serverOnly` ignores cache-served snapshots, so it stays undefined until the server has answered.
  */
 export function useDocs<T>(q: Query<T> | null, serverOnly = false): WithId<T>[] | undefined {
@@ -17,7 +17,7 @@ export function useDocs<T>(q: Query<T> | null, serverOnly = false): WithId<T>[] 
       { includeMetadataChanges: serverOnly },
       (snap) => {
         if (serverOnly && snap.metadata.fromCache) return
-        setState({ q, docs: snap.docs.map((d) => ({ ...d.data(), id: d.id })) })
+        setState({ q, docs: liveDocs(snap) })
       },
     )
   }, [q, serverOnly])

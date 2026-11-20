@@ -49,7 +49,7 @@ export function DeleteFlow({ cat, targets, isUsed, onDelete, onArchive, onMove, 
         </p>
       )}
 
-      {usage === 'unused' && <p className="text-base">No transactions use it. This can't be undone.</p>}
+      {usage === 'unused' && <p className="text-base">No transactions use it.</p>}
 
       {usage === 'used' && (
         <>

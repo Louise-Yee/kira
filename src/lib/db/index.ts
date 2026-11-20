@@ -1,6 +1,6 @@
 // The one entry point for Firestore access: import from '@/lib/db', never from the files inside.
 export type { Category, DirectoryEntry, Kind, PublicReceipt, Recurring, RecurringDraft, Settings, Split, SplitDraft, SyncStatus, Transaction, TransactionDraft, WithId } from './types'
-export { col, newId, remove, save, settingsRef } from './core'
+export { col, newId, save, settingsRef } from './core'
 export {
   categoryInUse,
   deleteCategory,

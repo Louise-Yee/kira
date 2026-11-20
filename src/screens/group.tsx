@@ -46,7 +46,7 @@ import { success } from '@/lib/haptics'
 import { MAX_NAME, cleanGroupName, hasActiveInvite, inviteesOf, membersOf } from '@/lib/groups'
 import { formatRM } from '@/lib/money'
 import { joinUrl, shareLink } from '@/lib/share-link'
-import { toast } from '@/lib/toast'
+import { toast, toastUndo } from '@/lib/toast'
 
 type Props = {
   me: Me
@@ -239,7 +239,7 @@ function GroupSettings({ me, group, log, categories, onGone }: Omit<Props, 'grou
         text={owner ? 'This removes the group for everyone and turns off its invite link.' : 'You stop seeing this group. Someone can invite you back.'}
         confirmLabel={owner ? 'Delete group' : 'Leave group'}
         onConfirm={() => {
-          if (owner) deleteGroup(group)
+          if (owner) deleteGroup(me, group)
           else leaveGroup(me, group)
           setLeaving(false)
           onGone()
@@ -337,8 +337,8 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
           success()
           confirmSettlement(group.id, s)
         }}
-        onTakeBack={(s) => (s.to === me.uid ? rejectSettlement(group.id, s) : takeBackSettlement(group.id, s))}
-        onDismiss={(s) => dismissSettlement(group.id, s)}
+        onTakeBack={(s) => (s.to === me.uid ? rejectSettlement(group.id, s) : toastUndo('Payment taken back', takeBackSettlement(me, group.id, s)))}
+        onDismiss={(s) => dismissSettlement(me, group.id, s)}
       />
 
       <section className="flex flex-col gap-2">
@@ -395,7 +395,7 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
           setDetail({ open: false, expense })
           setForm({ open: true, expense })
         }}
-        onDelete={(expense) => deleteGroupExpense(group.id, expense)}
+        onDelete={(expense) => toastUndo('Expense deleted', deleteGroupExpense(me, group.id, expense))}
       />
     </>
   )

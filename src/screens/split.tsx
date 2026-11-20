@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { ReceiptText, Share2, User, Users } from "lucide-react";
 import { motion } from "motion/react";
+import { toastUndo } from '@/lib/toast'
 import { EmptyState } from "@/components/empty-state";
 import { Fab } from "@/components/fab";
 import { ListRow } from "@/components/list-row";
@@ -167,7 +168,7 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
         friends={friends}
         initial={sheet.split}
         onSave={(draft) => saveSplit(user.uid, draft, sheet.split)}
-        onDelete={() => sheet.split && deleteSplit(user.uid, sheet.split)}
+        onDelete={() => sheet.split && toastUndo('Split deleted', deleteSplit(user.uid, sheet.split))}
       />
       <ReceiptSheet
         open={receipt.open}
