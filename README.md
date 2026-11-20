@@ -79,7 +79,8 @@ The web app ships on every merge. The Android app ships only when the version ch
 1. Branch `chores/release-X.Y.Z` off `main`.
 2. Set `"version"` in `package.json` to the new version ([semver](https://semver.org)): patch for fixes, minor for features, major only for something that breaks older installs. Minor and patch stay between 0 and 99, because Android's `versionCode` is `major*10000 + minor*100 + patch`.
 3. For an urgent fix (security, data loss) that older installs must not keep running, also raise `"minVersion"` to the new version. The app blocks anything below `minVersion` until it is updated.
-4. Open a PR and merge it. CI tags `vX.Y.Z`, builds and signs the APK, and publishes the release, with notes generated from the merged PRs.
+4. Add the version's entry at the top of `src/lib/changelog.ts`: what people can now do, in plain words (no technical terms). It shows once after the update, and stays in Settings → What's new.
+5. Open a PR and merge it. CI tags `vX.Y.Z`, builds and signs the APK, and publishes the release, with notes generated from the merged PRs.
 
 The version must be higher than the latest release, or the release job fails. Don't push `v*` tags by hand.
 

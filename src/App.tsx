@@ -23,6 +23,8 @@ import { TabBar, type TabItem } from '@/components/tab-bar'
 import { CoinBurst } from '@/components/coin-burst'
 import { JoinGroupSheet } from '@/components/join-group-sheet'
 import { UpdateSheet } from '@/components/update-sheet'
+import { WhatsNewSheet } from '@/components/whats-new-sheet'
+import { useWhatsNew } from '@/lib/whats-new'
 import { Toaster } from '@/components/toaster'
 import { LockScreen } from '@/screens/lock'
 import { Gallery } from '@/screens/gallery'
@@ -152,6 +154,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
     window.scrollTo(0, 0)
   }, [tab])
   const update = useUpdate()
+  const whatsNew = useWhatsNew()
   // The tab reached by the last swipe: its change cuts instead of sliding (it already slid in under the finger).
   const [swipedTo, setSwipedTo] = useState<Tab | null>(null)
   const slide: Slide = { dir, lg, cut: swipedTo === tab }
@@ -257,6 +260,8 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
       )}
       {burst && <CoinBurst from={burst} onDone={() => setBurst(null)} />}
       <UpdateSheet open={update.open} update={update.update} onLater={update.later} />
+      {/* Once after an update, and never on top of the update sheet. */}
+      <WhatsNewSheet open={whatsNew.open && !update.open} onClose={whatsNew.close} entries={whatsNew.entries} />
     </div>
   )
 }
