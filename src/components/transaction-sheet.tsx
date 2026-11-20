@@ -5,6 +5,7 @@ import { Sheet } from '@/components/sheet'
 import { SheetActions } from '@/components/sheet-actions'
 import { success, warning } from '@/lib/haptics'
 import { todayISO } from '@/lib/date'
+import { toast } from '@/lib/toast'
 import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
 
 type Props = {
@@ -50,6 +51,7 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
           if (!draft) return
           success()
           onSave(draft)
+          toast('Saved')
           onClose()
         }}
         onDelete={
