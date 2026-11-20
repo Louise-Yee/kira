@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
-import { animate, useMotionValue, useReducedMotion } from 'motion/react'
+import { animate, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { detent } from '@/lib/haptics'
 import { soft } from '@/lib/motion'
 
@@ -30,6 +30,7 @@ export type PeekBox = { top: number; left: number; width: number; shift: number 
  * current page (`page`), one column width over, and at the top of the screen however far the page is scrolled. `canGo(dir)` says whether there is a tab that way; `onSwipe`
  * switches to it once the pages have slid over, and `x` resets when `current` changes.
  * With reduced motion the page doesn't follow the finger; a flick still switches.
+ * `progress` is the same drag in tabs (0.5 = halfway to the next one), so the nav highlight can follow it.
  * Ignored while a sheet is open, from the screen edges, and on anything that drags or scrolls sideways itself.
  */
 export function useTabSwipe(
@@ -46,6 +47,8 @@ export function useTabSwipe(
   const fromRef = useRef(current)
   const [box, setBox] = useState<PeekBox>({ top: 0, left: 0, width: 0, shift: 0 })
   const reduce = useReducedMotion()
+  const span = useRef(1) // the width a swipe moves the page by, from the last gesture
+  const progress = useTransform(x, (v) => -v / span.current)
   const latest = useRef({ canGo, onSwipe })
   useEffect(() => {
     latest.current = { canGo, onSwipe }
@@ -84,6 +87,7 @@ export function useTabSwipe(
         if (Math.hypot(dx, dy) < LOCK_PX) return
         g.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
         const el = page.current
+        if (g.axis === 'x') span.current = width()
         if (g.axis === 'x' && el) setBox({ top: el.offsetTop + scrollY, left: el.offsetLeft, width: el.offsetWidth, shift: width() })
       }
       if (g.axis !== 'x' || reduce) return
@@ -127,5 +131,5 @@ export function useTabSwipe(
     }
   }, [enabled, reduce, x, page])
 
-  return { x, peek, box }
+  return { x, peek, box, progress }
 }
