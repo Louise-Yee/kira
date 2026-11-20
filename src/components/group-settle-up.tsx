@@ -12,16 +12,19 @@ type Props = {
   transfers: readonly Transfer[]
   /** Payments made but not yet confirmed by the person who got them. */
   pending: readonly WithId<Settlement>[]
+  /** My payments that were marked "Not received", until I dismiss them. */
+  rejected: readonly WithId<Settlement>[]
   /** Nothing is owed: there are expenses and every balance is zero. */
   allSettled: boolean
   onSettle: (t: Transfer) => void
   onConfirm: (s: WithId<Settlement>) => void
   /** Undo my payment, or say I didn't get theirs. */
   onTakeBack: (s: WithId<Settlement>) => void
+  onDismiss: (s: WithId<Settlement>) => void
 }
 
 /** Who should pay whom to square the group up (one tap records my payment), and the payments waiting to be confirmed. */
-export function GroupSettleUp({ group, meUid, transfers, pending, allSettled, onSettle, onConfirm, onTakeBack }: Props) {
+export function GroupSettleUp({ group, meUid, transfers, pending, rejected, allSettled, onSettle, onConfirm, onTakeBack, onDismiss }: Props) {
   const name = (uid: string) => (uid === meUid ? 'You' : group.members[uid]?.displayName || (group.memberUids.includes(uid) ? 'Someone' : 'Someone who left'))
   // "You pay Aiman" but "Aiman pays you".
   const line = (from: string, to: string, verb: 'pay' | 'paid') =>
@@ -29,6 +32,24 @@ export function GroupSettleUp({ group, meUid, transfers, pending, allSettled, on
 
   return (
     <>
+      {rejected.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-base font-semibold text-muted-foreground">Not received</h2>
+          {rejected.map((s) => (
+            <PendingSettlementRow
+              key={s.id}
+              title={`${name(s.to)} didn't get your payment`}
+              subtitle={
+                <>
+                  <Money sen={s.amount} /> · {shortDate(s.date)} · back in the balances
+                </>
+              }
+              takeBack={{ label: 'OK', onClick: () => onDismiss(s) }}
+            />
+          ))}
+        </section>
+      )}
+
       {(transfers.length > 0 || allSettled) && (
         <section className="flex flex-col gap-2">
           <h2 className="text-base font-semibold text-muted-foreground">Settle up</h2>

@@ -16,9 +16,11 @@ import {
   EXPENSES_PAGE,
   confirmSettlement,
   deleteGroupExpense,
+  dismissSettlement,
   deleteGroup,
   leaveGroup,
   newInvite,
+  rejectSettlement,
   renameGroup,
   revokeInvite,
   saveGroupExpense,
@@ -30,6 +32,7 @@ import {
   usePendingSettlements,
   useRecentExpenses,
   useRecentSettlements,
+  useRejectedSettlements,
   type Category,
   type Group,
   type GroupLog,
@@ -206,6 +209,7 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
   const recentPays = useRecentSettlements(group.id, since)
   const olderPays = useOlderSettlements(group.id, since, pages * EXPENSES_PAGE, pages > 0)
   const pending = usePendingSettlements(group.id)
+  const rejected = useRejectedSettlements(group.id)
   // Expenses and settle-up payments share one feed, newest first.
   const feed = [
     ...[...(recent ?? []), ...(older ?? [])].map((e) => ({ kind: 'expense' as const, date: e.date, at: e.createdAt, e })),
@@ -272,6 +276,7 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
         meUid={me.uid}
         transfers={transfers}
         pending={pending ?? []}
+        rejected={(rejected ?? []).filter((s) => s.from === me.uid)}
         allSettled={totals.spent > 0}
         onSettle={(t) => {
           success()
@@ -281,7 +286,8 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
           success()
           confirmSettlement(group.id, s)
         }}
-        onTakeBack={(s) => takeBackSettlement(group.id, s)}
+        onTakeBack={(s) => (s.to === me.uid ? rejectSettlement(group.id, s) : takeBackSettlement(group.id, s))}
+        onDismiss={(s) => dismissSettlement(group.id, s)}
       />
 
       <section className="flex flex-col gap-2">
@@ -308,7 +314,7 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
             <ListRow
               key={`p-${item.s.id}`}
               title={`${nameOf(item.s.from)} paid ${nameOf(item.s.to)}`}
-              subtitle={`${shortDate(item.date)} · ${item.s.status === 'confirmed' ? 'confirmed' : 'waiting for confirmation'}`}
+              subtitle={`${shortDate(item.date)} · ${{ confirmed: 'confirmed', rejected: 'not received', pending: 'waiting for confirmation' }[item.s.status]}`}
               trailing={<Money sen={item.s.amount} className="text-base font-semibold" />}
             />
           ),

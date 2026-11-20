@@ -59,10 +59,12 @@ export type Settlement = {
   amount: number
   /** Local YYYY-MM-DD. */
   date: string
-  status: 'pending' | 'confirmed'
+  /** 'rejected': `to` says they didn't get it. It no longer counts, and stays until `from` has seen it and dismisses it. */
+  status: 'pending' | 'confirmed' | 'rejected'
   createdBy: string
   createdAt: number
   confirmedAt?: number
+  rejectedAt?: number
 }
 
 /** One payment that would square things up. */

@@ -234,10 +234,12 @@ function ComponentGallery() {
           { id: 'p1', from: 'c', to: 'a', amount: 5000, date: '2026-11-18', status: 'pending', createdBy: 'c', createdAt: 1 },
           { id: 'p2', from: 'a', to: 'c', amount: 700, date: '2026-11-19', status: 'pending', createdBy: 'a', createdAt: 2 },
         ]}
+        rejected={[{ id: 'r1', from: 'a', to: 'b', amount: 1500, date: '2026-11-17', status: 'rejected', createdBy: 'a', createdAt: 0 }]}
         allSettled
         onSettle={(t) => setSettleLog(`settle ${t.from}->${t.to} ${t.amount}`)}
         onConfirm={(s) => setSettleLog(`confirm ${s.id}`)}
         onTakeBack={(s) => setSettleLog(`take back ${s.id}`)}
+        onDismiss={(s) => setSettleLog(`dismiss ${s.id}`)}
       />
       <p data-testid="settle-log">settle: {settleLog}</p>
       <GroupAutoLogCard log={autoLog} categories={defaultCategories} onChange={setAutoLog} />

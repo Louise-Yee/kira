@@ -72,7 +72,6 @@ test('#120 settle up does not say "settled up" while a payment waits for confirm
 })
 
 test('#121 the payer is told when their payment is marked "Not received"', async ({ signIn }) => {
-  test.fail(true, '#121: the payment just disappears for the payer')
   const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
   await tripWith(alice, bob)
   await addGroupExpense(alice, 'Dinner', '3000')
@@ -81,7 +80,12 @@ test('#121 the payer is told when their payment is marked "Not received"', async
   await section(alice, 'Waiting for confirmation').getByRole('button', { name: 'Not received' }).click()
 
   await expect(section(bob, 'Settle up')).toContainText(/You pay Alice\s*RM 15\.00/)
-  await expect(bob.page.getByText(/not received/i)).toBeVisible({ timeout: 3000 })
+  const notice = section(bob, 'Not received')
+  await expect(notice).toContainText(/Alice didn't get your payment\s*RM 15\.00/)
+  await expect(section(bob, 'Expenses')).toContainText(/Bob paid Alice.*not received/)
+  await notice.getByRole('button', { name: 'OK' }).click()
+  await expect(notice).toBeHidden()
+  await expect(section(alice, 'Balances')).toContainText(/Bob\s*−RM 15\.00/)
 })
 
 test('auto-log puts my share of a group expense in my own transactions', async ({ signIn }) => {
