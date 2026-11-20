@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { arrayRemove, arrayUnion, collection, deleteField, doc, getDoc, query, updateDoc, where, writeBatch } from 'firebase/firestore'
+import type { FirebaseError } from 'firebase/app'
 import { db } from '@/lib/firebase'
 import { INVITE_MS, cleanGroupName, type Group, type Invite } from '@/lib/groups'
 import { converter, reportError } from './core'
@@ -25,12 +26,22 @@ export function useInvite(token: string) {
   const [state, setState] = useState<{ token: string; invite: WithId<Invite> | null }>()
   useEffect(() => {
     let live = true
-    getDoc(inviteRef(token)).then(
-      (s) => live && setState({ token, invite: s.exists() ? { ...s.data(), id: s.id } : null }),
-      () => live && setState({ token, invite: null }),
-    )
+    let timer: ReturnType<typeof setTimeout> | undefined
+    // Right after signing in, the first read can go out before the database has the sign-in and be refused (#115),
+    // so a refusal is tried again a few times before the link counts as not working.
+    const read = (triesLeft: number) =>
+      getDoc(inviteRef(token)).then(
+        (s) => live && setState({ token, invite: s.exists() ? { ...s.data(), id: s.id } : null }),
+        (e: FirebaseError) => {
+          if (!live) return
+          if (e.code === 'permission-denied' && triesLeft > 0) timer = setTimeout(() => read(triesLeft - 1), 1000)
+          else setState({ token, invite: null })
+        },
+      )
+    void read(3)
     return () => {
       live = false
+      clearTimeout(timer)
     }
   }, [token])
   return state?.token === token ? state.invite : undefined
