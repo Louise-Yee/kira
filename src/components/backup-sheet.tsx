@@ -7,6 +7,7 @@ import { backupSummary, transactionsCsv, validateBackup, type Backup } from '@/l
 import { todayISO } from '@/lib/date'
 import { exportBackup, importBackup } from '@/lib/db'
 import { shareFile } from '@/lib/share-image'
+import { toast } from '@/lib/toast'
 
 type Props = { open: boolean; onClose: () => void; uid: string }
 
@@ -23,13 +24,11 @@ export function BackupSheet({ open, onClose, uid }: Props) {
 function Body({ uid, onClose }: { uid: string; onClose: () => void }) {
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<Backup | null>(null)
 
   const run = async (task: () => Promise<void>) => {
     setError(null)
-    setMessage(null)
     setBusy(true)
     try {
       await task()
@@ -56,7 +55,7 @@ function Body({ uid, onClose }: { uid: string; onClose: () => void }) {
           : new File([transactionsCsv(backup.transactions, backup.categories)], name, { type: 'text/csv' })
       if ((await shareFile(file, name)) !== 'cancelled') {
         success()
-        setMessage('Exported.')
+        toast('Exported')
       }
     })
 
@@ -101,7 +100,6 @@ function Body({ uid, onClose }: { uid: string; onClose: () => void }) {
         included and are created again when you share.
       </p>
       {error && <p className="text-base text-destructive">{error}</p>}
-      {message && <p className="text-base text-muted-foreground">{message}</p>}
       <input ref={input} type="file" accept=".json,application/json" hidden onChange={(e) => pick(e.target.files?.[0])} />
       <SheetFooter>
         <PillButton disabled={busy} onClick={() => exportAs('json')}>

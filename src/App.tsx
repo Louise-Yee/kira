@@ -23,6 +23,7 @@ import { TabBar, type TabItem } from '@/components/tab-bar'
 import { CoinBurst } from '@/components/coin-burst'
 import { JoinGroupSheet } from '@/components/join-group-sheet'
 import { UpdateSheet } from '@/components/update-sheet'
+import { Toaster } from '@/components/toaster'
 import { LockScreen } from '@/screens/lock'
 import { Gallery } from '@/screens/gallery'
 import { Home } from '@/screens/home'
@@ -180,6 +181,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   return (
     <div className={cn('mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6', navPos === 'right' && 'lg:flex-row-reverse')}>
       <SyncPill status={sync} />
+      <Toaster />
       <TabBar tabs={tabs} active={tab} onChange={go} side={side} />
 
       <FabSlideContext value={hasNoFab(tab) || hasNoFab(from)}>

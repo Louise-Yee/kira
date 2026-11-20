@@ -7,6 +7,7 @@ import { buildReceipt } from '@/lib/receipt-data'
 import { renderReceipt } from '@/lib/receipt-canvas'
 import { canShareImages, shareImage } from '@/lib/share-image'
 import { canShareLinks, receiptUrl, shareLink } from '@/lib/share-link'
+import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -34,7 +35,6 @@ function Body({ split, qr, onCreateLink }: Pick<Props, 'qr' | 'onCreateLink'> & 
   const [only, setOnly] = useState<number | null>(null)
   const [image, setImage] = useState<{ blob: Blob; url: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
   const [includeQr, setIncludeQr] = useState(true)
   const shownQr = includeQr ? qr : undefined
 
@@ -61,13 +61,14 @@ function Body({ split, qr, onCreateLink }: Pick<Props, 'qr' | 'onCreateLink'> & 
     if (!image) return
     const who = only === null ? 'receipt' : split.people[only].toLowerCase().replace(/\W+/g, '-')
     const result = await shareImage(image.blob, `${split.title.toLowerCase().replace(/\W+/g, '-')}-${who}.png`, split.title)
-    setNotice(result === 'downloaded' ? 'Saved to your downloads.' : null)
+    if (result === 'downloaded') toast('Saved to your downloads')
   }
 
   const link = async () => {
     if (only === null) return
     const result = await shareLink(receiptUrl(onCreateLink(split, only)), split.title).catch(() => null)
-    setNotice(result === 'copied' ? 'Link copied.' : result === null ? "Couldn't copy the link." : null)
+    if (result === 'copied') toast('Link copied')
+    else if (result === null) toast("Couldn't copy the link", 'error')
   }
 
   const audience = [{ label: 'Everyone', value: null }, ...split.people.map((name, i) => ({ label: name, value: i }))]
@@ -106,7 +107,6 @@ function Body({ split, qr, onCreateLink }: Pick<Props, 'qr' | 'onCreateLink'> & 
         <div className="flex h-64 items-center justify-center rounded-2xl bg-secondary text-base text-muted-foreground">Creating receipt…</div>
       )}
       {!qr && <p className="px-1 text-base text-muted-foreground">Add your payment QR in Settings to show it on the receipt.</p>}
-      {notice && <p className="px-1 text-base text-muted-foreground">{notice}</p>}
       <SheetActions
         label={canShareImages() ? 'Share image' : 'Download'}
         disabled={!image}
