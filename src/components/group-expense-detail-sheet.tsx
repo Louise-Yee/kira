@@ -55,7 +55,7 @@ export function GroupExpenseDetailSheet({ open, onClose, group, meUid, expense, 
               {expense.previous.map((v) => (
                 <div key={v.at} className="flex items-center justify-between gap-3 text-base text-muted-foreground">
                   <span className="min-w-0 truncate">
-                    {nameOf(v.by)} changed it on {shortDate(todayISO(new Date(v.at)))}: {v.title}
+                    Before {nameOf(v.by)}'s edit on {shortDate(todayISO(new Date(v.at)))}: {v.title}
                   </span>
                   <Money sen={v.amount} className="shrink-0" />
                 </div>

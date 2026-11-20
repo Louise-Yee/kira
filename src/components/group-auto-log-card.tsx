@@ -15,20 +15,24 @@ type Props = {
 export function GroupAutoLogCard({ log, categories, onChange }: Props) {
   const choices = categories.filter((c) => c.kind === 'expense' && (!c.archived || c.id === log?.categoryId))
   const categoryId = log?.categoryId ?? choices.find((c) => c.name === 'Other')?.id ?? choices[0]?.id ?? ''
-  const enabled = !!log?.enabled
+  // On by default: a group with no setting yet gets one turned on (useDefaultGroupLogs).
+  const enabled = log ? log.enabled : true
   const save = (patch: Partial<GroupLog>) =>
     onChange({ enabled, categoryId, from: log?.from ?? todayISO(), ...patch, updatedAt: Date.now() })
 
   return (
     <section className="flex flex-col gap-3 rounded-3xl bg-card p-5">
       {/* Turning it on starts from today, so old expenses never turn up in my transactions. */}
-      <Toggle label="Add my share to my transactions" checked={enabled} disabled={!categoryId} onChange={(on) => save(on ? { enabled: true, from: todayISO() } : { enabled: false })} />
+      <Toggle label="Count my share in my spending" checked={enabled} disabled={!categoryId} onChange={(on) => save(on ? { enabled: true, from: todayISO() } : { enabled: false })} />
       <p className="px-1 text-base text-muted-foreground">
-        {enabled && log
-          ? `From ${longDate(log.from)}, each expense you are part of becomes one transaction of your share. Edit its category there any time.`
-          : 'Each expense you are part of becomes one transaction of your share, so your own spending stays right.'}
+        {enabled && log ? `Adds your share of each expense from ${longDate(log.from)} to your own spending.` : 'Adds your share of each expense to your own spending.'}
       </p>
-      {enabled && <CategoryPicker categories={choices} value={categoryId} onChange={(id) => save({ categoryId: id })} />}
+      {enabled && (
+        <>
+          <CategoryPicker categories={choices} value={categoryId} onChange={(id) => save({ categoryId: id })} />
+          <p className="px-1 text-base text-muted-foreground">Only new expenses use a new category.</p>
+        </>
+      )}
     </section>
   )
 }

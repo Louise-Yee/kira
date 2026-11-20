@@ -21,7 +21,7 @@ export { exportBackup, importBackup } from './backup'
 export { usePublicReceipt } from './shares'
 export { findByEmails, useDirectoryPublisher } from './directory'
 export { EXPENSES_PAGE, deleteGroupExpense, saveGroupExpense, useOlderExpenses, useRecentExpenses } from './group-expenses'
-export { setGroupLog, useGroupAutoLog, useGroupLogs } from './group-autolog'
+export { setGroupLog, useDefaultGroupLogs, useGroupAutoLog, useGroupLogs } from './group-autolog'
 export type { GroupLog } from '@/lib/group-autolog'
 export {
   confirmSettlement,
