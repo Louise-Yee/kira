@@ -48,8 +48,8 @@ type Props = {
 }
 
 const segments = [
-  { value: 'friends', label: 'Friends' },
   { value: 'groups', label: 'Groups' },
+  { value: 'friends', label: 'Friends' },
 ] as const
 
 const Heading = ({ children }: { children: string }) => <h2 className="text-base font-semibold text-muted-foreground">{children}</h2>
@@ -58,7 +58,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
   const categories = useCategories(user.uid) ?? []
   const me: Me = user
   const joined = openGroupId ?? null
-  const [segment, setSegment] = useState<(typeof segments)[number]['value']>(joined ? 'groups' : 'friends')
+  const [segment, setSegment] = useState<(typeof segments)[number]['value']>('groups')
   const [groupId, setGroupId] = useState<string | null>(joined)
   useBackClose(groupId !== null, () => setGroupId(null))
   const [adding, setAdding] = useState(false)
@@ -90,17 +90,16 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-3">
         <h1 className="font-heading text-3xl font-extrabold tracking-tight">People</h1>
-        {/* With nothing yet, the empty state below carries the same action. */}
-        {segment === 'friends' && !!friendships?.length && (
-          <PillButton size="pill-sm" onClick={() => setAdding(true)}>
-            <UserPlus className="size-5" />
-            Add friend
-          </PillButton>
-        )}
-        {segment === 'groups' && !!groups?.length && (
-          <PillButton size="pill-sm" onClick={() => setCreating(true)}>
+        {/* The same width for both labels, so switching views doesn't shift the header (min: it can still grow with a larger font). */}
+        {segment === 'groups' ? (
+          <PillButton size="pill-sm" className="min-w-40" onClick={() => setCreating(true)}>
             <Users className="size-5" />
             New group
+          </PillButton>
+        ) : (
+          <PillButton size="pill-sm" className="min-w-40" onClick={() => setAdding(true)}>
+            <UserPlus className="size-5" />
+            Add friend
           </PillButton>
         )}
       </div>

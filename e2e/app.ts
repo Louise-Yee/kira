@@ -18,8 +18,14 @@ export async function pickCategory(u: User, name: string) {
   await u.page.getByRole('button', { name, exact: true }).click()
 }
 
-export async function addFriend(u: User, friend: User) {
+/** People opens on Groups; friends and friend requests are under Friends. */
+export async function openFriends(u: User) {
   await tab(u, 'People')
+  await u.page.getByRole('button', { name: 'Friends', exact: true }).click()
+}
+
+export async function addFriend(u: User, friend: User) {
+  await openFriends(u)
   await u.page.getByRole('button', { name: /^Add friends?$/ }).first().click()
   const s = sheet(u, 'Add friends')
   await s.getByLabel("Friend's email").fill(friend.email)
@@ -34,7 +40,7 @@ export async function addFriend(u: User, friend: User) {
 }
 
 export async function acceptFriend(u: User, friend: User) {
-  await tab(u, 'People')
+  await openFriends(u)
   await u.page.getByRole('button', { name: `Accept ${friend.name}` }).click()
 }
 
