@@ -1,5 +1,5 @@
 import { expect, test, type User } from './fixtures.ts'
-import { addGroupExpense, closeSheet, copyInviteLink, createGroup, groupSettings, joinByLink, openGroup, openGroups, section, tab } from './app.ts'
+import { acceptFriend, addFriend, addGroupExpense, closeSheet, copyInviteLink, createGroup, groupSettings, joinByLink, openGroup, openGroups, section, sheet, tab } from './app.ts'
 
 /** Alice makes "Trip" and everyone else joins it by link. */
 async function tripWith(alice: User, ...others: User[]) {
@@ -204,4 +204,51 @@ test('the owner renames the group from its settings and everyone sees the new na
   await expect(bobs.getByRole('button', { name: 'Share invite link' })).toBeVisible()
   await expect(bobs.getByLabel('Group name')).toBeHidden()
   await expect(bobs.getByRole('button', { name: 'Turn off' })).toBeHidden()
+})
+
+/** On the open group screen: invite a friend from the "Add friends" sheet. */
+async function inviteFriend(u: User, friend: User) {
+  await u.page.getByRole('button', { name: 'Add friends' }).click()
+  const s = sheet(u, 'Add friends to Trip')
+  await s.getByRole('button', { name: 'Invite', exact: true }).click()
+  await expect(s.getByRole('button', { name: 'Invited' })).toBeDisabled()
+  await closeSheet(u)
+  await expect(section(u, '1 member')).toContainText(`${friend.name}Invited by you`)
+}
+
+test('invite a friend into a group; they join from their People tab', async ({ signIn }) => {
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await addFriend(alice, bob)
+  await acceptFriend(bob, alice)
+  await createGroup(alice, 'Trip')
+
+  await inviteFriend(alice, bob)
+  await tab(bob, 'People')
+  const invites = section(bob, 'Group invites')
+  await expect(invites).toContainText('Alice invited you to Trip')
+  await invites.getByRole('button', { name: 'Join' }).click()
+  await expect(bob.page.getByRole('heading', { name: 'Trip', level: 1 })).toBeVisible()
+  await expect(section(bob, 'Balances')).toContainText('Alice')
+
+  await expect(alice.page.getByText('2 members')).toBeVisible()
+  await expect(alice.page.getByText('Invited by you')).toBeHidden()
+})
+
+test('an invite can be declined, or cancelled by whoever sent it', async ({ signIn }) => {
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await addFriend(alice, bob)
+  await acceptFriend(bob, alice)
+  await createGroup(alice, 'Trip')
+
+  await inviteFriend(alice, bob)
+  await tab(bob, 'People')
+  await section(bob, 'Group invites').getByRole('button', { name: 'Decline' }).click()
+  await expect(bob.page.getByRole('heading', { name: 'Group invites' })).toBeHidden()
+  await expect(alice.page.getByText('Invited by you')).toBeHidden()
+
+  await inviteFriend(alice, bob)
+  await expect(section(bob, 'Group invites')).toContainText('Alice invited you to Trip')
+  await section(alice, '1 member').getByRole('button', { name: 'Cancel' }).click()
+  await expect(bob.page.getByRole('heading', { name: 'Group invites' })).toBeHidden()
+  await expect(alice.page.getByText('1 member', { exact: true })).toBeVisible()
 })

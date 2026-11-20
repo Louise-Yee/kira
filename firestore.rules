@@ -56,11 +56,30 @@ service cloud.firestore {
       function onlyMemberChanged(uid) {
         return request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([uid]);
       }
+      function isInvited() {
+        return request.auth.uid in resource.data.invitedUids;
+      }
+      function friendsWith(uid) {
+        let me = request.auth.uid;
+        let path = /databases/$(database)/documents/friendships/$(me < uid ? me + '_' + uid : uid + '_' + me);
+        return exists(path) && get(path).data.status == 'accepted';
+      }
+      // The one uid added to (or taken off) the invited list by this write.
+      function invitedAdded() {
+        return request.resource.data.invitedUids.removeAll(resource.data.get('invitedUids', []));
+      }
+      function invitedRemoved() {
+        return resource.data.invitedUids.removeAll(request.resource.data.invitedUids);
+      }
+      function onlyInviteeChanged(uid) {
+        return request.resource.data.get('invited', {}).diff(resource.data.get('invited', {})).affectedKeys().hasOnly([uid]);
+      }
       function inviteOk(token) {
         let inv = get(/databases/$(database)/documents/invites/$(token)).data;
         return inv.gid == gid && inv.revoked == false && inv.expiresAt > request.time.toMillis();
       }
-      allow read: if request.auth != null && isMember();
+      // Members, and friends invited into it (so they can see what they're joining).
+      allow read: if request.auth != null && (isMember() || isInvited());
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'memberUids', 'members', 'inviteId', 'inviteExpiresAt', 'createdAt', 'updatedAt'])
         && nameOk()
@@ -87,6 +106,35 @@ service cloud.firestore {
           && request.resource.data.memberUids == resource.data.memberUids.removeAll([request.auth.uid])
           && onlyMemberChanged(request.auth.uid)
           && !(request.auth.uid in request.resource.data.members))
+        // Invite a friend: any member adds one of their friends who isn't in the group yet.
+        || (isMember()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['invitedUids', 'invited', 'updatedAt'])
+          && invitedAdded().size() == 1
+          && request.resource.data.invitedUids.size() == resource.data.get('invitedUids', []).size() + 1
+          && request.resource.data.invitedUids.size() <= 30
+          && !(invitedAdded()[0] in resource.data.memberUids)
+          && friendsWith(invitedAdded()[0])
+          && onlyInviteeChanged(invitedAdded()[0])
+          && request.resource.data.invited[invitedAdded()[0]].keys().hasOnly(['displayName', 'photoURL', 'by', 'at'])
+          && request.resource.data.invited[invitedAdded()[0]].by == request.auth.uid)
+        // Take an invite back: the invitee declines, or the member who sent it or the owner cancels it.
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['invitedUids', 'invited', 'updatedAt'])
+          && invitedRemoved().size() == 1
+          && request.resource.data.invitedUids.size() == resource.data.invitedUids.size() - 1
+          && onlyInviteeChanged(invitedRemoved()[0])
+          && !(invitedRemoved()[0] in request.resource.data.get('invited', {}))
+          && (invitedRemoved()[0] == request.auth.uid
+            || (isMember() && (resource.data.invited[invitedRemoved()[0]].by == request.auth.uid || resource.data.ownerUid == request.auth.uid))))
+        // Accept an invite: add only myself and take myself off the invited list.
+        || (!isMember() && isInvited()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberUids', 'members', 'invitedUids', 'invited', 'updatedAt'])
+          && request.resource.data.memberUids == resource.data.memberUids.concat([request.auth.uid])
+          && request.resource.data.memberUids.size() <= 30
+          && onlyMemberChanged(request.auth.uid)
+          && request.resource.data.members[request.auth.uid].keys().hasOnly(['displayName', 'photoURL', 'joinedAt', 'invitedBy'])
+          && request.resource.data.invitedUids == resource.data.invitedUids.removeAll([request.auth.uid])
+          && onlyInviteeChanged(request.auth.uid)
+          && !(request.auth.uid in request.resource.data.invited))
         // Expenses: any member moves the running totals (only that and the timestamp).
         || (isMember()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totals', 'updatedAt'])

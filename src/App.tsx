@@ -4,7 +4,7 @@ import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/rea
 import { House, ReceiptText, Repeat, Settings, Users } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
 import { useAppLock, type AppLock } from '@/lib/app-lock'
-import { useCategories, useClientInfo, useDefaultGroupLogs, useDirectoryPublisher, useFriendships, useGroupAutoLog, useGroupLogs, useGroups, usePendingForMe, useSyncStatus } from '@/lib/db'
+import { useCategories, useClientInfo, useDefaultGroupLogs, useDirectoryPublisher, useFriendships, useGroupAutoLog, useGroupInvites, useGroupLogs, useGroups, usePendingForMe, useSyncStatus } from '@/lib/db'
 import { splitFriendships } from '@/lib/friends'
 import { todayISO } from '@/lib/date'
 import { coinBurst } from '@/lib/haptics'
@@ -105,6 +105,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   const navigate = useNavigate()
   const friendships = useFriendships(user.uid)
   const groups = useGroups(user.uid)
+  const groupInvites = useGroupInvites(user.uid)
   const [burst, setBurst] = useState<DOMRect | null>(null)
   const logs = useGroupLogs(user.uid)
   const categories = useCategories(user.uid)
@@ -112,7 +113,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   useGroupAutoLog(user.uid, groups, logs)
   const toConfirm = usePendingForMe(user.uid, groups?.map((g) => g.id) ?? [])
   // The People tab's dot: friend requests and payments waiting for me.
-  const requests = splitFriendships(friendships ?? [], user.uid).incoming.length + toConfirm.length
+  const requests = splitFriendships(friendships ?? [], user.uid).incoming.length + toConfirm.length + (groupInvites?.length ?? 0)
   const tabs = baseTabs.map((t) => (t.id === 'people' ? { ...t, badge: requests } : t))
   const current = tabs.find((t) => paths[t.id] === pathname)
   // A group invite link (/join/…) opens its sheet over the People tab.
@@ -197,7 +198,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
             {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} update={update.update} onUpdate={update.show} lock={lock} />}
             {tab === 'recurring' && <RecurringScreen user={user} />}
             {tab === 'split' && <SplitScreen user={user} today={today} />}
-            {tab === 'people' && <PeopleScreen key={joined?.at} user={user} friendships={friendships} groups={groups} toConfirm={toConfirm} logs={logs} openGroupId={joined?.gid} />}
+            {tab === 'people' && <PeopleScreen key={joined?.at} user={user} friendships={friendships} groups={groups} toConfirm={toConfirm} groupInvites={groupInvites ?? []} logs={logs} openGroupId={joined?.gid} />}
           </motion.div>
         </AnimatePresence>
       </main>

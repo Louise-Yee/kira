@@ -14,6 +14,8 @@ import {
   confirmSettlement,
   createGroup,
   removeFriendship,
+  acceptGroupInvite,
+  cancelGroupInvite,
   dismissSettlement,
   rejectSettlement,
   useCategories,
@@ -37,6 +39,8 @@ type Props = {
   groups: readonly WithId<Group>[] | undefined
   /** Payments made to me that wait for me to confirm, from all my groups. */
   toConfirm: readonly PendingForMe[]
+  /** Groups a friend invited me to. */
+  groupInvites: readonly WithId<Group>[]
   /** My auto-log settings, by group id. */
   logs: readonly (GroupLog & { id: string })[] | undefined
   /** A group to open straight away (after joining by link). */
@@ -50,7 +54,7 @@ const segments = [
 
 const Heading = ({ children }: { children: string }) => <h2 className="text-base font-semibold text-muted-foreground">{children}</h2>
 
-export function PeopleScreen({ user, friendships, groups, toConfirm, logs, openGroupId }: Props) {
+export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvites, logs, openGroupId }: Props) {
   const categories = useCategories(user.uid) ?? []
   const me: Me = user
   const joined = openGroupId ?? null
@@ -72,6 +76,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, logs, openG
         group={groups?.find((g) => g.id === groupId)}
         log={logs?.find((l) => l.id === groupId)}
         categories={categories}
+        friends={friends.map((f) => ({ uid: otherUid(f, user.uid), ...f.names[otherUid(f, user.uid)] }))}
         onBack={() => setGroupId(null)}
       />
     )
@@ -99,6 +104,28 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, logs, openG
           </PillButton>
         )}
       </div>
+      {groupInvites.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <Heading>Group invites</Heading>
+          {groupInvites.map((g) => {
+            const by = g.invited?.[user.uid]?.by ?? ''
+            return (
+              <PendingSettlementRow
+                key={g.id}
+                title={`${g.members[by]?.displayName || 'A friend'} invited you to ${g.name}`}
+                subtitle={`${g.memberUids.length} ${g.memberUids.length === 1 ? 'member' : 'members'}`}
+                confirmLabel="Join"
+                onConfirm={() => {
+                  success()
+                  acceptGroupInvite(me, g)
+                  setGroupId(g.id)
+                }}
+                takeBack={{ label: 'Decline', onClick: () => cancelGroupInvite(g.id, user.uid) }}
+              />
+            )
+          })}
+        </section>
+      )}
       {notReceived.length > 0 && (
         <section className="flex flex-col gap-2">
           <Heading>Not received</Heading>

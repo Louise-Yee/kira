@@ -36,7 +36,21 @@ export {
   useRejectedSettlements,
   type PendingForMe,
 } from './group-settlements'
-export { createGroup, deleteGroup, joinGroup, leaveGroup, newInvite, renameGroup, revokeInvite, useGroups, useInvite } from './groups'
+export {
+  acceptGroupInvite,
+  cancelGroupInvite,
+  createGroup,
+  deleteGroup,
+  inviteToGroup,
+  joinGroup,
+  leaveGroup,
+  newInvite,
+  renameGroup,
+  revokeInvite,
+  useGroupInvites,
+  useGroups,
+  useInvite,
+} from './groups'
 export { acceptFriendRequest, removeFriendship, sendFriendRequest, useFriendships, type Me } from './friends'
 export type { Group, Invite } from '@/lib/groups'
 export { setDiscoverable, setPaymentQr, useSettings } from './settings'
