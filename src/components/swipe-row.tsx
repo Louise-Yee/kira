@@ -23,7 +23,8 @@ export function SwipeRow({ onSwipe, label, children }: { onSwipe: () => void; la
     armed.current = past
   })
   return (
-    <div className="relative overflow-hidden rounded-2xl">
+    // Its own swipe, so a flick on it doesn't also switch tab.
+    <div className="relative overflow-hidden rounded-2xl" data-no-tab-swipe>
       <motion.div className="pointer-events-none absolute inset-0 bg-primary" style={{ opacity: bg }} aria-hidden />
       <motion.div className="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-2 pr-5 text-base font-semibold text-primary-foreground" style={{ opacity: fade, scale: reveal }}>
         <Share2 className="size-5" aria-hidden />

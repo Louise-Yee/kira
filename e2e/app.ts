@@ -98,3 +98,16 @@ export async function addGroupExpense(u: User, title: string, digits: string) {
 /** A section of the screen by its heading, e.g. section(u, 'Balances'). */
 export const section = (u: User, heading: string) =>
   u.page.locator('section').filter({ has: u.page.getByRole('heading', { name: heading, exact: true }) })
+
+/** A quick sideways flick across the middle of the screen, as a finger does (touch events, phone only). */
+export async function flick(u: User, direction: 'left' | 'right') {
+  const cdp = await u.page.context().newCDPSession(u.page)
+  const { width, height } = u.page.viewportSize() ?? { width: 412, height: 839 }
+  const [from, to] = direction === 'left' ? [0.8, 0.2] : [0.2, 0.8]
+  const y = height / 2
+  const at = (f: number) => [{ x: width * f, y }]
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(from) })
+  for (const f of [0.75, 0.5, 0.25]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(from + (to - from) * f) })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await cdp.detach()
+}
