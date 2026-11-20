@@ -31,10 +31,11 @@ export function csvField(text: string): string {
   return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe
 }
 
-/** Transactions as CSV (UTF-8 BOM so Excel reads it correctly), oldest first. */
+/** Transactions as CSV (UTF-8 BOM so Excel reads it correctly), oldest first, without deleted ones. */
 export function transactionsCsv(transactions: readonly Transaction[], categories: readonly WithId<Category>[]): string {
   const names = new Map(categories.map((c) => [c.id, c.name]))
   const rows = transactions
+    .filter((t) => t.deletedAt === undefined)
     .toSorted((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt)
     .map((t) =>
       [
@@ -94,6 +95,9 @@ const has = (o: Rec, k: string) => o[k] !== undefined
 
 const KINDS = ['expense', 'income'] as const
 
+// Kept on import, or restoring a backup would bring deleted items back.
+const deletionOf = (o: Rec) => (has(o, 'deletedAt') ? { deletedAt: int(o, 'deletedAt') } : {})
+
 function parseCategory(o: Rec): Category {
   return {
     name: str(o, 'name'),
@@ -102,6 +106,7 @@ function parseCategory(o: Rec): Category {
     icon: str(o, 'icon'),
     order: anyInt(o, 'order'),
     archived: bool(o, 'archived'),
+    ...deletionOf(o),
   }
 }
 
@@ -120,6 +125,7 @@ function parseTransaction(o: Rec): Transaction {
     ...(has(o, 'groupExpenseId') ? { groupExpenseId: str(o, 'groupExpenseId') } : {}),
     createdAt: int(o, 'createdAt'),
     updatedAt: int(o, 'updatedAt'),
+    ...deletionOf(o),
   }
 }
 
@@ -144,6 +150,7 @@ function parseRecurring(o: Rec): Recurring {
     paused: bool(o, 'paused'),
     posted: int(o, 'posted'),
     createdAt: int(o, 'createdAt'),
+    ...deletionOf(o),
   }
 }
 
@@ -183,6 +190,7 @@ function parseSplit(o: Rec): Split {
       expenseTxId === null ? null : typeof expenseTxId === 'string' ? expenseTxId : fail('expenseTxId must be text or null'),
     createdAt: int(o, 'createdAt'),
     updatedAt: int(o, 'updatedAt'),
+    ...deletionOf(o),
   }
 }
 

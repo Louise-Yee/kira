@@ -1,3 +1,4 @@
+import type { Deletion } from './deletion.ts'
 import { apportion } from './split.ts'
 
 /** One earlier state of an expense, kept when it is edited so the group can audit changes. */
@@ -28,7 +29,7 @@ export type GroupExpense = {
   updatedAt: number
   /** Earlier versions, newest first. */
   previous?: ExpenseVersion[]
-}
+} & Deletion
 
 /** The fields a member fills in. */
 export type ExpenseDraft = Pick<GroupExpense, 'title' | 'date' | 'amount' | 'paidBy' | 'shares'>
@@ -65,7 +66,7 @@ export type Settlement = {
   createdAt: number
   confirmedAt?: number
   rejectedAt?: number
-}
+} & Deletion
 
 /** One payment that would square things up. */
 export type Transfer = { from: string; to: string; amount: number }

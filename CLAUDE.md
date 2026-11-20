@@ -39,6 +39,7 @@ Personal expense tracker PWA. Product spec: `SPEC.md`. Task list: `PLAN.md`. Do 
 - After each task, run `npm run build` and `npm run lint`, plus any check scripts the task touches. Report failures exactly as they appear.
 - Rules deploy (only when `firestore.rules` changed): `firebase deploy --only firestore:rules`.
 - Releases: bump `version` in `package.json` (and `minVersion` for forced updates) in a `chores/release-X.Y.Z` PR; merging it publishes the APK. Never push `v*` tags by hand. See "Releasing" in `README.md`.
-- Old APKs keep using the same data: Firestore changes are additive only (never rename, remove or change the meaning of a field), and rules must not start rejecting older versions' writes.
+- Old APKs keep using the same data: Firestore changes are additive only (never rename, remove or change the meaning of a field), and rules must not start rejecting older versions' writes. A change that older versions would misread ships with a `minVersion` bump in the same release.
+- Deletes are soft: set `deletedAt` (plus `deletedBy` on shared docs) through the helpers in `src/lib/db/core.ts`, never `deleteDoc`. The db hooks leave deleted docs out. Exceptions: the directory entry (privacy), the payment QR, and auto-log cleanup.
 - Commit only when the user asks. Commits end with the `Co-Authored-By` line and PR descriptions with the "Generated with Claude Code" line, as given in the session's attribution reminder.
 - If the plan looks wrong once you're in the code, stop and ask; don't improvise around it.

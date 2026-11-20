@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { doc, getDocsFromServer, limit, orderBy, query, where, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { col, newId, remove, reportError, save } from './core'
+import { col, liveDocs, newId, reportError, save, softDelete } from './core'
 import type { Category, WithId } from './types'
 import { useDocs } from './use-docs'
 
@@ -26,15 +26,18 @@ export function swapCategoryOrder(uid: string, a: WithId<Category>, b: WithId<Ca
 }
 
 /**
- * Does any transaction use this category? Asks the server, never the cache: a partial cache could say
+ * Does any (not deleted) transaction use this category? Asks the server, never the cache: a partial cache could say
  * "no" and let a used category be deleted. Rejects when offline, so callers must treat that as "unknown".
+ * Firestore can't query for a missing `deletedAt`, so it reads a few at a time until it finds a live one.
  */
 export async function categoryInUse(uid: string, id: string): Promise<boolean> {
-  const snap = await getDocsFromServer(query(col(uid, 'transactions'), where('categoryId', '==', id), limit(1)))
-  return !snap.empty
+  const snap = await getDocsFromServer(query(col(uid, 'transactions'), where('categoryId', '==', id), limit(20)))
+  // ponytail: 20 deleted ones in a row reads as "in use"; the move flow then just moves them too.
+  return liveDocs(snap).length > 0 || snap.size === 20
 }
 
-export const deleteCategory = (uid: string, id: string) => remove(doc(col(uid, 'categories'), id))
+/** Soft-delete a category. Returns the undo. */
+export const deleteCategory = (uid: string, id: string) => softDelete(doc(col(uid, 'categories'), id))
 
 /**
  * Re-point every transaction of `fromId` to `toId`, then delete `fromId`.
@@ -52,6 +55,6 @@ export async function moveAndDeleteCategory(uid: string, fromId: string, toId: s
     commits.push(batch.commit())
   }
   void Promise.all(commits)
-    .then(() => deleteCategory(uid, fromId))
+    .then(() => void deleteCategory(uid, fromId))
     .catch(reportError)
 }

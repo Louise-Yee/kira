@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { doc, orderBy, query, where } from 'firebase/firestore'
 import { monthRange, monthsRange } from '@/lib/date'
-import { col, newId, remove, save } from './core'
+import { col, newId, save, softDelete } from './core'
 import type { Transaction, TransactionDraft, WithId } from './types'
 import { useDocs } from './use-docs'
 
@@ -42,4 +42,5 @@ export function saveTransaction(uid: string, draft: TransactionDraft, existing?:
   })
 }
 
-export const deleteTransaction = (uid: string, id: string) => remove(doc(col(uid, 'transactions'), id))
+/** Soft-delete a transaction. Returns the undo. */
+export const deleteTransaction = (uid: string, id: string) => softDelete(doc(col(uid, 'transactions'), id))

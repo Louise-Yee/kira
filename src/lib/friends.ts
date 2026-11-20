@@ -1,3 +1,4 @@
+import type { Deletion } from './deletion.ts'
 export type FriendName = { displayName: string; photoURL: string | null }
 
 /** `friendships/{id}`: a request (pending) or a friendship (accepted) between two users. `uids` is sorted. */
@@ -10,7 +11,7 @@ export type Friendship = {
   names: Record<string, FriendName>
   createdAt: number
   updatedAt: number
-}
+} & Deletion
 
 /** The two uids in the order the document id and rules use. */
 export const sortedUids = (a: string, b: string): [string, string] => (a < b ? [a, b] : [b, a])

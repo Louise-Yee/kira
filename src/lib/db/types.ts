@@ -1,4 +1,5 @@
 import type { ClientInfo } from '@/lib/client-info'
+import type { Deletion } from '@/lib/deletion'
 import type { RecurrenceRule } from '@/lib/recurrence'
 import type { Receipt } from '@/lib/receipt-data'
 import type { Charge, Share, SplitForm, SplitItem, SplitMode, SplitFriend } from '@/lib/split'
@@ -14,7 +15,7 @@ export type Category = {
   icon: string
   order: number
   archived: boolean
-}
+} & Deletion
 
 export type Transaction = {
   kind: Kind
@@ -34,14 +35,14 @@ export type Transaction = {
   /** Epoch ms (not serverTimestamp, which reads back null while a write is pending). */
   createdAt: number
   updatedAt: number
-}
+} & Deletion
 
 /** A recurring rule. `posted` = how many occurrences already exist (the next index to post). */
 export type Recurring = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'note'> &
-  RecurrenceRule & { posted: number; createdAt: number }
+  RecurrenceRule & { posted: number; createdAt: number } & Deletion
 
 /** What the rule form produces; `posted` and `createdAt` are managed by the db layer. */
-export type RecurringDraft = Omit<Recurring, 'posted' | 'createdAt'>
+export type RecurringDraft = Omit<Recurring, 'posted' | 'createdAt' | keyof Deletion>
 
 /** A bill split between people. `people[0]` is me; `shares` are stored as fixed values, never recomputed. */
 export type Split = {
@@ -64,7 +65,7 @@ export type Split = {
   shareIds?: Record<string, string>
   createdAt: number
   updatedAt: number
-}
+} & Deletion
 
 /** A public receipt for one person (`shares/{id}`, readable by anyone with the id). It holds only that person's rows. */
 export type PublicReceipt = {
@@ -74,7 +75,7 @@ export type PublicReceipt = {
   receipt: Receipt
   createdAt: number
   updatedAt: number
-}
+} & Deletion
 
 /** What the editor produces; shares, the expense id and timestamps are added on save. */
 export type SplitDraft = { title: string; date: string; categoryId: string; form: SplitForm }

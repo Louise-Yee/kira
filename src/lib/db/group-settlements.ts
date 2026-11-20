@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { collection, deleteDoc, doc, limit, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore'
+import { collection, doc, limit, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { settlementDelta, type Settlement, type Transfer } from '@/lib/group-ledger'
-import { converter, listen, reportError } from './core'
+import { converter, deletion, listen, liveDocs, reportError, restoration } from './core'
 import type { Me } from './friends'
 import { bumpTotals } from './group-expenses'
 import type { WithId } from './types'
@@ -52,7 +52,7 @@ export function usePendingForMe(uid: string, groupIds: readonly string[]): Pendi
       [
         [`${gid} to`, query(settlements(gid), where('to', '==', uid), where('status', '==', 'pending'))] as const,
         [`${gid} from`, query(settlements(gid), where('from', '==', uid), where('status', '==', 'rejected'))] as const,
-      ].map(([slot, q]) => listen(q, {}, (snap) => setByGroup((m) => ({ ...m, [slot]: snap.docs.map((d) => ({ ...d.data(), id: d.id })) })))),
+      ].map(([slot, q]) => listen(q, {}, (snap) => setByGroup((m) => ({ ...m, [slot]: liveDocs(snap) })))),
     )
     return () => stops.forEach((stop) => stop())
   }, [uid, key])
@@ -89,15 +89,21 @@ export function rejectSettlement(gid: string, s: WithId<Settlement>) {
   void batch.commit().catch(reportError)
 }
 
-/** The payer has seen that their payment was rejected. It no longer counts, so it just goes. */
-export function dismissSettlement(gid: string, s: WithId<Settlement>) {
-  void deleteDoc(doc(settlements(gid), s.id)).catch(reportError)
+/** The payer has seen that their payment was rejected. It no longer counts, so it just goes (soft-deleted). */
+export function dismissSettlement(me: Me, gid: string, s: WithId<Settlement>) {
+  void updateDoc(doc(settlements(gid), s.id), deletion(me.uid)).catch(reportError)
 }
 
-/** The payer undoes it (only while pending): it goes, and the balances go back. */
-export function takeBackSettlement(gid: string, s: WithId<Settlement>) {
-  const batch = writeBatch(db)
-  batch.delete(doc(settlements(gid), s.id))
-  bumpTotals(batch, gid, settlementDelta(s, -1), Date.now())
-  void batch.commit().catch(reportError)
+// ponytail: a taken-back payment keeps status 'pending', so the small pending listeners keep reading it; give it its
+// own status if that ever adds up.
+/** The payer undoes it (only while pending): it goes (soft-deleted), and the balances go back. Returns the undo. */
+export function takeBackSettlement(me: Me, gid: string, s: WithId<Settlement>) {
+  const move = (sign: 1 | -1, fields: ReturnType<typeof deletion> | ReturnType<typeof restoration>) => {
+    const batch = writeBatch(db)
+    batch.update(doc(settlements(gid), s.id), fields)
+    bumpTotals(batch, gid, settlementDelta(s, sign), Date.now())
+    void batch.commit().catch(reportError)
+  }
+  move(-1, deletion(me.uid))
+  return () => move(1, restoration())
 }

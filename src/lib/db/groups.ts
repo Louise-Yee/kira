@@ -3,7 +3,7 @@ import { arrayRemove, arrayUnion, collection, deleteField, doc, getDoc, query, u
 import type { FirebaseError } from 'firebase/app'
 import { db } from '@/lib/firebase'
 import { INVITE_MS, cleanGroupName, type Group, type Invite } from '@/lib/groups'
-import { converter, reportError } from './core'
+import { converter, deletion, reportError } from './core'
 import type { Me } from './friends'
 import type { WithId } from './types'
 import { useDocs } from './use-docs'
@@ -166,11 +166,14 @@ export function leaveGroup(me: Me, group: WithId<Group>) {
   }).catch(reportError)
 }
 
-/** Delete a group and its invite link (owner only). */
-export function deleteGroup(group: WithId<Group>) {
+/**
+ * Delete a group (owner only): soft-deleted, so its expenses and history stay for auditing, and its invite link is
+ * turned off. Members' apps stop showing it.
+ */
+export function deleteGroup(me: Me, group: WithId<Group>) {
   const batch = writeBatch(db)
-  batch.delete(groupRef(group.id))
-  if (group.inviteId) batch.delete(inviteRef(group.inviteId))
+  batch.update(groupRef(group.id), { ...deletion(me.uid), inviteId: null, inviteExpiresAt: null, updatedAt: Date.now() })
+  if (group.inviteId) batch.update(inviteRef(group.inviteId), { revoked: true })
   void batch.commit().catch(reportError)
 }
 

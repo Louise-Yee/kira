@@ -61,6 +61,10 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
               forceMount
               asChild
               aria-describedby={undefined}
+              // Tapping Undo on a toast is not a tap outside: the sheet stays open.
+              onInteractOutside={(e) => {
+                if (e.target instanceof Element && e.target.closest('[data-toaster]')) e.preventDefault()
+              }}
               // Radix focuses the first tabbable element; let a [data-autofocus] element (AmountInput) win.
               // On touch screens nothing is focused, so the keyboard doesn't push the sheet around.
               onOpenAutoFocus={(e) => {

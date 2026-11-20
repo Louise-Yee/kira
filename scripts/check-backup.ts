@@ -20,6 +20,7 @@ const csv = transactionsCsv(
   [
     { ...tx, id: 'b', date: '2026-11-18', categoryId: 'gone', splitId: 's1' },
     { ...tx, id: 'a' },
+    { ...tx, id: 'deleted', deletedAt: 5 },
   ],
   [cat],
 )
@@ -77,6 +78,11 @@ const mutated = (path: (string | number)[], value: Json | undefined): Json => {
 const good = validateBackup(clone())
 assert.ok(good.ok)
 assert.deepEqual(good.backup, backup)
+
+// deletedAt survives an import, so a restored backup doesn't bring deleted items back
+const withDeleted = validateBackup(mutated(['transactions', 0, 'deletedAt'], 5))
+assert.ok(withDeleted.ok)
+assert.equal(withDeleted.backup.transactions[0].deletedAt, 5)
 
 // shareIds are dropped
 const stripped = validateBackup(mutated(['splits', 0, 'shareIds'], { 1: 'abc' }))

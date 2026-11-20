@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { deleteDoc, doc, getDocFromServer, setDoc, updateDoc } from 'firebase/firestore'
 import { addDays, todayISO } from '@/lib/date'
 import { logTxId, planSync, type GroupLog, type Synced } from '@/lib/group-autolog'
-import { col, listen, reportError, save } from './core'
+import { col, listen, liveDocs, reportError, save } from './core'
 import { recentExpensesQuery } from './group-expenses'
 import type { Group } from '@/lib/groups'
 import type { Category } from './types'
@@ -92,7 +92,8 @@ export function useGroupAutoLog(uid: string, groups: readonly WithId<Group>[] | 
         { includeMetadataChanges: true },
         (snap) => {
           if (snap.metadata.fromCache) return
-          const expenses = snap.docs.map((d) => ({ id: d.id, date: d.data().date, title: d.data().title, shares: d.data().shares, updatedAt: d.data().updatedAt }))
+          // A deleted expense counts as removed, so its auto-logged transaction goes too.
+          const expenses = liveDocs(snap).map((e) => ({ id: e.id, date: e.date, title: e.title, shares: e.shares, updatedAt: e.updatedAt }))
           const plan = planSync(uid, expenses, readSynced(uid, gid), since)
           if (!plan.upserts.length && !plan.removals.length) return
           const now = Date.now()

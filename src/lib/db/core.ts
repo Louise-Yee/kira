@@ -1,9 +1,10 @@
 import {
   collection,
-  deleteDoc,
+  deleteField,
   doc,
   onSnapshot,
   setDoc,
+  updateDoc,
   type CollectionReference,
   type DocumentData,
   type DocumentReference,
@@ -15,7 +16,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { GroupLog } from '@/lib/group-autolog'
-import type { ClientDoc, Category, Recurring, Settings, Split, Transaction } from './types'
+import type { ClientDoc, Category, Recurring, Settings, Split, Transaction, WithId } from './types'
 
 type Collections = { categories: Category; transactions: Transaction; recurring: Recurring; splits: Split; groupLogs: GroupLog }
 
@@ -67,6 +68,18 @@ export function save<T extends DocumentData>(ref: DocumentReference<T>, data: T)
   void setDoc(ref, data).catch(reportError)
 }
 
-export function remove(ref: DocumentReference) {
-  void deleteDoc(ref).catch(reportError)
+/** The query's documents, leaving out soft-deleted ones (see `@/lib/deletion`). */
+export const liveDocs = <T>(snap: QuerySnapshot<T>): WithId<T>[] =>
+  snap.docs.filter((d) => d.get('deletedAt') == null).map((d) => ({ ...d.data(), id: d.id }))
+
+/** The fields that soft-delete a document. `by` is set on documents other people share (groups, friends). */
+export const deletion = (by?: string) => ({ deletedAt: Date.now(), ...(by ? { deletedBy: by } : {}) })
+
+/** The fields that bring a soft-deleted document back. */
+export const restoration = () => ({ deletedAt: deleteField(), deletedBy: deleteField() })
+
+/** Soft-delete one document. Returns the undo. */
+export function softDelete(ref: DocumentReference, by?: string) {
+  void updateDoc(ref, deletion(by)).catch(reportError)
+  return () => void updateDoc(ref, restoration()).catch(reportError)
 }

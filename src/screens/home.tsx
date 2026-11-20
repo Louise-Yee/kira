@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toastUndo } from '@/lib/toast'
 import { deleteTransaction, saveTransaction, useCategories, useMonth, useMonths, type Transaction, type WithId } from '@/lib/db'
 import { monthlyTotals } from '@/lib/chart-data'
 import { inTrendWindow, trendMonths } from '@/lib/date'
@@ -51,7 +52,7 @@ export function Home({ user, today, ym, onYm, addRequest }: { user: AppUser; tod
         categories={categories}
         initial={sheet.tx}
         onSave={(draft) => saveTransaction(user.uid, draft, sheet.tx)}
-        onDelete={() => sheet.tx && deleteTransaction(user.uid, sheet.tx.id)}
+        onDelete={() => sheet.tx && toastUndo('Transaction deleted', deleteTransaction(user.uid, sheet.tx.id))}
       />
     </>
   )

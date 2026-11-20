@@ -3,7 +3,7 @@ import { collection, doc, limit, orderBy, query, where, writeBatch } from 'fireb
 import { db } from '@/lib/firebase'
 import { buildReceipt } from '@/lib/receipt-data'
 import { computeForm, resolveItems, type SplitItem } from '@/lib/split'
-import { col, newId, reportError } from './core'
+import { col, newId, reportError, softDelete } from './core'
 import type { PublicReceipt, Split, SplitDraft, WithId } from './types'
 import { useDocs } from './use-docs'
 
@@ -116,11 +116,16 @@ export function createShare(uid: string, split: WithId<Split>, person: number): 
   return id
 }
 
-/** Delete a split, the expense it created and its receipt links, together. */
+/**
+ * Soft-delete a split, the expense it created and its receipt links (a deleted link stops opening). Returns the undo.
+ * Each on its own, not one batch: an update to a doc that is already gone (an expense removed by hand in an older
+ * version) would fail the whole batch.
+ */
 export function deleteSplit(uid: string, split: WithId<Split>) {
-  const batch = writeBatch(db)
-  batch.delete(doc(col(uid, 'splits'), split.id))
-  batch.delete(doc(col(uid, 'transactions'), expenseId(split.id)))
-  for (const shareId of Object.values(split.shareIds ?? {})) batch.delete(shareRef(shareId))
-  void batch.commit().catch(reportError)
+  const undos = [
+    doc(col(uid, 'splits'), split.id),
+    ...(split.expenseTxId ? [doc(col(uid, 'transactions'), split.expenseTxId)] : []),
+    ...Object.values(split.shareIds ?? {}).map(shareRef),
+  ].map((ref) => softDelete(ref))
+  return () => undos.forEach((undo) => undo())
 }

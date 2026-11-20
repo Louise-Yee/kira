@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Repeat } from 'lucide-react'
+import { toastUndo } from '@/lib/toast'
 import { CategoryIcon } from '@/components/category-icon'
 import { EmptyState } from '@/components/empty-state'
 import { Fab } from '@/components/fab'
@@ -72,7 +73,9 @@ export function RecurringScreen({ user }: { user: AppUser }) {
         initial={sheet.rule}
         onSave={(draft) => saveRecurring(user.uid, draft, sheet.rule)}
         countTransactions={() => (sheet.rule ? countRecurringTransactions(user.uid, sheet.rule.id) : Promise.resolve(0))}
-        onDelete={(withTx) => (sheet.rule ? deleteRecurring(user.uid, sheet.rule.id, withTx) : Promise.resolve())}
+        onDelete={(withTx) =>
+          sheet.rule ? deleteRecurring(user.uid, sheet.rule.id, withTx).then((undo) => toastUndo('Rule deleted', undo)) : Promise.resolve()
+        }
       />
     </div>
   )

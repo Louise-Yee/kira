@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import { doc, getCountFromServer, getDocsFromServer, limit, query, updateDoc, where, writeBatch } from 'firebase/firestore'
+import { doc, getDocsFromServer, limit, query, updateDoc, where, writeBatch, type DocumentReference } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { occurrenceDate, scheduleChanged } from '@/lib/recurrence'
-import { col, newId, remove, reportError, save } from './core'
+import { col, deletion, liveDocs, newId, reportError, restoration, save } from './core'
 import type { Recurring, RecurringDraft, WithId } from './types'
 import { useDocs } from './use-docs'
 
@@ -71,28 +71,38 @@ export function saveRecurring(uid: string, draft: RecurringDraft, existing?: Wit
 
 const postedBy = (uid: string, ruleId: string) => query(col(uid, 'transactions'), where('recurringId', '==', ruleId))
 
-/** How many transactions the rule has posted. Asks the server; rejects when offline. */
+/**
+ * How many (not deleted) transactions the rule has posted. Asks the server; rejects when offline.
+ * Reads them all: a count query can't leave out soft-deleted ones.
+ */
 export async function countRecurringTransactions(uid: string, ruleId: string): Promise<number> {
-  return (await getCountFromServer(postedBy(uid, ruleId))).data().count
+  return liveDocs(await getDocsFromServer(postedBy(uid, ruleId))).length
+}
+
+/** Apply `fields` to every doc, at most 450 writes a batch. */
+function updateAll(refs: DocumentReference[], fields: ReturnType<typeof deletion> | ReturnType<typeof restoration>) {
+  const commits: Promise<void>[] = []
+  for (let i = 0; i < refs.length; i += 450) {
+    const batch = writeBatch(db)
+    for (const ref of refs.slice(i, i + 450)) batch.update(ref, fields)
+    commits.push(batch.commit())
+  }
+  return Promise.all(commits)
 }
 
 /**
- * Delete a rule, and optionally the transactions it posted. Reads the server first, so it rejects offline
- * and nothing changes. The deletes then run detached, and the rule goes last, only after every batch is
- * acked: a failed batch leaves the rule in place to retry.
+ * Soft-delete a rule, and optionally the transactions it posted. Reads the server first, so it rejects offline
+ * and nothing changes. The writes then run detached, and the rule goes last, only after every batch is
+ * acked: a failed batch leaves the rule in place to retry. Resolves to the undo, which brings back the same ones.
  */
-export async function deleteRecurring(uid: string, ruleId: string, withTransactions: boolean): Promise<void> {
+export async function deleteRecurring(uid: string, ruleId: string, withTransactions: boolean): Promise<() => void> {
   const q = postedBy(uid, ruleId)
   const snap = await getDocsFromServer(withTransactions ? q : query(q, limit(1)))
-  const commits: Promise<void>[] = []
-  if (withTransactions) {
-    for (let i = 0; i < snap.docs.length; i += 450) {
-      const batch = writeBatch(db)
-      for (const d of snap.docs.slice(i, i + 450)) batch.delete(d.ref)
-      commits.push(batch.commit())
-    }
-  }
-  void Promise.all(commits)
-    .then(() => remove(doc(col(uid, 'recurring'), ruleId)))
+  // Ones already deleted on their own stay that way, with their own date.
+  const txs = withTransactions ? liveDocs(snap).map((t) => doc(col(uid, 'transactions'), t.id)) : []
+  const rule = doc(col(uid, 'recurring'), ruleId)
+  void updateAll(txs, deletion())
+    .then(() => updateDoc(rule, deletion()))
     .catch(reportError)
+  return () => void updateAll([rule, ...txs], restoration()).catch(reportError)
 }
