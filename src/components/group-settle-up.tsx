@@ -32,7 +32,9 @@ export function GroupSettleUp({ group, meUid, transfers, pending, allSettled, on
       {(transfers.length > 0 || allSettled) && (
         <section className="flex flex-col gap-2">
           <h2 className="text-base font-semibold text-muted-foreground">Settle up</h2>
-          {allSettled && transfers.length === 0 && <p className="text-base text-muted-foreground">Everyone is settled up.</p>}
+          {allSettled && transfers.length === 0 && (
+            <p className="text-base text-muted-foreground">{pending.length > 0 ? 'All paid, waiting for confirmation.' : 'Everyone is settled up.'}</p>
+          )}
           {transfers.map((t) => (
             <div key={`${t.from}-${t.to}`} className="flex min-h-14 items-center gap-3 rounded-2xl bg-card p-3">
               <span className="min-w-0 flex-1">
