@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, Link2, Plus, Settings } from 'lucide-react'
+import { ArrowLeft, Link2, Plus, Settings, UserPlus } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { ConfirmSheet } from '@/components/confirm-sheet'
 import { GroupAutoLogCard } from '@/components/group-auto-log-card'
@@ -14,10 +14,12 @@ import { TextField } from '@/components/text-field'
 import { addDays, monthLabel, shortDate, todayISO } from '@/lib/date'
 import {
   EXPENSES_PAGE,
+  cancelGroupInvite,
   confirmSettlement,
   deleteGroupExpense,
   dismissSettlement,
   deleteGroup,
+  inviteToGroup,
   leaveGroup,
   newInvite,
   rejectSettlement,
@@ -41,7 +43,7 @@ import {
 } from '@/lib/db'
 import { emptyTotals, netOf, suggestTransfers, type GroupExpense } from '@/lib/group-ledger'
 import { success } from '@/lib/haptics'
-import { MAX_NAME, cleanGroupName, hasActiveInvite, membersOf } from '@/lib/groups'
+import { MAX_NAME, cleanGroupName, hasActiveInvite, inviteesOf, membersOf } from '@/lib/groups'
 import { formatRM } from '@/lib/money'
 import { joinUrl, shareLink } from '@/lib/share-link'
 
@@ -52,13 +54,16 @@ type Props = {
   /** My auto-log setting for this group. */
   log: GroupLog | undefined
   categories: readonly WithId<Category>[]
+  /** My friends, to invite into the group. */
+  friends: readonly { uid: string; displayName: string; photoURL: string | null }[]
   onBack: () => void
 }
 
 const day = 24 * 60 * 60 * 1000
 
-export function GroupScreen({ me, group, log, categories, onBack }: Props) {
+export function GroupScreen({ me, group, log, categories, friends, onBack }: Props) {
   const [settings, setSettings] = useState(false)
+  const [inviting, setInviting] = useState(false)
 
   const back = (
     <PillButton variant="secondary" size="pill-sm" className="w-11 px-0" aria-label="Back to people" onClick={onBack}>
@@ -88,9 +93,17 @@ export function GroupScreen({ me, group, log, categories, onBack }: Props) {
       <GroupLedger me={me} group={group} />
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-base font-semibold text-muted-foreground">
-          {count} {count === 1 ? 'member' : 'members'}
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-muted-foreground">
+            {count} {count === 1 ? 'member' : 'members'}
+          </h2>
+          {friends.length > 0 && (
+            <PillButton variant="secondary" size="pill-sm" onClick={() => setInviting(true)}>
+              <UserPlus className="size-5" />
+              Add friends
+            </PillButton>
+          )}
+        </div>
         {membersOf(group).map(({ uid, member, owner: isOwner }) => (
           <ListRow
             key={uid}
@@ -99,7 +112,46 @@ export function GroupScreen({ me, group, log, categories, onBack }: Props) {
             subtitle={uid === me.uid ? (isOwner ? 'You · owner' : 'You') : isOwner ? 'Owner' : undefined}
           />
         ))}
+        {inviteesOf(group).map(({ uid, invitee }) => (
+          <ListRow
+            key={uid}
+            icon={<Avatar photoURL={invitee.photoURL} name={invitee.displayName || '?'} className="size-11 text-lg" />}
+            title={invitee.displayName || 'Someone'}
+            subtitle={`Invited by ${invitee.by === me.uid ? 'you' : group.members[invitee.by]?.displayName || 'someone'}`}
+            trailing={
+              (invitee.by === me.uid || group.ownerUid === me.uid) && (
+                <PillButton variant="secondary" size="pill-sm" onClick={() => cancelGroupInvite(group.id, uid)}>
+                  Cancel
+                </PillButton>
+              )
+            }
+          />
+        ))}
       </section>
+
+      <Sheet open={inviting} onClose={() => setInviting(false)} title={`Add friends to ${group.name}`}>
+        <div className="flex flex-col gap-2 pb-1">
+          {friends
+            .filter((f) => !group.memberUids.includes(f.uid))
+            .map((f) => {
+              const invited = !!group.invited?.[f.uid]
+              return (
+                <ListRow
+                  key={f.uid}
+                  icon={<Avatar photoURL={f.photoURL} name={f.displayName || '?'} className="size-11 text-lg" />}
+                  title={f.displayName || 'Someone'}
+                  trailing={
+                    <PillButton size="pill-sm" variant={invited ? 'secondary' : 'default'} disabled={invited} onClick={() => inviteToGroup(me, group.id, f)}>
+                      {invited ? 'Invited' : 'Invite'}
+                    </PillButton>
+                  }
+                />
+              )
+            })}
+          {friends.every((f) => group.memberUids.includes(f.uid)) && <p className="text-base text-muted-foreground">All your friends are in this group.</p>}
+          <p className="text-base text-muted-foreground">They join from their People tab. Someone not on your friends list can use the invite link.</p>
+        </div>
+      </Sheet>
 
       <Sheet open={settings} onClose={() => setSettings(false)} title="Group settings" tall>
         <GroupSettings me={me} group={group} log={log} categories={categories} onGone={onBack} />
@@ -109,7 +161,7 @@ export function GroupScreen({ me, group, log, categories, onBack }: Props) {
 }
 
 /** The group's settings sheet: its name (owner), the invite link, auto-log, and leaving or deleting it. */
-function GroupSettings({ me, group, log, categories, onGone }: Omit<Props, 'group' | 'onBack'> & { group: WithId<Group>; onGone: () => void }) {
+function GroupSettings({ me, group, log, categories, onGone }: Omit<Props, 'group' | 'onBack' | 'friends'> & { group: WithId<Group>; onGone: () => void }) {
   const [name, setName] = useState(group.name)
   const [leaving, setLeaving] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)

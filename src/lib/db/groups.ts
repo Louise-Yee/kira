@@ -21,6 +21,39 @@ export function useGroups(uid: string) {
   return useDocs(q)
 }
 
+/** Groups a friend invited me to, waiting for me to join or decline. */
+export function useGroupInvites(uid: string) {
+  const q = useMemo(() => query(groups, where('invitedUids', 'array-contains', uid)), [uid])
+  return useDocs(q)
+}
+
+/** Invite a friend into a group (any member). They see it in their People inbox and join or decline. */
+export function inviteToGroup(me: Me, gid: string, friend: { uid: string; displayName: string; photoURL: string | null }) {
+  const now = Date.now()
+  void updateDoc(groupRef(gid), {
+    invitedUids: arrayUnion(friend.uid),
+    [`invited.${friend.uid}`]: { displayName: friend.displayName, photoURL: friend.photoURL, by: me.uid, at: now },
+    updatedAt: now,
+  }).catch(reportError)
+}
+
+/** Take an invite back (whoever sent it, or the owner), or decline one sent to me (`uid` is mine). */
+export function cancelGroupInvite(gid: string, uid: string) {
+  void updateDoc(groupRef(gid), { invitedUids: arrayRemove(uid), [`invited.${uid}`]: deleteField(), updatedAt: Date.now() }).catch(reportError)
+}
+
+/** Join a group I was invited to. */
+export function acceptGroupInvite(me: Me, group: WithId<Group>) {
+  const now = Date.now()
+  void updateDoc(groupRef(group.id), {
+    memberUids: arrayUnion(me.uid),
+    [`members.${me.uid}`]: { displayName: nameOf(me), photoURL: me.photoURL, joinedAt: now, invitedBy: group.invited?.[me.uid]?.by ?? '' },
+    invitedUids: arrayRemove(me.uid),
+    [`invited.${me.uid}`]: deleteField(),
+    updatedAt: now,
+  }).catch(reportError)
+}
+
 /** A group's invite by link token: undefined while loading, null if it doesn't exist or can't be read. */
 export function useInvite(token: string) {
   const [state, setState] = useState<{ token: string; invite: WithId<Invite> | null }>()
