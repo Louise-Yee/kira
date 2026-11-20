@@ -98,7 +98,7 @@ users/{uid}
 - Firestore's offline cache, with multiple tabs open at once supported.
 - Reads come from the cache instantly; writes queue while offline and sync on reconnect.
 - **The UI never waits for a write to finish** (offline it never would). Changes show immediately in the UI.
-- A small "Saving…/Offline" indicator, based on Firestore's pending-write status.
+- No sync indicator: syncing is invisible to the user (#154).
 - Conflicts: last write wins per document. That's acceptable for a single user.
 - The very first sign-in on a device needs a connection.
 

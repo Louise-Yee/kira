@@ -1,5 +1,5 @@
 // The one entry point for Firestore access: import from '@/lib/db', never from the files inside.
-export type { Category, DirectoryEntry, Kind, PublicReceipt, Recurring, RecurringDraft, Settings, Split, SplitDraft, SyncStatus, Transaction, TransactionDraft, WithId } from './types'
+export type { Category, DirectoryEntry, Kind, PublicReceipt, Recurring, RecurringDraft, Settings, Split, SplitDraft, Transaction, TransactionDraft, WithId } from './types'
 export { col, newId, save, settingsRef } from './core'
 export {
   categoryInUse,
@@ -55,5 +55,4 @@ export { acceptFriendRequest, removeFriendship, sendFriendRequest, useFriendship
 export type { Group, Invite } from '@/lib/groups'
 export { setDiscoverable, setPaymentQr, useSettings } from './settings'
 export { createShare, deleteSplit, saveSplit, SPLITS_PAGE, useOlderSplits, useRecentSplits } from './splits'
-export { useSyncStatus } from './sync'
 export { useClientInfo } from './client'

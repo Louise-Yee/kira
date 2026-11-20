@@ -170,6 +170,7 @@ Build these in `src/components/`. **Every later screen must use them** instead o
 
 ### P1.8 Sync indicator (done)
 - A small pill in the header: shows "Offline" (grey) or "Saving…" (cobalt pulse) and hides when synced. It pops in and out with the `pop` spring.
+- Removed in #154: syncing is invisible to the user.
 
 ---
 

@@ -4,7 +4,7 @@ import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/rea
 import { House, ReceiptText, Repeat, Settings, Users } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
 import { useAppLock, type AppLock } from '@/lib/app-lock'
-import { useCategories, useClientInfo, useDefaultGroupLogs, useDirectoryPublisher, useFriendships, useGroupAutoLog, useGroupInvites, useGroupLogs, useGroups, usePendingForMe, useSyncStatus } from '@/lib/db'
+import { useCategories, useClientInfo, useDefaultGroupLogs, useDirectoryPublisher, useFriendships, useGroupAutoLog, useGroupInvites, useGroupLogs, useGroups, usePendingForMe } from '@/lib/db'
 import { splitFriendships } from '@/lib/friends'
 import { todayISO } from '@/lib/date'
 import { coinBurst } from '@/lib/haptics'
@@ -18,7 +18,6 @@ import { useMediaQuery } from '@/lib/use-media-query'
 import { useTabSwipe } from '@/lib/use-tab-swipe'
 import { cn } from '@/lib/utils'
 import { FabSlideContext, PeekContext } from '@/lib/fab-slide'
-import { SyncPill } from '@/components/sync-pill'
 import { TabBar, type TabItem } from '@/components/tab-bar'
 import { CoinBurst } from '@/components/coin-burst'
 import { JoinGroupSheet } from '@/components/join-group-sheet'
@@ -142,7 +141,6 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   // ponytail: read once per mount, so "Today" and the trend window go stale if the app stays open past midnight.
   const [today] = useState(todayISO)
   const [ym, setYm] = useState(today.slice(0, 7))
-  const sync = useSyncStatus(user.uid, ym, today.slice(0, 7))
   // The floating Add button reads this to stay clear of a right-hand sidebar.
   useEffect(() => {
     document.documentElement.dataset.nav = navPos
@@ -207,7 +205,6 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
 
   return (
     <div className={cn('mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6', navPos === 'right' && 'lg:flex-row-reverse')}>
-      <SyncPill status={sync} />
       <Toaster />
       <TabBar tabs={tabs} active={tab} onChange={go} side={side} />
 

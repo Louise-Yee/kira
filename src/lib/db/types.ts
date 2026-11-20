@@ -99,4 +99,3 @@ export type WithId<T> = T & { id: string }
 /** What the add/edit form produces; ids and timestamps are added on save. */
 export type TransactionDraft = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'date' | 'note'>
 
-export type SyncStatus = 'offline' | 'saving' | 'synced'
