@@ -1,0 +1,178 @@
+import { expect, test, type User } from './fixtures.ts'
+import { addGroupExpense, copyInviteLink, createGroup, joinByLink, openGroup, openGroups, section, tab } from './app.ts'
+
+/** Alice makes "Trip" and everyone else joins it by link. */
+async function tripWith(alice: User, ...others: User[]) {
+  await createGroup(alice, 'Trip')
+  const link = await copyInviteLink(alice)
+  for (const u of others) await joinByLink(u, link, 'Trip')
+  await expect(alice.page.getByText(`${others.length + 1} members`)).toBeVisible()
+}
+
+test('join a group from an invite link opened while signed out', async ({ signIn }) => {
+  const alice = await signIn('Alice')
+  await createGroup(alice, 'Trip')
+  const link = await copyInviteLink(alice)
+
+  const bob = await signIn('Bob', { path: new URL(link).pathname, signedOutFirst: true })
+  await bob.page.getByRole('dialog', { name: 'Join Trip?' }).getByRole('button', { name: 'Join' }).click()
+  await expect(bob.page.getByRole('heading', { name: 'Trip', level: 1 })).toBeVisible()
+  await expect(bob.page.getByText('2 members')).toBeVisible()
+  await expect(alice.page.getByText('2 members')).toBeVisible()
+})
+
+test('an expense split three ways shows the same totals and balances to everyone', async ({ signIn }) => {
+  const [alice, bob, carol] = [await signIn('Alice'), await signIn('Bob'), await signIn('Carol')]
+  await tripWith(alice, bob, carol)
+
+  await addGroupExpense(alice, 'Dinner', '3000')
+
+  for (const u of [alice, bob, carol]) {
+    await expect(section(u, 'Total spent')).toContainText('RM 30.00')
+    await expect(section(u, 'Expenses')).toContainText(/Dinner.*paid by Alice.*RM 30\.00/)
+    const balances = section(u, 'Balances')
+    await expect(balances).toContainText(/Alice\s*Paid RM 30\.00 · Share RM 10\.00\s*\+RM 20\.00/)
+    await expect(balances).toContainText(/Bob\s*Paid RM 0\.00 · Share RM 10\.00\s*−RM 10\.00/)
+    await expect(balances).toContainText(/Carol\s*Paid RM 0\.00 · Share RM 10\.00\s*−RM 10\.00/)
+  }
+})
+
+test('settle up: Bob pays, Alice confirms from her inbox, everyone is square', async ({ signIn }) => {
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await tripWith(alice, bob)
+  await addGroupExpense(alice, 'Dinner', '3000')
+
+  const settle = section(bob, 'Settle up')
+  await expect(settle).toContainText(/You pay Alice\s*RM 15\.00/)
+  await settle.getByRole('button', { name: 'I paid' }).click()
+  await expect(section(bob, 'Waiting for confirmation')).toContainText(/You paid Alice\s*RM 15\.00/)
+
+  // Alice confirms from the People tab's "To confirm" inbox.
+  await alice.page.getByRole('button', { name: 'Back to people' }).click()
+  const inbox = section(alice, 'To confirm')
+  await expect(inbox).toContainText(/Bob says they paid you\s*RM 15\.00 · Trip/)
+  await inbox.getByRole('button', { name: 'Got it' }).click()
+  await expect(alice.page.getByRole('heading', { name: 'To confirm' })).toBeHidden()
+
+  await expect(bob.page.getByRole('heading', { name: 'Waiting for confirmation' })).toBeHidden()
+  await expect(section(bob, 'Settle up')).toContainText('Everyone is settled up.')
+  await expect(section(bob, 'Expenses')).toContainText(/Bob paid Alice.*confirmed/)
+})
+
+test('#120 settle up does not say "settled up" while a payment waits for confirmation', async ({ signIn }) => {
+  test.fail(true, '#120: shows "Everyone is settled up." while the payment is pending')
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await tripWith(alice, bob)
+  await addGroupExpense(alice, 'Dinner', '3000')
+
+  await section(bob, 'Settle up').getByRole('button', { name: 'I paid' }).click()
+  await expect(section(bob, 'Waiting for confirmation')).toBeVisible()
+  await expect(section(bob, 'Settle up')).not.toContainText('Everyone is settled up', { timeout: 3000 })
+})
+
+test('#121 the payer is told when their payment is marked "Not received"', async ({ signIn }) => {
+  test.fail(true, '#121: the payment just disappears for the payer')
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await tripWith(alice, bob)
+  await addGroupExpense(alice, 'Dinner', '3000')
+
+  await section(bob, 'Settle up').getByRole('button', { name: 'I paid' }).click()
+  await section(alice, 'Waiting for confirmation').getByRole('button', { name: 'Not received' }).click()
+
+  await expect(section(bob, 'Settle up')).toContainText(/You pay Alice\s*RM 15\.00/)
+  await expect(bob.page.getByText(/not received/i)).toBeVisible({ timeout: 3000 })
+})
+
+test('auto-log puts my share of a group expense in my own transactions', async ({ signIn }) => {
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await tripWith(alice, bob)
+
+  await alice.page.getByRole('switch', { name: 'Add my share to my transactions' }).click()
+  await expect(alice.page.getByRole('switch', { name: 'Add my share to my transactions' })).toHaveAttribute('aria-checked', 'true')
+  await addGroupExpense(bob, 'Groceries run', '4000')
+
+  await tab(alice, 'Home')
+  await expect(alice.page.getByRole('button', { name: /Groceries run/ })).toContainText('−RM 20.00')
+  // Bob never turned it on, so his own transactions stay empty.
+  await tab(bob, 'Home')
+  await expect(bob.page.getByRole('button', { name: /Groceries run/ })).toBeHidden()
+})
+
+const noGroups = 'Make a group for the people you hang out with'
+
+async function leave(u: User) {
+  await u.page.getByRole('button', { name: 'Leave group' }).click()
+  await u.page.getByRole('dialog', { name: 'Leave Trip?' }).getByRole('button', { name: 'Leave group' }).click()
+}
+
+test('a member leaves: everyone else sees them gone, and the group leaves their list', async ({ signIn }) => {
+  const [alice, bob, carol] = [await signIn('Alice'), await signIn('Bob'), await signIn('Carol')]
+  await tripWith(alice, bob, carol)
+  // Bob opens the group from his list (see the next test for leaving straight after joining by link).
+  await tab(bob, 'Home')
+  await openGroup(bob, 'Trip')
+
+  await leave(bob)
+  await expect(bob.page.getByRole('heading', { name: 'People', level: 1 })).toBeVisible()
+  await expect(bob.page.getByText(noGroups)).toBeVisible()
+  await expect(alice.page.getByText('2 members')).toBeVisible()
+  await expect(carol.page.getByText('2 members')).toBeVisible()
+  await expect(section(alice, 'Balances')).not.toContainText('Bob')
+})
+
+test('leaving a group right after joining it by link goes back to People', async ({ signIn }) => {
+  // Found by e2e, no issue yet: the leaver is often bounced back to "Joining the group…" (seen on desktop every run,
+  // on phone only sometimes), and their leave can reach the server late. Skipped until fixed, since a race would make
+  // test.fail() flip between pass and fail. Remove fixme with the fix.
+  test.fixme()
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await tripWith(alice, bob)
+
+  await leave(bob)
+  // Short waits: this must fail on the assertion, not by running out the test's time.
+  await expect(bob.page.getByRole('heading', { name: 'People', level: 1 })).toBeVisible({ timeout: 5000 })
+  await expect(bob.page.getByText('Joining the group…')).toBeHidden({ timeout: 5000 })
+  await expect(alice.page.getByText('1 members')).toBeVisible({ timeout: 5000 })
+})
+
+test('the owner deletes the group and it is gone for everyone', async ({ signIn }) => {
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await tripWith(alice, bob)
+
+  await alice.page.getByRole('button', { name: 'Delete group' }).click()
+  await alice.page.getByRole('dialog', { name: 'Delete Trip?' }).getByRole('button', { name: 'Delete group' }).click()
+  await expect(alice.page.getByText(noGroups)).toBeVisible()
+
+  await bob.page.goto('/people')
+  await openGroups(bob)
+  await expect(bob.page.getByText(noGroups)).toBeVisible()
+})
+
+test('a turned-off invite link says so instead of joining', async ({ signIn }) => {
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await createGroup(alice, 'Trip')
+  const link = await copyInviteLink(alice)
+  await alice.page.getByRole('button', { name: 'Turn off' }).click()
+  await expect(alice.page.getByText('There is no working invite link.')).toBeVisible()
+
+  // Alice's change is saved offline-first; Bob sees it once it has reached the server.
+  await expect(async () => {
+    await bob.page.goto(new URL(link).pathname)
+    await expect(bob.page.getByRole('dialog')).toContainText('This invite link was turned off. Ask Alice for a new one.', { timeout: 2000 })
+  }).toPass()
+  await expect(bob.page.getByRole('dialog').getByRole('button', { name: 'Join' })).toBeHidden()
+})
+
+test('#116 a just-created group works without a reload (on a slow connection)', async ({ signIn }) => {
+  test.fail(true, "#116: the new group's listeners are refused and never retried")
+  const alice = await signIn('Alice')
+  // The local emulator answers instantly, which hides #116. Hold writes back like a phone network does.
+  await alice.page.route('**/google.firestore.v1.Firestore/Write/channel**', async (route) => {
+    await new Promise((r) => setTimeout(r, 1500))
+    await route.continue()
+  })
+  await createGroup(alice, 'Trip', { workaround116: false })
+  await addGroupExpense(alice, 'Dinner', '3000')
+  // The refused listeners also fail the test through the console check.
+  await expect(section(alice, 'Expenses')).toContainText(/Dinner.*RM 30\.00/, { timeout: 5000 })
+})

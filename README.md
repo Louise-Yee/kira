@@ -41,6 +41,27 @@ npm install
 npm run dev
 ```
 
+## End-to-end tests
+
+```sh
+npx playwright install chromium   # once
+npm run e2e                        # all scenarios, phone and desktop
+npx playwright test -g "settle up" --project=desktop   # one scenario
+```
+
+Real user flows (sign in, transactions, friends, groups, invites, settle up, auto-log) run in Playwright, each person
+in their own browser profile, against the local Firebase emulators. The emulators and a test copy of the app (port 5199) start
+by themselves; Java 21+ is needed for the Firestore emulator. CI runs the same suite on every PR (`e2e.yml`).
+
+- **Never live data.** The tests use the `demo-kira` project, which the emulators can't connect to anything real,
+  and every test browser blocks the live Firebase hosts. The run refuses to start if port 5199 isn't the e2e build.
+- **Sign-in** goes through the Auth emulator's REST API instead of the Google popup (the emulator's popup loads
+  Google scripts from the internet and is flaky).
+- **Known bugs** are tests marked `test.fail('#issue')`. When a fix lands, Playwright reports "expected to fail,
+  but passed": remove the marker. A race that only fails sometimes is `test.fixme()` with a note instead. A test also fails on any Firestore permission error in the console, except
+  where `knownFirestoreErrors('#issue')` allows it.
+- A failure attaches each person's screenshot and console.
+
 ## Deploy
 
 | Event | What CI does |

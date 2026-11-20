@@ -33,3 +33,9 @@ dist-ssr
 
 # Android Firebase config (CI writes it from the GOOGLE_SERVICES_JSON secret)
 android/app/google-services.json
+
+# E2E (Playwright + Firebase emulators)
+test-results/
+playwright-report/
+firebase-debug.log
+firestore-debug.log
