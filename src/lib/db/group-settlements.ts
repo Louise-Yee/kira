@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore'
+import { collection, doc, limit, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { settlementDelta, type Settlement, type Transfer } from '@/lib/group-ledger'
-import { converter, reportError } from './core'
+import { converter, listen, reportError } from './core'
 import type { Me } from './friends'
 import { bumpTotals } from './group-expenses'
 import type { WithId } from './types'
@@ -43,10 +43,8 @@ export function usePendingForMe(uid: string, groupIds: readonly string[]): Pendi
   const [byGroup, setByGroup] = useState<Record<string, WithId<Settlement>[]>>({})
   useEffect(() => {
     const stops = (key ? key.split(',') : []).map((gid) =>
-      onSnapshot(
-        query(settlements(gid), where('to', '==', uid), where('status', '==', 'pending')),
-        (snap) => setByGroup((m) => ({ ...m, [gid]: snap.docs.map((d) => ({ ...d.data(), id: d.id })) })),
-        reportError,
+      listen(query(settlements(gid), where('to', '==', uid), where('status', '==', 'pending')), {}, (snap) =>
+        setByGroup((m) => ({ ...m, [gid]: snap.docs.map((d) => ({ ...d.data(), id: d.id })) })),
       ),
     )
     return () => stops.forEach((stop) => stop())

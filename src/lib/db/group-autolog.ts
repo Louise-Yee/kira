@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react'
-import { deleteDoc, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
+import { deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore'
 import { addDays, todayISO } from '@/lib/date'
 import { logTxId, planSync, type GroupLog, type Synced } from '@/lib/group-autolog'
-import { col, reportError, save } from './core'
+import { col, listen, reportError, save } from './core'
 import { recentExpensesQuery } from './group-expenses'
 import type { Group } from '@/lib/groups'
 import type { WithId } from './types'
@@ -55,7 +55,7 @@ export function useGroupAutoLog(uid: string, groups: readonly WithId<Group>[] | 
     const stops = active.map((log) => {
       const gid = log.id
       const since = [log.from, addDays(todayISO(), -WINDOW_DAYS)].reduce((a, b) => (a > b ? a : b))
-      return onSnapshot(
+      return listen(
         recentExpensesQuery(gid, since),
         // A snapshot from the local cache can be missing expenses, which would look like deletions: wait for the server's.
         { includeMetadataChanges: true },
@@ -90,7 +90,6 @@ export function useGroupAutoLog(uid: string, groups: readonly WithId<Group>[] | 
             writeSynced(uid, gid, plan.next)
           })
         },
-        reportError,
       )
     })
     return () => stops.forEach((stop) => stop())
