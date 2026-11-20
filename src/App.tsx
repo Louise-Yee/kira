@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useMatch, useNavigate } from 'react-router'
 import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/react'
 import { House, ReceiptText, Repeat, Settings, Users } from 'lucide-react'
@@ -17,7 +17,7 @@ import { useUpdate } from '@/lib/update'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { useTabSwipe } from '@/lib/use-tab-swipe'
 import { cn } from '@/lib/utils'
-import { FabSlideContext } from '@/lib/fab-slide'
+import { FabSlideContext, PeekContext } from '@/lib/fab-slide'
 import { SyncPill } from '@/components/sync-pill'
 import { TabBar, type TabItem } from '@/components/tab-bar'
 import { CoinBurst } from '@/components/coin-burst'
@@ -91,13 +91,16 @@ function readNavPos(): NavPos {
   }
 }
 
-type Slide = { dir: number; lg: boolean }
+/** `cut`: the change came from a swipe, so the old page is already off screen and just goes. */
+type Slide = { dir: number; lg: boolean; cut: boolean }
 
 // Phones: pages slide horizontally by tab order. lg (vertical nav): the old fade-up.
 const page: Variants = {
   enter: ({ dir, lg }: Slide) => (lg ? { opacity: 0, y: 12 } : { x: `${dir * 100}%`, opacity: 0 }),
   center: { x: 0, y: 0, opacity: 1 },
-  exit: ({ dir, lg }: Slide) => (lg ? { opacity: 0, y: -8 } : { x: `${-dir * 100}%`, opacity: 0 }),
+  // A cut has no curve to it (not a linear tween): the page is already off screen.
+  exit: ({ dir, lg, cut }: Slide) =>
+    cut ? { opacity: 0, transition: { duration: 0 } } : lg ? { opacity: 0, y: -8 } : { x: `${-dir * 100}%`, opacity: 0 },
 }
 
 function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
@@ -143,12 +146,15 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
     document.documentElement.dataset.nav = navPos
   }, [navPos])
   const side = navPos !== 'bottom'
-  // The window scroll carries over between tabs; reset it so the new page doesn't land mid-scroll.
-  useEffect(() => {
+  // The window scroll carries over between tabs; reset it so the new page doesn't land mid-scroll. Before paint, so a
+  // swiped-in page (shown at the top of the screen while it peeked) doesn't jump.
+  useLayoutEffect(() => {
     window.scrollTo(0, 0)
   }, [tab])
   const update = useUpdate()
-  const slide: Slide = { dir, lg }
+  // The tab reached by the last swipe: its change cuts instead of sliding (it already slid in under the finger).
+  const [swipedTo, setSwipedTo] = useState<Tab | null>(null)
+  const slide: Slide = { dir, lg, cut: swipedTo === tab }
 
   // The widget's "+" opens kira://add: jump to Home, then Home opens the add sheet.
   const [addRequest, setAddRequest] = useState(0)
@@ -162,11 +168,29 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   const go = (id: Tab) => {
     if (id !== tab) navigate({ pathname: paths[id], search })
   }
-  // Flick sideways for the next or previous tab (phones and tablets; not beside the lg sidebar).
-  useTabSwipe(!(lg && side), (d) => {
-    const next = tabs[tabs.findIndex((t) => t.id === tab) + d]
-    if (next) go(next.id)
-  })
+  // Swipe sideways for the next or previous tab (phones and tablets; not beside the lg sidebar).
+  const pageRef = useRef<HTMLDivElement>(null)
+  const index = tabs.findIndex((t) => t.id === tab)
+  const swipe = useTabSwipe(
+    !(lg && side),
+    pageRef,
+    tab,
+    (d) => !!tabs[index + d],
+    (d) => {
+      const next = tabs[index + d]
+      if (!next) return
+      setSwipedTo(next.id)
+      go(next.id)
+    },
+  )
+  const peekTab = swipe.peek ? tabs[index + swipe.peek]?.id : undefined
+  const screen = (id: Tab) => {
+    if (id === 'home') return <Home user={user} today={today} ym={ym} onYm={setYm} addRequest={addRequest} />
+    if (id === 'settings') return <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} update={update.update} onUpdate={update.show} lock={lock} />
+    if (id === 'recurring') return <RecurringScreen user={user} />
+    if (id === 'split') return <SplitScreen user={user} today={today} />
+    return <PeopleScreen key={joined?.at} user={user} friendships={friendships} groups={groups} toConfirm={toConfirm} groupInvites={groupInvites ?? []} logs={logs} openGroupId={joined?.gid} />
+  }
   const changeNavPos = (p: NavPos) => {
     setNavPos(p)
     try {
@@ -186,23 +210,33 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
 
       <FabSlideContext value={hasNoFab(tab) || hasNoFab(from)}>
       <main className={cn('relative flex-1 overflow-x-clip px-5 pt-[calc(1.5rem+var(--inset-top))] pb-32', side && 'lg:p-0 lg:pb-24')}>
-        <AnimatePresence mode="popLayout" initial={false} custom={slide}>
-          <motion.div
-            key={tab}
-            custom={slide}
-            variants={page}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={soft}
-          >
-            {tab === 'home' && <Home user={user} today={today} ym={ym} onYm={setYm} addRequest={addRequest} />}
-            {tab === 'settings' && <SettingsScreen user={user} navPos={navPos} onNavPos={changeNavPos} update={update.update} onUpdate={update.show} lock={lock} />}
-            {tab === 'recurring' && <RecurringScreen user={user} />}
-            {tab === 'split' && <SplitScreen user={user} today={today} />}
-            {tab === 'people' && <PeopleScreen key={joined?.at} user={user} friendships={friendships} groups={groups} toConfirm={toConfirm} groupInvites={groupInvites ?? []} logs={logs} openGroupId={joined?.gid} />}
-          </motion.div>
-        </AnimatePresence>
+        {/* Follows the finger during a swipe; the peeking tab sits one column over, so it slides in alongside. */}
+        <motion.div className="relative" style={{ x: swipe.x }}>
+          <AnimatePresence mode="popLayout" initial={false} custom={slide}>
+            {[tab, ...(peekTab ? [peekTab] : [])].map((id) => {
+              const peeking = id !== tab
+              const { box } = swipe
+              return (
+                <motion.div
+                  // Same key when a peeking tab becomes the current one, so it stays mounted with its data.
+                  key={id}
+                  ref={peeking ? undefined : pageRef}
+                  custom={slide}
+                  variants={page}
+                  initial={peeking ? false : 'enter'}
+                  animate="center"
+                  exit="exit"
+                  transition={soft}
+                  inert={peeking}
+                  className={peeking ? 'absolute' : undefined}
+                  style={peeking ? { top: box.top, left: box.left + swipe.peek * box.shift, width: box.width } : undefined}
+                >
+                  <PeekContext value={peeking}>{screen(id)}</PeekContext>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </motion.div>
       </main>
       </FabSlideContext>
       {joinToken && (

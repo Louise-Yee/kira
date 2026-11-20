@@ -120,3 +120,21 @@ export async function flick(u: User, direction: 'left' | 'right') {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await cdp.detach()
 }
+
+/**
+ * A slow sideways drag from `from` to `to` (shares of the screen width). `whileHeld` runs before letting go, to check
+ * what shows mid-swipe.
+ */
+export async function drag(u: User, from: number, to: number, whileHeld?: () => Promise<void>) {
+  const cdp = await u.page.context().newCDPSession(u.page)
+  const { width, height } = u.page.viewportSize() ?? { width: 412, height: 839 }
+  const at = (f: number) => [{ x: width * f, y: height / 2 }]
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(from) })
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(from + ((to - from) * i) / 10) })
+    await u.page.waitForTimeout(80) // slower than a flick: only the distance can make it switch
+  }
+  await whileHeld?.()
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await cdp.detach()
+}
