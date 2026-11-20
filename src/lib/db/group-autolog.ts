@@ -1,10 +1,11 @@
 import { useEffect, useMemo } from 'react'
-import { deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore'
+import { deleteDoc, doc, getDocFromServer, setDoc, updateDoc } from 'firebase/firestore'
 import { addDays, todayISO } from '@/lib/date'
 import { logTxId, planSync, type GroupLog, type Synced } from '@/lib/group-autolog'
 import { col, listen, reportError, save } from './core'
 import { recentExpensesQuery } from './group-expenses'
 import type { Group } from '@/lib/groups'
+import type { Category } from './types'
 import type { WithId } from './types'
 import { useDocs } from './use-docs'
 
@@ -20,6 +21,36 @@ export function useGroupLogs(uid: string) {
 /** Turn auto-log on or off for a group, or change its category. Never awaited. */
 export function setGroupLog(uid: string, gid: string, log: GroupLog) {
   save(doc(col(uid, 'groupLogs'), gid), log)
+}
+
+/**
+ * Auto-log is on by default (#113): a group I have no setting for gets one, on from today under "Other" (or my first
+ * expense category), so nothing from before suddenly lands in my transactions. The server is asked first, so a device
+ * whose cache hasn't loaded a setting yet never overwrites one I turned off; offline, it waits for the next launch.
+ */
+export function useDefaultGroupLogs(
+  uid: string,
+  groups: readonly WithId<Group>[] | undefined,
+  logs: readonly { id: string }[] | undefined,
+  categories: readonly WithId<Category>[] | undefined,
+) {
+  const missing = groups && logs ? groups.filter((g) => !logs.some((l) => l.id === g.id)).map((g) => g.id) : []
+  const usable = (categories ?? []).filter((c) => c.kind === 'expense' && !c.archived)
+  const categoryId = (usable.find((c) => c.name === 'Other') ?? usable[0])?.id
+  const key = missing.join(',')
+  useEffect(() => {
+    if (!key || !categoryId) return
+    let live = true
+    for (const gid of key.split(',')) {
+      getDocFromServer(doc(col(uid, 'groupLogs'), gid)).then(
+        (s) => live && !s.exists() && setGroupLog(uid, gid, { enabled: true, categoryId, from: todayISO(), updatedAt: Date.now() }),
+        () => {}, // offline: try again next launch
+      )
+    }
+    return () => {
+      live = false
+    }
+  }, [uid, key, categoryId])
 }
 
 const cacheKey = (uid: string, gid: string) => `kira.groupLog.${uid}.${gid}`

@@ -4,7 +4,7 @@ import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/rea
 import { House, ReceiptText, Repeat, Settings, Users } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
 import { useAppLock, type AppLock } from '@/lib/app-lock'
-import { useClientInfo, useDirectoryPublisher, useFriendships, useGroupAutoLog, useGroupLogs, useGroups, usePendingForMe, useSyncStatus } from '@/lib/db'
+import { useCategories, useClientInfo, useDefaultGroupLogs, useDirectoryPublisher, useFriendships, useGroupAutoLog, useGroupLogs, useGroups, usePendingForMe, useSyncStatus } from '@/lib/db'
 import { splitFriendships } from '@/lib/friends'
 import { todayISO } from '@/lib/date'
 import { coinBurst } from '@/lib/haptics'
@@ -107,6 +107,8 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
   const groups = useGroups(user.uid)
   const [burst, setBurst] = useState<DOMRect | null>(null)
   const logs = useGroupLogs(user.uid)
+  const categories = useCategories(user.uid)
+  useDefaultGroupLogs(user.uid, groups, logs, categories)
   useGroupAutoLog(user.uid, groups, logs)
   const toConfirm = usePendingForMe(user.uid, groups?.map((g) => g.id) ?? [])
   // The People tab's dot: friend requests and payments waiting for me.
