@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core'
 import { initializeApp } from 'firebase/app'
 import {
   GoogleAuthProvider,
+  connectAuthEmulator,
   getAuth,
   onAuthStateChanged,
   signInWithCredential,
@@ -12,6 +13,7 @@ import {
   type User,
 } from 'firebase/auth'
 import {
+  connectFirestoreEmulator,
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
@@ -44,6 +46,14 @@ export const auth = getAuth(app)
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 })
+
+// E2E only (npm run e2e sets it): talk to the local emulators. A prod build never has the flag, so this is
+// compiled out, and the demo- project id guarantees the emulators can't reach a real Firebase project.
+if (import.meta.env.VITE_USE_EMULATOR === 'true') {
+  if (!PROJECT.startsWith('demo-')) throw new Error('VITE_USE_EMULATOR needs a demo- project id')
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  connectFirestoreEmulator(db, '127.0.0.1', 8080)
+}
 
 export async function signIn() {
   if (Capacitor.isNativePlatform()) {
