@@ -6,9 +6,10 @@ let skip = 0
 // popstate would pop the new sheet's entry and close it (editor -> receipt).
 let backing: Promise<void> | null = null
 let landed: (() => void) | null = null
-// Registered non-capture so it runs after every capture-phase handler below.
+// The skip count is only lowered in a later task, so every handler of this popstate still sees it. (Relying on this
+// listener running last doesn't hold: at the target, browsers can run listeners in the order they were added.)
 window.addEventListener('popstate', () => {
-  if (skip > 0) skip--
+  if (skip > 0) setTimeout(() => skip--, 0)
   landed?.()
 })
 
