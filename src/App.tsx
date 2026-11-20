@@ -209,7 +209,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
     <div className={cn('mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6', navPos === 'right' && 'lg:flex-row-reverse')}>
       <SyncPill status={sync} />
       <Toaster />
-      <TabBar tabs={tabs} active={tab} onChange={go} side={side} />
+      <TabBar tabs={tabs} active={tab} onChange={go} side={side} drag={swipe.progress} cut={slide.cut} />
 
       <FabSlideContext value={hasNoFab(tab) || hasNoFab(from)}>
       <main className={cn('relative flex-1 overflow-x-clip px-5 pt-[calc(1.5rem+var(--inset-top))] pb-32', side && 'lg:p-0 lg:pb-24')}>

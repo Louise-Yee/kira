@@ -1,7 +1,9 @@
-import { motion } from 'motion/react'
+import { useLayoutEffect, useRef } from 'react'
+import { animate, motion, useMotionValue, useReducedMotion, useTransform, type MotionValue } from 'motion/react'
 import type { LucideIcon } from 'lucide-react'
 import { select } from '@/lib/haptics'
 import { press, soft } from '@/lib/motion'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 export type TabItem<Id extends string> = { id: Id; label: string; icon: LucideIcon; /** A count dot on the icon when above 0. */ badge?: number }
@@ -12,9 +14,31 @@ type Props<Id extends string> = {
   onChange: (id: Id) => void
   /** Sidebar layout at lg (nav position left/right). */
   side: boolean
+  /** How far a tab swipe has dragged, in tabs (from `useTabSwipe`): the highlight follows it. */
+  drag?: MotionValue<number>
+  /** The tab was reached by a swipe: the highlight is already there, so it doesn't animate over again. */
+  cut?: boolean
 }
 
-export function TabBar<Id extends string>({ tabs, active: current, onChange, side }: Props<Id>) {
+export function TabBar<Id extends string>({ tabs, active: current, onChange, side, drag, cut }: Props<Id>) {
+  const vertical = useMediaQuery('(min-width: 1024px)') && side
+  const reduce = useReducedMotion()
+  const index = tabs.findIndex((t) => t.id === current)
+  // The highlight lives in the active tab and is shifted by whole tabs: `shift` springs from the previous tab to 0 on a
+  // tap, and the swipe's drag is added on top, so it moves with the finger and lands without a jump.
+  const shift = useMotionValue(0)
+  const prev = useRef(index)
+  useLayoutEffect(() => {
+    const from = prev.current - index
+    prev.current = index
+    if (!from || cut || reduce) return shift.set(0)
+    shift.set(from + shift.get())
+    void animate(shift, 0, soft)
+  }, [index, cut, reduce, shift])
+  const fallback = useMotionValue(0)
+  const steps = useTransform(() => shift.get() + (drag ?? fallback).get())
+  // One step is a tab plus the gap between tabs (gap-0.5 across, gap-1 down the sidebar).
+  const offset = useTransform(steps, (n) => `calc(${n * 100}% + ${n * (vertical ? 4 : 2)}px)`)
   return (
     <nav
       className={cn(
@@ -45,17 +69,13 @@ export function TabBar<Id extends string>({ tabs, active: current, onChange, sid
           >
             {active && (
               <motion.span
-                layoutId="tab-active"
-                transition={soft}
-                className={cn('absolute inset-0 rounded-full bg-foreground/10', side && 'lg:rounded-2xl')}
-              />
+                style={vertical ? { y: offset } : { x: offset }}
+                // Behind every tab's icon, whichever tab it is passing over.
+                className={cn('absolute inset-0 -z-10 rounded-full bg-foreground/10', side && 'lg:rounded-2xl')}
+              >
+                <span className={cn('absolute bottom-1.5 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-foreground', side && 'lg:hidden')} />
+              </motion.span>
             )}
-            <motion.span
-              initial={false}
-              animate={{ opacity: active ? 1 : 0, scaleX: active ? 1 : 0 }}
-              transition={soft}
-              className={cn('absolute bottom-1.5 h-0.5 w-5 rounded-full bg-foreground', side && 'lg:hidden')}
-            />
             <span className="relative">
               <t.icon className="size-6 shrink-0 lg:size-5" />
               {!!t.badge && <span className="absolute -top-0.5 -right-1 size-3 rounded-full bg-destructive" aria-label={`${t.badge} new`} />}
