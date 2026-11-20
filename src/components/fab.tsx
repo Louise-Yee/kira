@@ -2,7 +2,7 @@ import { useContext } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus } from 'lucide-react'
 import { PillButton } from '@/components/pill-button'
-import { FabSlideContext } from '@/lib/fab-slide'
+import { FabSlideContext, PeekContext } from '@/lib/fab-slide'
 import { press } from '@/lib/haptics'
 import { soft } from '@/lib/motion'
 
@@ -18,6 +18,8 @@ type Props = { label: string; onClick: () => void }
  */
 export function Fab({ label, onClick }: Props) {
   const slide = useContext(FabSlideContext)
+  // The tab peeking in during a swipe: the current page's button stays the only one.
+  if (useContext(PeekContext)) return null
   return createPortal(
     <PillButton
       // Tick on press, not click: the sheet it opens ticks on open, so the two read as down-up instead of one smear.
