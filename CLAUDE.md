@@ -34,6 +34,9 @@ Personal expense tracker PWA. Product spec: `SPEC.md`. Task list: `PLAN.md`. Do 
 - The sign-in screen is always dark.
 
 ## Workflow
+- **Every task has a GitHub issue.** If the user gives none, create one with `gh issue create` before branching: the title in the branch's form (`feature: …`, `fix: …`), the body holding the scope and the decisions agreed in the conversation. Scope that grows into its own piece of work gets its own issue.
+- **Every PR links its issue:** `Closes #N` in the description (and the commit), so merging closes it. A PR that does only part of an issue says `Part of #N`. A PR that depends on another unmerged one is based on that branch and says so at the top.
+- **An issue that still fails after its PR merged is reopened, not duplicated:** `gh issue reopen N` with a comment on what still fails, then the fix PR says `Closes #N` again.
 - Never commit to `main` directly. Each task gets its own branch off `main`, named `<type>/<kebab-name>`. The type is `feature`, `fix`, `chores` or `refactor`, for example `feature/amount-input` or `fix/month-end-clamp`. The PR check rejects any other name; the one exception is `chores/release-X.Y.Z`.
 - Open a PR into `main`. Every PR gets a preview deploy, and merging into `main` deploys the live site. Don't run `firebase deploy` by hand unless `firestore.rules` changed: CI deploys hosting only.
 - After each task, run `npm run build` and `npm run lint`, plus any check scripts the task touches. Report failures exactly as they appear.
