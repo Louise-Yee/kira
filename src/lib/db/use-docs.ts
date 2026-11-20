@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { onSnapshot, type Query } from 'firebase/firestore'
-import { reportError } from './core'
+import type { Query } from 'firebase/firestore'
+import { listen } from './core'
 import type { WithId } from './types'
 
 /**
@@ -11,7 +11,7 @@ export function useDocs<T>(q: Query<T> | null, serverOnly = false): WithId<T>[] 
   const [state, setState] = useState<{ q: Query<T>; docs: WithId<T>[] }>()
   useEffect(() => {
     if (!q) return
-    return onSnapshot(
+    return listen(
       q,
       // Without metadata changes, a cache snapshot the server confirms unchanged never fires again.
       { includeMetadataChanges: serverOnly },
@@ -19,7 +19,6 @@ export function useDocs<T>(q: Query<T> | null, serverOnly = false): WithId<T>[] 
         if (serverOnly && snap.metadata.fromCache) return
         setState({ q, docs: snap.docs.map((d) => ({ ...d.data(), id: d.id })) })
       },
-      reportError,
     )
   }, [q, serverOnly])
   // Ignore a snapshot that belongs to a previous query (e.g. the month just switched).

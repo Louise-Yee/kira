@@ -1,4 +1,4 @@
-import { expect, knownFirestoreErrors, type User } from './fixtures.ts'
+import { expect, type User } from './fixtures.ts'
 
 /** Steps a person takes in the app, in the words a person would use. */
 
@@ -44,21 +44,13 @@ export async function openGroups(u: User) {
 }
 
 /** Creates a group and leaves its screen open. */
-export async function createGroup(u: User, name: string, { workaround116 = true } = {}) {
+export async function createGroup(u: User, name: string) {
   await openGroups(u)
   await u.page.getByRole('button', { name: 'New group' }).first().click()
   const s = sheet(u, 'New group')
   await s.getByLabel('Group name').fill(name)
   await s.getByRole('button', { name: 'Create' }).click()
   await expect(u.page.getByRole('heading', { name, level: 1 })).toBeVisible()
-  if (workaround116) {
-    // #116: a just-created group's expense and payment listeners are refused and never retried.
-    // Reloading is what a person does today. Drop this once #116 is fixed.
-    knownFirestoreErrors('#116')
-    await expect(u.page.getByText('Share invite link')).toBeVisible()
-    await u.page.reload()
-    await openGroup(u, name)
-  }
 }
 
 export async function openGroup(u: User, name: string) {

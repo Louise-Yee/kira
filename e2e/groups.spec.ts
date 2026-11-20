@@ -164,14 +164,13 @@ test('a turned-off invite link says so instead of joining', async ({ signIn }) =
 })
 
 test('#116 a just-created group works without a reload (on a slow connection)', async ({ signIn }) => {
-  test.fail(true, "#116: the new group's listeners are refused and never retried")
   const alice = await signIn('Alice')
   // The local emulator answers instantly, which hides #116. Hold writes back like a phone network does.
   await alice.page.route('**/google.firestore.v1.Firestore/Write/channel**', async (route) => {
     await new Promise((r) => setTimeout(r, 1500))
     await route.continue()
   })
-  await createGroup(alice, 'Trip', { workaround116: false })
+  await createGroup(alice, 'Trip')
   await addGroupExpense(alice, 'Dinner', '3000')
   // The refused listeners also fail the test through the console check.
   await expect(section(alice, 'Expenses')).toContainText(/Dinner.*RM 30\.00/, { timeout: 5000 })
