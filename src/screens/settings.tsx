@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { ChevronRight, DatabaseBackup, QrCode, Smartphone, type LucideIcon } from 'lucide-react'
+import { ChevronRight, DatabaseBackup, QrCode, Smartphone, Sparkles, type LucideIcon } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
 import {
   categoryInUse,
@@ -18,6 +18,7 @@ import { logOut, type AppUser } from '@/lib/firebase'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { readTheme, setTheme, type Theme } from '@/lib/theme'
 import { APP_VERSION, type Update } from '@/lib/update'
+import { releasedEntries } from '@/lib/changelog'
 import { Avatar } from '@/components/avatar'
 import { BackupSheet } from '@/components/backup-sheet'
 import { CategoryIcon } from '@/components/category-icon'
@@ -26,6 +27,7 @@ import { PaymentQrSheet } from '@/components/payment-qr-sheet'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
 import { Toggle } from '@/components/toggle'
+import { WhatsNewSheet } from '@/components/whats-new-sheet'
 import { CategoriesManager } from '@/screens/categories/manager'
 
 const themeOptions = [
@@ -58,6 +60,8 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
   const [managing, setManaging] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [backupOpen, setBackupOpen] = useState(false)
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false)
+  const changes = releasedEntries(APP_VERSION)
   const settings = useSettings(user.uid)
   const isUsed = useCallback((id: string) => categoryInUse(user.uid, id), [user.uid])
   return (
@@ -159,6 +163,16 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
           )
         }
       />
+      {changes.length > 0 && (
+        <ListRow
+          icon={<Tile icon={Sparkles} />}
+          title="What's new"
+          subtitle="What changed in each update"
+          trailing={<ChevronRight className="size-5 text-muted-foreground" />}
+          onClick={() => setWhatsNewOpen(true)}
+        />
+      )}
+      <WhatsNewSheet open={whatsNewOpen} onClose={() => setWhatsNewOpen(false)} entries={changes} />
       <p className="px-1 text-base text-muted-foreground">kira records your app version and device type to help with updates.</p>
       <PillButton variant="secondary" onClick={logOut}>
         Sign out
