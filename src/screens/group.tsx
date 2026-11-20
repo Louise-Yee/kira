@@ -1,15 +1,16 @@
 import { useState } from 'react'
-import { ArrowLeft, Link2, Pencil, Plus } from 'lucide-react'
+import { ArrowLeft, Link2, Plus, Settings } from 'lucide-react'
 import { Avatar } from '@/components/avatar'
 import { ConfirmSheet } from '@/components/confirm-sheet'
 import { GroupAutoLogCard } from '@/components/group-auto-log-card'
 import { GroupExpenseDetailSheet } from '@/components/group-expense-detail-sheet'
 import { GroupExpenseSheet } from '@/components/group-expense-sheet'
-import { GroupNameSheet } from '@/components/group-name-sheet'
 import { GroupSettleUp } from '@/components/group-settle-up'
 import { ListRow } from '@/components/list-row'
 import { Money } from '@/components/money'
 import { PillButton } from '@/components/pill-button'
+import { Sheet } from '@/components/sheet'
+import { TextField } from '@/components/text-field'
 import { addDays, monthLabel, shortDate, todayISO } from '@/lib/date'
 import {
   EXPENSES_PAGE,
@@ -37,7 +38,7 @@ import {
 } from '@/lib/db'
 import { emptyTotals, netOf, suggestTransfers, type GroupExpense } from '@/lib/group-ledger'
 import { success } from '@/lib/haptics'
-import { hasActiveInvite, membersOf } from '@/lib/groups'
+import { MAX_NAME, cleanGroupName, hasActiveInvite, membersOf } from '@/lib/groups'
 import { formatRM } from '@/lib/money'
 import { joinUrl, shareLink } from '@/lib/share-link'
 
@@ -54,11 +55,7 @@ type Props = {
 const day = 24 * 60 * 60 * 1000
 
 export function GroupScreen({ me, group, log, categories, onBack }: Props) {
-  const [renaming, setRenaming] = useState(false)
-  const [leaving, setLeaving] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
-  // ponytail: read once per mount, so "expires in" can lag if the screen stays open for days.
-  const [now] = useState(Date.now)
+  const [settings, setSettings] = useState(false)
 
   const back = (
     <PillButton variant="secondary" size="pill-sm" className="w-11 px-0" aria-label="Back to people" onClick={onBack}>
@@ -74,9 +71,51 @@ export function GroupScreen({ me, group, log, categories, onBack }: Props) {
     )
   }
 
+  const count = group.memberUids.length
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center gap-3">
+        {back}
+        <h1 className="min-w-0 flex-1 truncate font-heading text-3xl font-extrabold tracking-tight">{group.name}</h1>
+        <PillButton variant="secondary" size="pill-sm" className="w-11 px-0" aria-label="Group settings" onClick={() => setSettings(true)}>
+          <Settings className="size-5" />
+        </PillButton>
+      </div>
+
+      <GroupLedger me={me} group={group} />
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-base font-semibold text-muted-foreground">
+          {count} {count === 1 ? 'member' : 'members'}
+        </h2>
+        {membersOf(group).map(({ uid, member, owner: isOwner }) => (
+          <ListRow
+            key={uid}
+            icon={<Avatar photoURL={member.photoURL} name={member.displayName || '?'} className="size-11 text-lg" />}
+            title={member.displayName || 'Someone'}
+            subtitle={uid === me.uid ? (isOwner ? 'You · owner' : 'You') : isOwner ? 'Owner' : undefined}
+          />
+        ))}
+      </section>
+
+      <Sheet open={settings} onClose={() => setSettings(false)} title="Group settings" tall>
+        <GroupSettings me={me} group={group} log={log} categories={categories} onGone={onBack} />
+      </Sheet>
+    </div>
+  )
+}
+
+/** The group's settings sheet: its name (owner), the invite link, auto-log, and leaving or deleting it. */
+function GroupSettings({ me, group, log, categories, onGone }: Omit<Props, 'group' | 'onBack'> & { group: WithId<Group>; onGone: () => void }) {
+  const [name, setName] = useState(group.name)
+  const [leaving, setLeaving] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  // ponytail: read once per open, so "expires in" can lag if the sheet stays open for days.
+  const [now] = useState(Date.now)
   const owner = group.ownerUid === me.uid
   const active = hasActiveInvite(group, now)
   const daysLeft = Math.max(1, Math.ceil(((group.inviteExpiresAt ?? 0) - now) / day))
+  const clean = cleanGroupName(name)
 
   const share = async () => {
     if (!group.inviteId) return
@@ -89,32 +128,21 @@ export function GroupScreen({ me, group, log, categories, onBack }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
-        {back}
-        <h1 className="min-w-0 flex-1 truncate font-heading text-3xl font-extrabold tracking-tight">{group.name}</h1>
-        {owner && (
-          <PillButton variant="secondary" size="pill-sm" className="w-11 px-0" aria-label="Rename group" onClick={() => setRenaming(true)}>
-            <Pencil className="size-5" />
+    <div className="flex flex-col gap-5 pb-1">
+      {owner && (
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (clean && clean !== group.name) renameGroup(group, clean)
+          }}
+        >
+          <TextField value={name} maxLength={MAX_NAME} aria-label="Group name" onChange={(e) => setName(e.target.value)} />
+          <PillButton type="submit" variant="secondary" className="h-12 shrink-0" disabled={!clean || clean === group.name}>
+            Rename
           </PillButton>
-        )}
-      </div>
-
-      <GroupLedger me={me} group={group} />
-
-      <GroupAutoLogCard log={log} categories={categories} onChange={(next) => setGroupLog(me.uid, group.id, next)} />
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-base font-semibold text-muted-foreground">{group.memberUids.length} members</h2>
-        {membersOf(group).map(({ uid, member, owner: isOwner }) => (
-          <ListRow
-            key={uid}
-            icon={<Avatar photoURL={member.photoURL} name={member.displayName || '?'} className="size-11 text-lg" />}
-            title={member.displayName || 'Someone'}
-            subtitle={uid === me.uid ? (isOwner ? 'You · owner' : 'You') : isOwner ? 'Owner' : undefined}
-          />
-        ))}
-      </section>
+        </form>
+      )}
 
       <section className="flex flex-col gap-3 rounded-3xl bg-card p-5">
         <h2 className="text-base font-semibold">Invite link</h2>
@@ -144,18 +172,12 @@ export function GroupScreen({ me, group, log, categories, onBack }: Props) {
         )}
       </section>
 
+      <GroupAutoLogCard log={log} categories={categories} onChange={(next) => setGroupLog(me.uid, group.id, next)} />
+
       <PillButton variant="destructive" size="pill-sm" onClick={() => setLeaving(true)}>
         {owner ? 'Delete group' : 'Leave group'}
       </PillButton>
 
-      <GroupNameSheet
-        open={renaming}
-        onClose={() => setRenaming(false)}
-        title="Rename group"
-        initial={group.name}
-        label="Save"
-        onSave={(name) => renameGroup(group, name)}
-      />
       <ConfirmSheet
         open={leaving}
         onClose={() => setLeaving(false)}
@@ -166,7 +188,7 @@ export function GroupScreen({ me, group, log, categories, onBack }: Props) {
           if (owner) deleteGroup(group)
           else leaveGroup(me, group)
           setLeaving(false)
-          onBack()
+          onGone()
         }}
       />
     </div>
@@ -226,14 +248,21 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold text-muted-foreground">Balances</h2>
+        {/* Its own row rather than ListRow: the amounts must never be cut off, only a long name may be. */}
         {people.map((uid) => (
-          <ListRow
-            key={uid}
-            icon={<Avatar photoURL={group.members[uid]?.photoURL} name={nameOf(uid)} className="size-11 text-lg" />}
-            title={nameOf(uid)}
-            subtitle={`Paid ${formatRM(totals.paid[uid] ?? 0)} · Share ${formatRM(totals.owed[uid] ?? 0)}`}
-            trailing={<Money sen={netOf(totals, uid)} sign className="text-base font-semibold" />}
-          />
+          <div key={uid} className="flex min-h-14 items-center gap-3 rounded-2xl bg-card p-3">
+            <Avatar photoURL={group.members[uid]?.photoURL} name={nameOf(uid)} className="size-11 shrink-0 text-lg" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3">
+                <span className="min-w-0 flex-1 truncate text-base font-semibold">{nameOf(uid)}</span>
+                <Money sen={netOf(totals, uid)} sign className="shrink-0 text-base font-semibold" />
+              </div>
+              <div className="flex flex-wrap gap-x-3 text-base text-muted-foreground">
+                <span>Paid {formatRM(totals.paid[uid] ?? 0)}</span>
+                <span>Share {formatRM(totals.owed[uid] ?? 0)}</span>
+              </div>
+            </div>
+          </div>
         ))}
         <p className="text-base text-muted-foreground">+ is what they are owed, − is what they owe.</p>
       </section>
@@ -257,10 +286,16 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold text-muted-foreground">Expenses</h2>
-        {recent?.length === 0 && recentPays?.length === 0 && pages === 0 && (
-          <p className="text-base text-muted-foreground">Nothing in the last 60 days. Add the first expense.</p>
+        {recent?.length === 0 && recentPays?.length === 0 && (
+          <p className="text-base text-muted-foreground">Nothing in the last 60 days.{pages === 0 && ' Add the first expense.'}</p>
         )}
-        {feed.map((item) =>
+        {feed.map((item, i) => [
+          // The older pages come after the recent window, under their own label.
+          item.date < since && (i === 0 || feed[i - 1].date >= since) && (
+            <h3 key="older" className="pt-2 text-base font-semibold text-muted-foreground">
+              Older
+            </h3>
+          ),
           item.kind === 'expense' ? (
             <ListRow
               key={`e-${item.e.id}`}
@@ -277,7 +312,7 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
               trailing={<Money sen={item.s.amount} className="text-base font-semibold" />}
             />
           ),
-        )}
+        ])}
         {canLoadMore && (
           <PillButton variant="secondary" size="pill-sm" onClick={() => setPages((p) => p + 1)}>
             Show older

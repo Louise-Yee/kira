@@ -1,5 +1,5 @@
 import { expect, test, type User } from './fixtures.ts'
-import { addGroupExpense, copyInviteLink, createGroup, joinByLink, openGroup, openGroups, section, tab } from './app.ts'
+import { addGroupExpense, closeSheet, copyInviteLink, createGroup, groupSettings, joinByLink, openGroup, openGroups, section, tab } from './app.ts'
 
 /** Alice makes "Trip" and everyone else joins it by link. */
 async function tripWith(alice: User, ...others: User[]) {
@@ -31,9 +31,10 @@ test('an expense split three ways shows the same totals and balances to everyone
     await expect(section(u, 'Total spent')).toContainText('RM 30.00')
     await expect(section(u, 'Expenses')).toContainText(/Dinner.*paid by Alice.*RM 30\.00/)
     const balances = section(u, 'Balances')
-    await expect(balances).toContainText(/Alice\s*Paid RM 30\.00 · Share RM 10\.00\s*\+RM 20\.00/)
-    await expect(balances).toContainText(/Bob\s*Paid RM 0\.00 · Share RM 10\.00\s*−RM 10\.00/)
-    await expect(balances).toContainText(/Carol\s*Paid RM 0\.00 · Share RM 10\.00\s*−RM 10\.00/)
+    // A balance row reads "<name> <net>", then "Paid RM x" and "Share RM y".
+    await expect(balances).toContainText(/Alice\s*\+RM 20\.00\s*Paid RM 30\.00\s*Share RM 10\.00/)
+    await expect(balances).toContainText(/Bob\s*−RM 10\.00\s*Paid RM 0\.00\s*Share RM 10\.00/)
+    await expect(balances).toContainText(/Carol\s*−RM 10\.00\s*Paid RM 0\.00\s*Share RM 10\.00/)
   }
 })
 
@@ -87,8 +88,10 @@ test('auto-log puts my share of a group expense in my own transactions', async (
   const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
   await tripWith(alice, bob)
 
-  await alice.page.getByRole('switch', { name: 'Add my share to my transactions' }).click()
-  await expect(alice.page.getByRole('switch', { name: 'Add my share to my transactions' })).toHaveAttribute('aria-checked', 'true')
+  const settings = await groupSettings(alice)
+  await settings.getByRole('switch', { name: 'Add my share to my transactions' }).click()
+  await expect(settings.getByRole('switch', { name: 'Add my share to my transactions' })).toHaveAttribute('aria-checked', 'true')
+  await closeSheet(alice)
   await addGroupExpense(bob, 'Groceries run', '4000')
 
   // The transaction row reads "<title> <category> <amount>" (the group's own expense row, on the People page still
@@ -105,7 +108,7 @@ test('auto-log puts my share of a group expense in my own transactions', async (
 const noGroups = 'Make a group for the people you hang out with'
 
 async function leave(u: User) {
-  await u.page.getByRole('button', { name: 'Leave group' }).click()
+  await (await groupSettings(u)).getByRole('button', { name: 'Leave group' }).click()
   await u.page.getByRole('dialog', { name: 'Leave Trip?' }).getByRole('button', { name: 'Leave group' }).click()
 }
 
@@ -133,14 +136,14 @@ test('leaving a group right after joining it by link goes back to People', async
   // Short waits: this must fail on the assertion, not by running out the test's time.
   await expect(bob.page.getByRole('heading', { name: 'People', level: 1 })).toBeVisible({ timeout: 5000 })
   await expect(bob.page.getByText('Joining the group…')).toBeHidden({ timeout: 5000 })
-  await expect(alice.page.getByText('1 members')).toBeVisible({ timeout: 5000 })
+  await expect(alice.page.getByText('1 member', { exact: true })).toBeVisible({ timeout: 5000 })
 })
 
 test('the owner deletes the group and it is gone for everyone', async ({ signIn }) => {
   const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
   await tripWith(alice, bob)
 
-  await alice.page.getByRole('button', { name: 'Delete group' }).click()
+  await (await groupSettings(alice)).getByRole('button', { name: 'Delete group' }).click()
   await alice.page.getByRole('dialog', { name: 'Delete Trip?' }).getByRole('button', { name: 'Delete group' }).click()
   await expect(alice.page.getByText(noGroups)).toBeVisible()
 
@@ -153,8 +156,9 @@ test('a turned-off invite link says so instead of joining', async ({ signIn }) =
   const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
   await createGroup(alice, 'Trip')
   const link = await copyInviteLink(alice)
-  await alice.page.getByRole('button', { name: 'Turn off' }).click()
-  await expect(alice.page.getByText('There is no working invite link.')).toBeVisible()
+  const settings = await groupSettings(alice)
+  await settings.getByRole('button', { name: 'Turn off' }).click()
+  await expect(settings.getByText('There is no working invite link.')).toBeVisible()
 
   // Alice's change is saved offline-first; Bob sees it once it has reached the server.
   await expect(async () => {
@@ -175,4 +179,22 @@ test('#116 a just-created group works without a reload (on a slow connection)', 
   await addGroupExpense(alice, 'Dinner', '3000')
   // The refused listeners also fail the test through the console check.
   await expect(section(alice, 'Expenses')).toContainText(/Dinner.*RM 30\.00/, { timeout: 5000 })
+})
+
+test('the owner renames the group from its settings and everyone sees the new name', async ({ signIn }) => {
+  const [alice, bob] = [await signIn('Alice'), await signIn('Bob')]
+  await tripWith(alice, bob)
+
+  const settings = await groupSettings(alice)
+  await settings.getByLabel('Group name').fill('Langkawi')
+  await settings.getByRole('button', { name: 'Rename' }).click()
+  await closeSheet(alice)
+  await expect(alice.page.getByRole('heading', { name: 'Langkawi', level: 1 })).toBeVisible()
+  await expect(bob.page.getByRole('heading', { name: 'Langkawi', level: 1 })).toBeVisible()
+
+  // A member gets the same sheet without the owner's controls.
+  const bobs = await groupSettings(bob)
+  await expect(bobs.getByRole('button', { name: 'Share invite link' })).toBeVisible()
+  await expect(bobs.getByLabel('Group name')).toBeHidden()
+  await expect(bobs.getByRole('button', { name: 'Turn off' })).toBeHidden()
 })
