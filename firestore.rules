@@ -148,14 +148,19 @@ service cloud.firestore {
         && request.resource.data.date is string && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt is int;
+      // The receiver confirms it, or says they didn't get it ('rejected', kept so the payer is told).
       allow update: if request.auth != null && isMember()
         && resource.data.to == request.auth.uid
         && resource.data.status == 'pending'
-        && request.resource.data.status == 'confirmed'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmedAt']);
+        && ((request.resource.data.status == 'confirmed'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmedAt']))
+          || (request.resource.data.status == 'rejected'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'rejectedAt'])));
+      // While pending: the payer undoes it, or (older app versions) the receiver removes it. Once rejected: the payer
+      // dismisses it.
       allow delete: if request.auth != null && isMember()
-        && resource.data.status == 'pending'
-        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+        && ((resource.data.status == 'pending' && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid))
+          || (resource.data.status == 'rejected' && resource.data.from == request.auth.uid));
     }
 
     // Invite links: whoever holds the token (signed in) can read that one doc, to see what they are joining.

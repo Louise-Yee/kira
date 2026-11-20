@@ -14,7 +14,8 @@ import {
   confirmSettlement,
   createGroup,
   removeFriendship,
-  takeBackSettlement,
+  dismissSettlement,
+  rejectSettlement,
   useCategories,
   type Group,
   type GroupLog,
@@ -61,6 +62,8 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, logs, openG
   // `open` and `friend` are separate so the sheet keeps its title while it slides out.
   const [removing, setRemoving] = useState<{ open: boolean; friend?: WithId<Friendship> }>({ open: false })
   const { friends, incoming, outgoing } = splitFriendships(friendships ?? [], user.uid)
+  const pendingToMe = toConfirm.filter((s) => s.status === 'pending')
+  const notReceived = toConfirm.filter((s) => s.status === 'rejected')
 
   if (groupId !== null) {
     return (
@@ -96,10 +99,30 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, logs, openG
           </PillButton>
         )}
       </div>
-      {toConfirm.length > 0 && (
+      {notReceived.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <Heading>Not received</Heading>
+          {notReceived.map((s) => {
+            const group = groups?.find((g) => g.id === s.gid)
+            return (
+              <PendingSettlementRow
+                key={`${s.gid}-${s.id}`}
+                title={`${group?.members[s.to]?.displayName || 'Someone'} didn't get your payment`}
+                subtitle={
+                  <>
+                    <Money sen={s.amount} /> · {group?.name ?? 'a group'} · {shortDate(s.date)}
+                  </>
+                }
+                takeBack={{ label: 'OK', onClick: () => dismissSettlement(s.gid, s) }}
+              />
+            )
+          })}
+        </section>
+      )}
+      {pendingToMe.length > 0 && (
         <section className="flex flex-col gap-2">
           <Heading>To confirm</Heading>
-          {toConfirm.map((s) => {
+          {pendingToMe.map((s) => {
             const group = groups?.find((g) => g.id === s.gid)
             return (
               <PendingSettlementRow
@@ -114,7 +137,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, logs, openG
                   success()
                   confirmSettlement(s.gid, s)
                 }}
-                takeBack={{ label: 'Not received', onClick: () => takeBackSettlement(s.gid, s) }}
+                takeBack={{ label: 'Not received', onClick: () => rejectSettlement(s.gid, s) }}
               />
             )
           })}

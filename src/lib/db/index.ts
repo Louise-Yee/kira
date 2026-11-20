@@ -25,12 +25,15 @@ export { setGroupLog, useGroupAutoLog, useGroupLogs } from './group-autolog'
 export type { GroupLog } from '@/lib/group-autolog'
 export {
   confirmSettlement,
+  dismissSettlement,
+  rejectSettlement,
   settleUp,
   takeBackSettlement,
   useOlderSettlements,
   usePendingForMe,
   usePendingSettlements,
   useRecentSettlements,
+  useRejectedSettlements,
   type PendingForMe,
 } from './group-settlements'
 export { createGroup, deleteGroup, joinGroup, leaveGroup, newInvite, renameGroup, revokeInvite, useGroups, useInvite } from './groups'

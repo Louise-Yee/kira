@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { collection, doc, limit, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore'
+import { collection, deleteDoc, doc, limit, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { settlementDelta, type Settlement, type Transfer } from '@/lib/group-ledger'
 import { converter, listen, reportError } from './core'
@@ -31,25 +31,32 @@ export function usePendingSettlements(gid: string) {
   return useDocs(q)
 }
 
-/** A payment waiting for me to confirm, with the group it belongs to. */
+/** Payments marked "Not received" that the payer hasn't dismissed yet (only ever a few). */
+export function useRejectedSettlements(gid: string) {
+  const q = useMemo(() => query(settlements(gid), where('status', '==', 'rejected')), [gid])
+  return useDocs(q)
+}
+
+/** A payment that needs me, with the group it belongs to. */
 export type PendingForMe = WithId<Settlement> & { gid: string }
 
 /**
- * Payments in any of my groups that were made to me and wait for me to confirm: for the inbox and the tab's dot.
- * One small listener per group (people are in a handful of groups).
+ * Payments in any of my groups that need me: made to me and waiting for me to confirm, or mine that were marked "Not
+ * received". For the inbox and the tab's dot. Two small listeners per group (people are in a handful of groups).
  */
 export function usePendingForMe(uid: string, groupIds: readonly string[]): PendingForMe[] {
   const key = groupIds.join(',')
   const [byGroup, setByGroup] = useState<Record<string, WithId<Settlement>[]>>({})
   useEffect(() => {
-    const stops = (key ? key.split(',') : []).map((gid) =>
-      listen(query(settlements(gid), where('to', '==', uid), where('status', '==', 'pending')), {}, (snap) =>
-        setByGroup((m) => ({ ...m, [gid]: snap.docs.map((d) => ({ ...d.data(), id: d.id })) })),
-      ),
+    const stops = (key ? key.split(',') : []).flatMap((gid) =>
+      [
+        [`${gid} to`, query(settlements(gid), where('to', '==', uid), where('status', '==', 'pending'))] as const,
+        [`${gid} from`, query(settlements(gid), where('from', '==', uid), where('status', '==', 'rejected'))] as const,
+      ].map(([slot, q]) => listen(q, {}, (snap) => setByGroup((m) => ({ ...m, [slot]: snap.docs.map((d) => ({ ...d.data(), id: d.id })) })))),
     )
     return () => stops.forEach((stop) => stop())
   }, [uid, key])
-  return groupIds.flatMap((gid) => (byGroup[gid] ?? []).map((s) => ({ ...s, gid })))
+  return groupIds.flatMap((gid) => [...(byGroup[`${gid} to`] ?? []), ...(byGroup[`${gid} from`] ?? [])].map((s) => ({ ...s, gid })))
 }
 
 /**
@@ -70,7 +77,24 @@ export function confirmSettlement(gid: string, s: WithId<Settlement>) {
   void updateDoc(doc(settlements(gid), s.id), { status: 'confirmed', confirmedAt: Date.now() }).catch(reportError)
 }
 
-/** The payer undoes it, or the receiver says they didn't get it (only while pending): it goes, and the balances go back. */
+/**
+ * The receiver says they didn't get it (only while pending): the balances go back, and it stays as "rejected" so the
+ * payer is told, until they dismiss it.
+ */
+export function rejectSettlement(gid: string, s: WithId<Settlement>) {
+  const now = Date.now()
+  const batch = writeBatch(db)
+  batch.update(doc(settlements(gid), s.id), { status: 'rejected', rejectedAt: now })
+  bumpTotals(batch, gid, settlementDelta(s, -1), now)
+  void batch.commit().catch(reportError)
+}
+
+/** The payer has seen that their payment was rejected. It no longer counts, so it just goes. */
+export function dismissSettlement(gid: string, s: WithId<Settlement>) {
+  void deleteDoc(doc(settlements(gid), s.id)).catch(reportError)
+}
+
+/** The payer undoes it (only while pending): it goes, and the balances go back. */
 export function takeBackSettlement(gid: string, s: WithId<Settlement>) {
   const batch = writeBatch(db)
   batch.delete(doc(settlements(gid), s.id))
