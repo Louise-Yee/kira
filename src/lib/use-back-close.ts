@@ -54,13 +54,13 @@ export function useBackClose(open: boolean, onClose: () => void) {
       active = false
       window.removeEventListener('popstate', onPop, true)
       // Pop our entry only if it's the current one: after a route change or a back press it isn't, and popping then
-      // would undo something else. Two sheets closing at once (a confirm and the screen under it) each wait for the
-      // other's pop to land first, or the second pop would go past the page into an older one (#125).
+      // would undo something else. Sheets closing at once (a confirm, the sheet under it, the screen under that) each
+      // wait for the pop before them to land, or a pop would go past the page into an older one (#125).
       const undo = () => {
-        if (history.state?.sheet === id) backSilently()
+        if (backing) void backing.then(undo)
+        else if (history.state?.sheet === id) backSilently()
       }
-      if (backing) void backing.then(undo)
-      else undo()
+      undo()
     }
   }, [open])
 }

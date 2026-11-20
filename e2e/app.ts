@@ -60,12 +60,28 @@ export async function openGroup(u: User, name: string) {
   await expect(u.page.getByRole('heading', { name, level: 1 })).toBeVisible()
 }
 
-/** Taps "Share invite link" on the open group screen and returns the copied link. */
+/** Opens the open group's settings sheet (name, invite link, auto-log, leave or delete). */
+export async function groupSettings(u: User) {
+  await u.page.getByRole('button', { name: 'Group settings' }).click()
+  const s = sheet(u, 'Group settings')
+  await expect(s).toBeVisible()
+  return s
+}
+
+/** Closes the open sheet the way a person dismisses it (Escape, or the back gesture). */
+export async function closeSheet(u: User) {
+  await u.page.keyboard.press('Escape')
+  await expect(u.page.getByRole('dialog')).toBeHidden()
+}
+
+/** Taps "Share invite link" in the open group's settings and returns the copied link. */
 export async function copyInviteLink(u: User): Promise<string> {
-  await u.page.getByRole('button', { name: 'Share invite link' }).click()
-  await expect(u.page.getByText('Link copied')).toBeVisible()
+  const s = await groupSettings(u)
+  await s.getByRole('button', { name: 'Share invite link' }).click()
+  await expect(s.getByText('Link copied')).toBeVisible()
   const link = await u.page.evaluate(() => navigator.clipboard.readText())
   expect(link).toMatch(/\/join\/[A-Za-z0-9]+$/)
+  await closeSheet(u)
   return link
 }
 
