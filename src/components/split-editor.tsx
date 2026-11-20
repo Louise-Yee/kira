@@ -1,4 +1,6 @@
 import { DatePicker } from '@/components/date-picker'
+import { Avatar } from '@/components/avatar'
+import type { FriendName } from '@/lib/friends'
 import { useState } from 'react'
 import { Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
@@ -19,6 +21,7 @@ import {
   formFromSplit,
   parsePercent,
   removePerson,
+  type SplitFriend,
   splitProblem,
   type SplitForm,
   type SplitMode,
@@ -31,6 +34,8 @@ type Props = {
   categories: readonly WithId<Category>[]
   /** Names used in past splits, most recent first, offered as one-tap additions. */
   suggestions: readonly string[]
+  /** My friends on kira, offered first; a picked one keeps their photo. */
+  friends: readonly ({ uid: string } & FriendName)[]
   /** Set to edit an existing split; omit to add. */
   initial?: WithId<Split>
   onSave: (draft: SplitDraft) => void
@@ -72,7 +77,7 @@ export function SplitEditor({ open, onClose, initial, ...rest }: Props) {
   )
 }
 
-function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: Omit<Props, 'open'>) {
+function Form({ initial, categories, suggestions, friends, onSave, onDelete, onClose }: Omit<Props, 'open'>) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial?.date ?? todayISO())
   const [form, setForm] = useState<SplitForm>(initial ? formFromSplit(initial) : emptyForm)
@@ -113,11 +118,17 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
     }))
 
   const name = newName.trim()
-  const nameTaken = form.people.some((p) => p.toLowerCase() === name.toLowerCase())
-  const add = (n: string) => {
-    setForm((f) => addPerson(f, n))
+  const taken = (n: string) => form.people.some((p) => p.toLowerCase() === n.toLowerCase())
+  const nameTaken = taken(name)
+  const add = (n: string, friend?: SplitFriend) => {
+    setForm((f) => addPerson(f, n, friend))
     setNewName('')
   }
+  // Friends not on the split yet (a name already used, typed or picked, can't be added twice).
+  const picked = new Set(Object.values(form.friends ?? {}).map((f) => f.uid))
+  const friendChoices = friends.filter((f) => !picked.has(f.uid) && f.displayName && !taken(f.displayName))
+  const friendNames = new Set(friends.map((f) => f.displayName.toLowerCase()))
+  const nameChoices = suggestions.filter((s) => !taken(s) && !friendNames.has(s.toLowerCase()))
 
   return (
     <div className="flex flex-col gap-5 pb-1">
@@ -129,7 +140,8 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
       <Section title="People">
         <div className="flex flex-wrap gap-2">
           {form.people.map((p, i) => (
-            <span key={p} className={cn('flex h-11 items-center rounded-full bg-secondary text-base font-semibold', i === 0 ? 'px-4' : 'pl-4')}>
+            <span key={p} className={cn('flex h-11 items-center gap-2 rounded-full bg-secondary text-base font-semibold', i === 0 ? 'px-4' : form.friends?.[i] ? 'pl-1.5' : 'pl-4')}>
+              {form.friends?.[i] && <Avatar photoURL={form.friends[i].photoURL} name={p} className="size-8 text-sm" />}
               {p}
               {i > 0 && (
                 <button
@@ -159,10 +171,23 @@ function Form({ initial, categories, suggestions, onSave, onDelete, onClose }: O
             Add
           </PillButton>
         </div>
-        {suggestions.filter((s) => !form.people.some((p) => p.toLowerCase() === s.toLowerCase())).length > 0 && (
+        {friendChoices.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {suggestions
-              .filter((s) => !form.people.some((p) => p.toLowerCase() === s.toLowerCase()))
+            {friendChoices.map((f) => (
+              <button
+                key={f.uid}
+                type="button"
+                onClick={() => add(f.displayName, { uid: f.uid, photoURL: f.photoURL })}
+                className="flex h-11 items-center gap-2 rounded-full border border-dashed border-border pr-4 pl-1.5 text-base text-muted-foreground"
+              >
+                <Avatar photoURL={f.photoURL} name={f.displayName} className="size-8 text-sm" />+ {f.displayName}
+              </button>
+            ))}
+          </div>
+        )}
+        {nameChoices.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {nameChoices
               .slice(0, 8)
               .map((s) => (
                 <button

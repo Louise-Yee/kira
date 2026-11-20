@@ -15,6 +15,7 @@ import {
   deleteSplit,
   saveSplit,
   useCategories,
+  useFriendships,
   useOlderSplits,
   useRecentSplits,
   useSettings,
@@ -23,6 +24,7 @@ import {
   type WithId,
 } from "@/lib/db";
 import type { AppUser } from "@/lib/firebase";
+import { otherUid, splitFriendships } from "@/lib/friends";
 
 export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
   const since = addDays(today, -30);
@@ -46,6 +48,11 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
     return () => io.disconnect();
   }, [more, older?.length]);
   const categories = useCategories(user.uid) ?? [];
+  // My friends on kira, offered in the editor before names from past splits.
+  const friends = splitFriendships(useFriendships(user.uid) ?? [], user.uid).friends.map((f) => {
+    const uid = otherUid(f, user.uid);
+    return { uid, displayName: f.names[uid]?.displayName ?? "", photoURL: f.names[uid]?.photoURL ?? null };
+  });
   const qr = useSettings(user.uid)?.tngQr;
   // `open` and `split` are separate so a sheet keeps its content while it slides out.
   const [sheet, setSheet] = useState<{ open: boolean; split?: WithId<Split> }>({
@@ -157,6 +164,7 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
         onClose={() => setSheet((s) => ({ ...s, open: false }))}
         categories={categories}
         suggestions={suggestions}
+        friends={friends}
         initial={sheet.split}
         onSave={(draft) => saveSplit(user.uid, draft, sheet.split)}
         onDelete={() => sheet.split && deleteSplit(user.uid, sheet.split)}

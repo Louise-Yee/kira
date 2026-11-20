@@ -127,6 +127,12 @@ assert.deepEqual(removed.exact, [5, 7])
 assert.equal(removePerson(form(), 0).people.length, 3)
 assert.equal(removePerson(form(), 9).people.length, 3)
 assert.deepEqual(addPerson(form(), 'Cat').exact, [0, 0, 0, 0])
+// A friend keeps their uid by index, and removing someone before them moves it down with them.
+const withFriends = addPerson(addPerson(form(), 'Dan', { uid: 'd', photoURL: null }), 'Eve', { uid: 'e', photoURL: 'p' })
+assert.deepEqual(withFriends.friends, { 3: { uid: 'd', photoURL: null }, 4: { uid: 'e', photoURL: 'p' } })
+assert.deepEqual(removePerson(withFriends, 1).friends, { 2: { uid: 'd', photoURL: null }, 3: { uid: 'e', photoURL: 'p' } })
+assert.deepEqual(removePerson(withFriends, 3).friends, { 3: { uid: 'e', photoURL: 'p' } })
+assert.equal(addPerson(form(), 'Cat').friends, undefined)
 
 // resolveItems / computeForm per mode
 assert.deepEqual(resolveItems(form({ mode: 'even', evenTotal: 900 })), [{ amount: 900, people: [0, 1, 2] }])
