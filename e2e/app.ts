@@ -78,7 +78,8 @@ export async function closeSheet(u: User) {
 export async function copyInviteLink(u: User): Promise<string> {
   const s = await groupSettings(u)
   await s.getByRole('button', { name: 'Share invite link' }).click()
-  await expect(s.getByText('Link copied')).toBeVisible()
+  // The toast lives outside the sheet, in a polite live region.
+  await expect(u.page.getByRole('status').filter({ hasText: 'Link copied' })).toBeVisible()
   const link = await u.page.evaluate(() => navigator.clipboard.readText())
   expect(link).toMatch(/\/join\/[A-Za-z0-9]+$/)
   await closeSheet(u)

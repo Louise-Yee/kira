@@ -46,6 +46,7 @@ import { success } from '@/lib/haptics'
 import { MAX_NAME, cleanGroupName, hasActiveInvite, inviteesOf, membersOf } from '@/lib/groups'
 import { formatRM } from '@/lib/money'
 import { joinUrl, shareLink } from '@/lib/share-link'
+import { toast } from '@/lib/toast'
 
 type Props = {
   me: Me
@@ -164,7 +165,6 @@ export function GroupScreen({ me, group, log, categories, friends, onBack }: Pro
 function GroupSettings({ me, group, log, categories, onGone }: Omit<Props, 'group' | 'onBack' | 'friends'> & { group: WithId<Group>; onGone: () => void }) {
   const [name, setName] = useState(group.name)
   const [leaving, setLeaving] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
   // ponytail: read once per open, so "expires in" can lag if the sheet stays open for days.
   const [now] = useState(Date.now)
   const owner = group.ownerUid === me.uid
@@ -176,9 +176,9 @@ function GroupSettings({ me, group, log, categories, onGone }: Omit<Props, 'grou
     if (!group.inviteId) return
     try {
       const result = await shareLink(joinUrl(group.inviteId), `Join ${group.name} on kira`)
-      setNotice(result === 'copied' ? 'Link copied' : null)
+      if (result === 'copied') toast('Link copied')
     } catch {
-      setNotice('Could not share the link')
+      toast("Couldn't share the link", 'error')
     }
   }
 
@@ -212,7 +212,6 @@ function GroupSettings({ me, group, log, categories, onGone }: Omit<Props, 'grou
             Share invite link
           </PillButton>
         )}
-        {notice && <p className="text-base text-muted-foreground">{notice}</p>}
         {owner && (
           <div className="flex gap-2">
             <PillButton variant="secondary" size="pill-sm" className="flex-1" onClick={() => newInvite(me, group)}>
