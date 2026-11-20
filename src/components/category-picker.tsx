@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import { CategoryIcon } from '@/components/category-icon'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useTouch } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 type Item = { id: string; name: string; icon: string; color: string }
@@ -12,6 +13,7 @@ type Props = { categories: readonly Item[]; value: string | null; onChange: (id:
 export function CategoryPicker({ categories, value, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const touch = useTouch()
   const selected = categories.find((c) => c.id === value)
   const q = query.trim().toLowerCase()
   const shown = q ? categories.filter((c) => c.name.toLowerCase().includes(q)) : categories
@@ -39,7 +41,11 @@ export function CategoryPicker({ categories, value, onChange }: Props) {
         )}
         <ChevronDown className="size-5 text-muted-foreground" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) gap-2 rounded-3xl p-2">
+      <PopoverContent
+        align="start"
+        // On touch screens the keyboard would shrink the viewport and push the list out of view; tap search to type.
+        onOpenAutoFocus={(e) => touch && e.preventDefault()}
+        className="w-(--radix-popover-trigger-width) gap-2 rounded-3xl p-2">
         <div className="flex h-11 items-center gap-2 rounded-full bg-secondary px-4">
           <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden />
           <input
