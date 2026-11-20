@@ -85,10 +85,15 @@ export const exactItems = (amounts: readonly number[]): SplitItem[] =>
 
 export type SplitMode = 'itemized' | 'even' | 'exact'
 
+/** A person on a split who is one of my friends on kira, so they keep their photo (not just a typed name). */
+export type SplitFriend = { uid: string; photoURL: string | null }
+
 /** Everything the editor holds. `people[0]` is always me. `exact` has one amount per person. */
 export type SplitForm = {
   mode: SplitMode
   people: string[]
+  /** The people who are friends, by person index (as a string, like Firestore map keys). */
+  friends?: Record<string, SplitFriend>
   items: SplitItem[]
   /** Even mode: the whole bill, in sen. */
   evenTotal: number
@@ -96,10 +101,11 @@ export type SplitForm = {
   charges: Charge
 }
 
-export const addPerson = (form: SplitForm, name: string): SplitForm => ({
+export const addPerson = (form: SplitForm, name: string, friend?: SplitFriend): SplitForm => ({
   ...form,
   people: [...form.people, name],
   exact: [...form.exact, 0],
+  ...(friend ? { friends: { ...form.friends, [form.people.length]: friend } } : {}),
 })
 
 /** Remove a person (never me, index 0) and re-point every item at the people who are left. */
@@ -109,6 +115,9 @@ export function removePerson(form: SplitForm, index: number): SplitForm {
     ...form,
     people: form.people.filter((_, i) => i !== index),
     exact: form.exact.filter((_, i) => i !== index),
+    friends: Object.fromEntries(
+      Object.entries(form.friends ?? {}).flatMap(([k, f]) => (Number(k) === index ? [] : [[String(Number(k) > index ? Number(k) - 1 : Number(k)), f]])),
+    ),
     items: form.items.map((item) => ({
       ...item,
       people: item.people.filter((p) => p !== index).map((p) => (p > index ? p - 1 : p)),
@@ -128,12 +137,13 @@ export const computeForm = (form: SplitForm): SplitResult =>
   computeShares({ people: form.people.length, items: resolveItems(form), charges: form.mode === 'exact' ? { type: 'percent', value: 0 } : form.charges })
 
 /** Rebuild the editor form from a saved split (the inverse of `resolveItems`). */
-export function formFromSplit(s: { mode: SplitMode; people: string[]; items: SplitItem[]; charges: Charge }): SplitForm {
+export function formFromSplit(s: { mode: SplitMode; people: string[]; friends?: Record<string, SplitFriend>; items: SplitItem[]; charges: Charge }): SplitForm {
   const exact = s.people.map(() => 0)
   if (s.mode === 'exact') for (const item of s.items) exact[item.people[0]] += item.amount
   return {
     mode: s.mode,
     people: s.people,
+    ...(s.friends ? { friends: s.friends } : {}),
     items: s.mode === 'itemized' ? s.items : [],
     evenTotal: s.mode === 'even' ? (s.items[0]?.amount ?? 0) : 0,
     exact,

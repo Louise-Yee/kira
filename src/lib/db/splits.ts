@@ -53,6 +53,8 @@ export function saveSplit(uid: string, draft: SplitDraft, existing?: WithId<Spli
     date: draft.date,
     mode: form.mode,
     people: form.people,
+    // Only friends still on the split; absent when there are none (Firestore rejects undefined).
+    ...(Object.keys(form.friends ?? {}).length ? { friends: form.friends } : {}),
     items: resolveItems(form).map(cleanItem),
     charges: form.mode === 'exact' ? ({ type: 'percent', value: 0 } as const) : form.charges,
     shares,

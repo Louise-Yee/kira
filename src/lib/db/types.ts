@@ -1,7 +1,7 @@
 import type { ClientInfo } from '@/lib/client-info'
 import type { RecurrenceRule } from '@/lib/recurrence'
 import type { Receipt } from '@/lib/receipt-data'
-import type { Charge, Share, SplitForm, SplitItem, SplitMode } from '@/lib/split'
+import type { Charge, Share, SplitForm, SplitItem, SplitMode, SplitFriend } from '@/lib/split'
 
 export type Kind = 'expense' | 'income'
 
@@ -50,6 +50,8 @@ export type Split = {
   date: string
   mode: SplitMode
   people: string[]
+  /** People who are my friends on kira, by person index (absent on older splits). */
+  friends?: Record<string, SplitFriend>
   /** Always the items the maths ran on (even and exact modes are stored as items too). */
   items: SplitItem[]
   charges: Charge
