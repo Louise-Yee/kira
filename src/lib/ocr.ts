@@ -32,14 +32,23 @@ async function prepare(file: File): Promise<HTMLCanvasElement> {
 export async function scanReceipt(file: File, onProgress: (p: number) => void): Promise<ScannedReceipt> {
   const canvas = await prepare(file)
   const { createWorker } = await import('tesseract.js')
-  const worker = await createWorker('eng', 1, {
+  let stage = 'starting'
+  // workerBlobURL off: the Android WebView doesn't serve a blob worker's importScripts, so load the worker file directly.
+  const starting = createWorker('eng', 1, {
+    workerBlobURL: false,
     workerPath,
     corePath,
     langPath: `${import.meta.env.BASE_URL}tessdata`,
     logger: (m) => {
+      stage = m.status
       if (m.status === 'recognizing text') onProgress(m.progress)
     },
   })
+  // A load that hangs (no network error, nothing) would leave the button spinning forever.
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`The reader didn't start (stuck at "${stage}").`)), 60_000),
+  )
+  const worker = await Promise.race([starting, timeout])
   try {
     const { data } = await worker.recognize(canvas)
     return parseReceipt(data.text)
