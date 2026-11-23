@@ -66,8 +66,17 @@ export function useTabSwipe(
     if (!enabled) return
     type Gesture = { x: number; y: number; t: number; axis: 'x' | 'y' | null; dx: number; armed: boolean }
     let g: Gesture | null = null
-    // A committed swipe is sliding the page out; a new touch waits for it, or it would navigate from a stale tab (#176).
-    let committing = false
+    // The direction of a committed swipe whose page is still sliding out (0: none). A touch that lands meanwhile stops
+    // the slide, so it has to finish the switch itself, or the page would jump back to the tab it left (#176).
+    let committing: 1 | -1 | 0 = 0
+    let commitId = 0 // a stopped slide's late callback must not finish a newer one
+    const finish = () => {
+      if (!committing) return
+      const dir = committing
+      committing = 0
+      progress.jump(dir)
+      latest.current.onSwipe(dir)
+    }
     const unfollow = x.on('change', (v) => {
       if (!committing) progress.set(-v / span.current)
     })
@@ -78,7 +87,13 @@ export function useTabSwipe(
     const onStart = (e: TouchEvent) => {
       const t = e.touches[0]
       g = null
-      if (committing || e.touches.length !== 1 || t.clientX < EDGE_PX || t.clientX > innerWidth - EDGE_PX) return
+      if (committing) {
+        // This touch only finishes the switch; the next one swipes from the new tab (its state isn't rendered yet).
+        x.jump(-committing * width())
+        finish()
+        return
+      }
+      if (e.touches.length !== 1 || t.clientX < EDGE_PX || t.clientX > innerWidth - EDGE_PX) return
       if (document.querySelector('[role="dialog"]') || ownsSwipe(e.target instanceof Element ? e.target : null)) return
       x.stop()
       g = { x: t.clientX, y: t.clientY, t: e.timeStamp, axis: null, dx: 0, armed: false }
@@ -125,11 +140,11 @@ export function useTabSwipe(
         return
       }
       if (reduce) return latest.current.onSwipe(dir)
-      committing = true
+      committing = dir
+      const id = ++commitId
       void animate(progress, dir, soft)
       void animate(x, -dir * width(), soft).then(() => {
-        committing = false
-        latest.current.onSwipe(dir)
+        if (id === commitId) finish()
       })
     }
 
