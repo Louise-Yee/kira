@@ -11,6 +11,10 @@ export type ChangelogEntry = {
 /** Newest first. */
 export const changelog: ChangelogEntry[] = [
   {
+    version: '0.1.2',
+    items: [{ title: 'Small improvements', text: 'A few small fixes to make the app smoother to use.' }],
+  },
+  {
     version: '0.1.1',
     items: [
       {
