@@ -58,7 +58,8 @@ assert.equal(nextDate(rule({ end: { type: 'count', value: 3 } }), 3), null)
 assert.equal(nextDate(rule({ startDate: '2026-01-01', end: { type: 'date', value: '2026-03-15' } }), 3), null)
 
 // describeFrequency / scheduleChanged
-assert.equal(describeFrequency('month', 1), 'Every month')
+assert.equal(describeFrequency('month', 1), 'Monthly')
+assert.equal(describeFrequency('day', 1), 'Daily')
 assert.equal(describeFrequency('week', 2), 'Every 2 weeks')
 assert.equal(scheduleChanged(monthly, { ...monthly }), false)
 assert.equal(scheduleChanged(monthly, { ...monthly, interval: 2 }), true)
