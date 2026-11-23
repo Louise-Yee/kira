@@ -2,7 +2,8 @@ import { CurrencySheet } from '@/components/currency-select'
 import { useDisplayCurrency } from '@/lib/display-currency'
 import { currencySymbol } from '@/lib/money'
 import { useCallback, useState } from 'react'
-import { Banknote, ChevronRight, DatabaseBackup, QrCode, Smartphone, Sparkles, type LucideIcon } from 'lucide-react'
+import { Banknote, ChevronRight, DatabaseBackup, Lock, Palette, PanelLeft, QrCode, Smartphone, Sparkles, Tags, UserSearch, type LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Capacitor } from '@capacitor/core'
 import {
   categoryInUse,
@@ -25,10 +26,10 @@ import { APP_VERSION, IS_DEV_BUILD, type Update } from '@/lib/update'
 import { releasedEntries } from '@/lib/changelog'
 import { Avatar } from '@/components/avatar'
 import { BackupSheet } from '@/components/backup-sheet'
-import { CategoryIcon } from '@/components/category-icon'
 import { ListRow } from '@/components/list-row'
 import { PaymentQrSheet } from '@/components/payment-qr-sheet'
 import { PillButton } from '@/components/pill-button'
+import { Section } from '@/components/section'
 import { Segmented } from '@/components/segmented'
 import { Toggle } from '@/components/toggle'
 import { WhatsNewSheet } from '@/components/whats-new-sheet'
@@ -49,6 +50,18 @@ type Props = {
   onUpdate: () => void
   lock: AppLock
 }
+
+/** A titled card of rows, split by hairlines (Wise-style settings groups). */
+function Group({ title, children, footer }: { title: string; children: ReactNode; footer?: string }) {
+  return (
+    <Section title={title}>
+      <div className="flex flex-col divide-y divide-border overflow-hidden rounded-3xl bg-card *:rounded-none">{children}</div>
+      {footer && <p className="px-1 text-base text-muted-foreground">{footer}</p>}
+    </Section>
+  )
+}
+
+const chevron = <ChevronRight className="size-5 text-muted-foreground" />
 
 function Tile({ icon: Icon }: { icon: LucideIcon }) {
   return (
@@ -80,23 +93,48 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
           <p className="truncate text-base text-muted-foreground">{user.email}</p>
         </div>
       </div>
-      <div className="rounded-3xl bg-card p-5">
-        <p className="mb-3 text-base font-semibold">Theme</p>
-        <Segmented
-          options={themeOptions}
-          value={theme}
-          onChange={(t) => {
-            setThemeState(t)
-            setTheme(t)
-          }}
-        />
-      </div>
-      <ListRow
-        icon={<CategoryIcon name="other" color="cat-6" tile />}
-        title="Categories"
-        trailing={<ChevronRight className="size-5 text-muted-foreground" />}
-        onClick={() => setManaging(true)}
-      />
+      <Group title="Preferences">
+        <ListRow icon={<Tile icon={Banknote} />} title="Currency" subtitle={`${currencySymbol(display)} · totals and new entries`} trailing={chevron} onClick={() => setCurrencyOpen(true)} />
+        <ListRow icon={<Tile icon={Tags} />} title="Categories" trailing={chevron} onClick={() => setManaging(true)} />
+        <div className="flex flex-col gap-3 p-3">
+          <div className="flex items-center gap-3">
+            <Tile icon={Palette} />
+            <span className="text-base font-semibold">Theme</span>
+          </div>
+          <Segmented
+            options={themeOptions}
+            value={theme}
+            onChange={(t) => {
+              setThemeState(t)
+              setTheme(t)
+            }}
+          />
+        </div>
+        {/* Only matters at lg: phones always use the floating bottom bar. */}
+        <div className="hidden flex-col gap-3 p-3 lg:flex">
+          <div className="flex items-center gap-3">
+            <Tile icon={PanelLeft} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-semibold">Navigation position</span>
+              <span className="block text-base text-muted-foreground">Where the menu sits on large screens.</span>
+            </span>
+          </div>
+          <div className="flex gap-2">
+            {navPositions.map((p) => (
+              <PillButton
+                key={p}
+                size="pill-sm"
+                variant={navPos === p ? 'default' : 'secondary'}
+                onClick={() => onNavPos(p)}
+                className="flex-1 capitalize"
+              >
+                {p}
+              </PillButton>
+            ))}
+          </div>
+        </div>
+      </Group>
+      <CurrencySheet open={currencyOpen} onClose={() => setCurrencyOpen(false)} value={display} onPick={(c) => setDisplayCurrency(user.uid, c)} />
       <CategoriesManager
         open={managing}
         onClose={() => setManaging(false)}
@@ -107,21 +145,37 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
         onDelete={(id) => toastUndo('Category deleted', deleteCategory(user.uid, id))}
         onMove={(from, to) => moveAndDeleteCategory(user.uid, from, to)}
       />
-      <ListRow
-        icon={<Tile icon={Banknote} />}
-        title="Currency"
-        subtitle={`${currencySymbol(display)} · totals and new entries`}
-        trailing={<ChevronRight className="size-5 text-muted-foreground" />}
-        onClick={() => setCurrencyOpen(true)}
-      />
-      <CurrencySheet open={currencyOpen} onClose={() => setCurrencyOpen(false)} value={display} onPick={(c) => setDisplayCurrency(user.uid, c)} />
-      <ListRow
-        icon={<Tile icon={QrCode} />}
-        title="Payment QR"
-        subtitle={settings === undefined ? undefined : settings?.tngQr ? 'On your split receipts' : 'Not set'}
-        trailing={<ChevronRight className="size-5 text-muted-foreground" />}
-        onClick={() => setQrOpen(true)}
-      />
+
+      <Group title="Privacy and security">
+        <div className="px-2 py-3">
+          <Toggle
+            icon={<Tile icon={UserSearch} />}
+            label="Findable by email"
+            description="Friends with your email can find you. Only your name and photo are shown."
+            checked={settings?.discoverable !== false}
+            onChange={(on) => setDiscoverable(user.uid, on)}
+            disabled={settings === undefined}
+          />
+        </div>
+        {lockSupported && (
+          <div className="px-2 py-3">
+            <Toggle
+              icon={<Tile icon={Lock} />}
+              label="App lock"
+              description="Fingerprint, face or phone PIN each time kira opens."
+              checked={!!lock.enabled}
+              onChange={lock.set}
+            />
+          </div>
+        )}
+        <ListRow
+          icon={<Tile icon={QrCode} />}
+          title="Payment QR"
+          subtitle={settings === undefined ? undefined : settings?.tngQr ? 'On your split receipts' : 'Not set'}
+          trailing={chevron}
+          onClick={() => setQrOpen(true)}
+        />
+      </Group>
       <PaymentQrSheet
         open={qrOpen}
         onClose={() => setQrOpen(false)}
@@ -129,66 +183,32 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
         onSave={(url) => setPaymentQr(user.uid, url)}
         onRemove={() => setPaymentQr(user.uid, null)}
       />
-      <ListRow
-        icon={<Tile icon={DatabaseBackup} />}
-        title="Backup"
-        subtitle="Export or import your data"
-        trailing={<ChevronRight className="size-5 text-muted-foreground" />}
-        onClick={() => setBackupOpen(true)}
-      />
+
+      <Group title="Data">
+        <ListRow icon={<Tile icon={DatabaseBackup} />} title="Backup" subtitle="Export or import your data" trailing={chevron} onClick={() => setBackupOpen(true)} />
+      </Group>
       <BackupSheet open={backupOpen} onClose={() => setBackupOpen(false)} uid={user.uid} />
-      <div className="rounded-3xl bg-card p-5">
-        <Toggle label="Findable by email" checked={settings?.discoverable !== false} onChange={(on) => setDiscoverable(user.uid, on)} disabled={settings === undefined} />
-        <p className="px-1 text-base text-muted-foreground">Let friends who have your email in their contacts find you on kira. Only your name and photo are shown.</p>
-      </div>
-      {lockSupported && (
-        <div className="rounded-3xl bg-card p-5">
-          <Toggle label="App lock" checked={!!lock.enabled} onChange={lock.set} />
-          <p className="px-1 text-base text-muted-foreground">Ask for fingerprint, face or phone PIN each time kira is opened.</p>
-        </div>
-      )}
-      {/* Only matters at lg: phones always use the floating bottom bar. */}
-      <div className="hidden rounded-3xl bg-card p-5 lg:block">
-        <p className="text-base font-semibold">Navigation position</p>
-        <p className="text-base text-muted-foreground">Where the menu sits on large screens.</p>
-        <div className="mt-3 flex gap-2">
-          {navPositions.map((p) => (
-            <PillButton
-              key={p}
-              size="pill-sm"
-              variant={navPos === p ? 'default' : 'secondary'}
-              onClick={() => onNavPos(p)}
-              className="flex-1 capitalize"
-            >
-              {p}
-            </PillButton>
-          ))}
-        </div>
-      </div>
-      <ListRow
-        icon={<Tile icon={Smartphone} />}
-        title={`${IS_DEV_BUILD ? 'kira dev' : 'kira'} v${APP_VERSION}`}
-        subtitle={update ? `v${update.release.version} is available` : Capacitor.isNativePlatform() ? undefined : 'Updates automatically'}
-        trailing={
-          update && (
-            <PillButton size="pill-sm" onClick={onUpdate}>
-              Update
-            </PillButton>
-          )
-        }
-      />
-      {changes.length > 0 && (
+
+      <Group title="About" footer="kira records your app version and device type to help with updates.">
         <ListRow
-          icon={<Tile icon={Sparkles} />}
-          title="What's new"
-          subtitle="What changed in each update"
-          trailing={<ChevronRight className="size-5 text-muted-foreground" />}
-          onClick={() => setWhatsNewOpen(true)}
+          icon={<Tile icon={Smartphone} />}
+          title={`${IS_DEV_BUILD ? 'kira dev' : 'kira'} v${APP_VERSION}`}
+          subtitle={update ? `v${update.release.version} is available` : Capacitor.isNativePlatform() ? undefined : 'Updates automatically'}
+          trailing={
+            update && (
+              <PillButton size="pill-sm" onClick={onUpdate}>
+                Update
+              </PillButton>
+            )
+          }
         />
-      )}
+        {changes.length > 0 && (
+          <ListRow icon={<Tile icon={Sparkles} />} title="What's new" subtitle="What changed in each update" trailing={chevron} onClick={() => setWhatsNewOpen(true)} />
+        )}
+      </Group>
       <WhatsNewSheet open={whatsNewOpen} onClose={() => setWhatsNewOpen(false)} entries={changes} />
-      <p className="px-1 text-base text-muted-foreground">kira records your app version and device type to help with updates.</p>
-      <PillButton variant="secondary" onClick={logOut}>
+
+      <PillButton variant="secondary" onClick={logOut} className="text-destructive">
         Sign out
       </PillButton>
     </div>
