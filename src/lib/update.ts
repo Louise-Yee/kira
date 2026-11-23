@@ -6,6 +6,9 @@ import { parseRelease, updateKind, type GitHubRelease, type Release } from '@/li
 /** From package.json at build time (vite.config.ts `define`). */
 export const APP_VERSION = __APP_VERSION__
 
+/** The dev APK (`app.kira.dev`), built by dev-apk.yml. It installs next to the live app and is reinstalled by hand. */
+export const IS_DEV_BUILD = import.meta.env.VITE_APP_ENV === 'dev'
+
 // Public repo: no token needed (60 requests an hour per IP; we make one per launch, plus at most one an hour on resume).
 const LATEST_RELEASE = 'https://api.github.com/repos/Louise-Yee/kira/releases/latest'
 const RECHECK_MS = 60 * 60 * 1000
@@ -31,7 +34,8 @@ export function useUpdate() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return
+    // A dev build is never offered the live release.
+    if (!Capacitor.isNativePlatform() || IS_DEV_BUILD) return
     let cancelled = false
     let lastCheck = 0
     const check = () => {

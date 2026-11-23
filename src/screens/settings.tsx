@@ -17,7 +17,7 @@ import { lockSupported, type AppLock } from '@/lib/app-lock'
 import { logOut, type AppUser } from '@/lib/firebase'
 import { navPositions, type NavPos } from '@/lib/nav'
 import { readTheme, setTheme, type Theme } from '@/lib/theme'
-import { APP_VERSION, type Update } from '@/lib/update'
+import { APP_VERSION, IS_DEV_BUILD, type Update } from '@/lib/update'
 import { releasedEntries } from '@/lib/changelog'
 import { Avatar } from '@/components/avatar'
 import { BackupSheet } from '@/components/backup-sheet'
@@ -153,7 +153,7 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
       </div>
       <ListRow
         icon={<Tile icon={Smartphone} />}
-        title={`kira v${APP_VERSION}`}
+        title={`${IS_DEV_BUILD ? 'kira dev' : 'kira'} v${APP_VERSION}`}
         subtitle={update ? `v${update.release.version} is available` : Capacitor.isNativePlatform() ? undefined : 'Updates automatically'}
         trailing={
           update && (
