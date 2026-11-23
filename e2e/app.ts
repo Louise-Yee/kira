@@ -16,9 +16,9 @@ export const typeAmount = async (u: User, digits: string, nth = 0) => {
   await u.page.getByLabel('Amount').nth(nth).fill(digits)
 }
 
+/** Taps the category's chip in the open form (expense ones come first, so "Other" is the expense one). */
 export async function pickCategory(u: User, name: string) {
-  await u.page.getByRole('button', { name: 'Category' }).click()
-  await u.page.getByRole('button', { name, exact: true }).click()
+  await u.page.getByRole('dialog').getByRole('group', { name: 'Category' }).getByRole('button', { name, exact: true }).first().click()
 }
 
 /** People opens on Groups; friends and friend requests are under Friends. */
