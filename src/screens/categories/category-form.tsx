@@ -75,6 +75,7 @@ export function CategoryForm({ initial, onCancel, onSubmit, onDelete, onRestore 
       )}
       <SheetActions
         disabled={!trimmed}
+        hint="Enter a name."
         onSave={() => trimmed && onSubmit({ name: trimmed, icon, color })}
         extras={[{ label: 'Cancel', onClick: onCancel }]}
         onDelete={onDelete}

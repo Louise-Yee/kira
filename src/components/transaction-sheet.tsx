@@ -1,6 +1,7 @@
 import { DatePicker } from '@/components/date-picker'
 import { useState } from 'react'
-import { EntryFields, type Entry } from '@/components/entry-fields'
+import { EntryFields } from '@/components/entry-fields'
+import { entryProblem, type Entry } from '@/lib/entry'
 import { Sheet } from '@/components/sheet'
 import { SheetActions } from '@/components/sheet-actions'
 import { success, warning } from '@/lib/haptics'
@@ -53,6 +54,7 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
     <div className="flex flex-col gap-4 pb-1">
       <SheetActions
         disabled={!draft}
+        hint={entryProblem(entry, entry.rate ?? fetched.rate) ?? (date ? null : 'Pick a date.')}
         onSave={() => {
           if (!draft) return
           success()

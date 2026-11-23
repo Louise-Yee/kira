@@ -1,6 +1,7 @@
 import { DatePicker } from '@/components/date-picker'
 import { useState } from 'react'
-import { EntryFields, type Entry } from '@/components/entry-fields'
+import { EntryFields } from '@/components/entry-fields'
+import { entryProblem, type Entry } from '@/lib/entry'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
 import { Sheet, SheetFooter } from '@/components/sheet'
@@ -202,6 +203,12 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
 
       <Actions
         disabled={!draft}
+        hint={
+          entryProblem(entry, entry.rate ?? fetched.rate) ??
+          (n ? null : 'Enter how often it repeats.') ??
+          (tooEarly ? `Start on or after ${shortDate(floor)}.` : null) ??
+          (end ? null : endType === 'date' ? 'Pick an end date.' : 'Enter the number of payments.')
+        }
         onSave={() => {
           if (!draft) return
           success()
@@ -227,7 +234,8 @@ function Actions({
   countTransactions,
   onDelete,
   onClose,
-}: Pick<Props, 'countTransactions' | 'onDelete' | 'onClose'> & { disabled: boolean; onSave: () => void; canDelete: boolean }) {
+  hint,
+}: Pick<Props, 'countTransactions' | 'onDelete' | 'onClose'> & { disabled: boolean; hint: string | null; onSave: () => void; canDelete: boolean }) {
   const [del, setDel] = useState<Del>({ phase: 'idle' })
   const run = (withTransactions: boolean) => {
     warning()
@@ -242,6 +250,7 @@ function Actions({
     return (
       <SheetActions
         disabled={disabled}
+        hint={hint}
         onSave={onSave}
         deleteLabel="Delete rule"
         confirmDelete={false}

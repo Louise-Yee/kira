@@ -5,10 +5,8 @@ import { RateField } from '@/components/rate-field'
 import { Segmented } from '@/components/segmented'
 import { TextField } from '@/components/text-field'
 import type { Category, Kind, WithId } from '@/lib/db'
+import type { Entry } from '@/lib/entry'
 import { HOME } from '@/lib/money'
-
-/** `amount` is in minor units of `currency`; `rate` is the one typed by hand (null uses the fetched one). */
-export type Entry = { kind: Kind; amount: number; currency: string; rate: number | null; categoryId: string | null; note: string }
 
 type Props = {
   value: Entry

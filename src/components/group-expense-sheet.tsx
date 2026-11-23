@@ -67,6 +67,7 @@ function Form({ group, meUid, initial, onSave, onClose }: Omit<Props, 'open'>) {
       <SheetActions
         label={initial ? 'Save' : 'Add'}
         disabled={!draft}
+        hint={title.trim() ? (problem ?? (date ? null : 'Pick a date.')) : 'Add a title.'}
         onSave={() => {
           if (!draft) return
           success()
