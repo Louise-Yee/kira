@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
-import { Camera, ImageIcon } from 'lucide-react'
-import { PillButton } from '@/components/pill-button'
+import { Camera, ImageIcon, ScanLine } from 'lucide-react'
+import { motion } from 'motion/react'
 import { error as errorHaptic, success } from '@/lib/haptics'
+import { press } from '@/lib/motion'
 import type { ScannedReceipt } from '@/lib/receipt-parse'
 
 type Props = {
@@ -15,7 +16,6 @@ export function ScanReceiptButton({ onScanned }: Props) {
   const gallery = useRef<HTMLInputElement>(null)
   const [progress, setProgress] = useState<number | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const busy = progress !== null
 
   const pick = async (file: File | undefined) => {
     if (!file) return
@@ -43,20 +43,38 @@ export function ScanReceiptButton({ onScanned }: Props) {
     }
   }
 
+  const tile =
+    'flex min-h-20 flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl bg-background text-base font-semibold transition-colors active:bg-muted'
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3 rounded-3xl bg-secondary p-3">
       <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={(e) => pick(e.target.files?.[0])} />
       <input ref={gallery} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
-      <div className="flex gap-2">
-        <PillButton variant="secondary" size="pill-sm" className="flex-1" disabled={busy} onClick={() => camera.current?.click()}>
-          <Camera aria-hidden />
-          {progress === null ? 'Take photo' : `Reading… ${Math.round(progress * 100)}%`}
-        </PillButton>
-        <PillButton variant="secondary" size="pill-sm" className="flex-1" disabled={busy} onClick={() => gallery.current?.click()}>
-          <ImageIcon aria-hidden />
-          Choose photo
-        </PillButton>
+      <div className="flex items-center gap-2 px-1">
+        <ScanLine className="size-5 text-primary" aria-hidden />
+        <div className="min-w-0">
+          <p className="text-base font-semibold">Scan a receipt</p>
+          <p className="text-base text-muted-foreground">Fills in the items. The photo stays on your phone.</p>
+        </div>
       </div>
+      {progress === null ? (
+        <div className="flex gap-2">
+          <motion.button type="button" whileTap={press} className={tile} onClick={() => camera.current?.click()}>
+            <Camera className="size-6 text-primary" aria-hidden />
+            Take photo
+          </motion.button>
+          <motion.button type="button" whileTap={press} className={tile} onClick={() => gallery.current?.click()}>
+            <ImageIcon className="size-6 text-primary" aria-hidden />
+            Choose photo
+          </motion.button>
+        </div>
+      ) : (
+        <div className="flex min-h-20 flex-col justify-center gap-2 rounded-2xl bg-background px-4" role="status">
+          <p className="text-base font-semibold">Reading… {Math.round(progress * 100)}%</p>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(progress * 100, 4)}%` }} />
+          </div>
+        </div>
+      )}
       {message && <p className="px-1 text-base text-muted-foreground">{message}</p>}
     </div>
   )
