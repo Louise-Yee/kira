@@ -141,7 +141,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
                 title={`${group?.members[s.to]?.displayName || 'Someone'} didn't get your payment`}
                 subtitle={
                   <>
-                    <Money sen={s.amount} /> · {group?.name ?? 'a group'} · {shortDate(s.date)}
+                    <Money currency={group?.currency} sen={s.amount} /> · {group?.name ?? 'a group'} · {shortDate(s.date)}
                   </>
                 }
                 takeBack={{ label: 'OK', onClick: () => dismissSettlement(me, s.gid, s) }}
@@ -161,7 +161,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
                 title={`${group?.members[s.from]?.displayName || 'Someone'} says they paid you`}
                 subtitle={
                   <>
-                    <Money sen={s.amount} /> · {group?.name ?? 'a group'} · {shortDate(s.date)}
+                    <Money currency={group?.currency} sen={s.amount} /> · {group?.name ?? 'a group'} · {shortDate(s.date)}
                   </>
                 }
                 onConfirm={() => {
@@ -268,7 +268,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
         onClose={() => setCreating(false)}
         title="New group"
         label="Create"
-        onSave={(name) => setGroupId(createGroup(me, name))}
+        onCreate={(name, currency) => setGroupId(createGroup(me, name, currency))}
       />
       <ConfirmSheet
         open={removing.open}

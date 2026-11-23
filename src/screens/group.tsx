@@ -45,7 +45,7 @@ import {
 import { emptyTotals, netOf, suggestTransfers, type GroupExpense } from '@/lib/group-ledger'
 import { success } from '@/lib/haptics'
 import { MAX_NAME, cleanGroupName, hasActiveInvite, inviteesOf, membersOf } from '@/lib/groups'
-import { formatRM } from '@/lib/money'
+import { formatMoney } from '@/lib/money'
 import { joinUrl, shareLink } from '@/lib/share-link'
 import { toast, toastUndo } from '@/lib/toast'
 
@@ -295,11 +295,11 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
 
       <section className="flex flex-col gap-3 rounded-3xl bg-card p-5">
         <h2 className="text-base font-semibold text-muted-foreground">Total spent</h2>
-        <Money sen={totals.spent} className="font-heading text-4xl font-extrabold" />
+        <Money currency={group.currency} sen={totals.spent} className="font-heading text-4xl font-extrabold" />
         {months.map(([ym, sen]) => (
           <div key={ym} className="flex items-center justify-between gap-3 text-base text-muted-foreground">
             <span>{monthLabel(ym)}</span>
-            <Money sen={sen} />
+            <Money currency={group.currency} sen={sen} />
           </div>
         ))}
       </section>
@@ -313,11 +313,11 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3">
                 <span className="min-w-0 flex-1 truncate text-base font-semibold">{nameOf(uid)}</span>
-                <Money sen={netOf(totals, uid)} sign className="shrink-0 text-base font-semibold" />
+                <Money currency={group.currency} sen={netOf(totals, uid)} sign className="shrink-0 text-base font-semibold" />
               </div>
               <div className="flex flex-wrap gap-x-3 text-base text-muted-foreground">
-                <span>Paid {formatRM(totals.paid[uid] ?? 0)}</span>
-                <span>Share {formatRM(totals.owed[uid] ?? 0)}</span>
+                <span>Paid {formatMoney(totals.paid[uid] ?? 0, group.currency)}</span>
+                <span>Share {formatMoney(totals.owed[uid] ?? 0, group.currency)}</span>
               </div>
             </div>
           </div>
@@ -361,7 +361,7 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
               key={`e-${item.e.id}`}
               title={item.e.title}
               subtitle={`${shortDate(item.date)} · paid by ${nameOf(item.e.paidBy)}`}
-              trailing={<Money sen={item.e.amount} className="text-base font-semibold" />}
+              trailing={<Money currency={group.currency} sen={item.e.amount} className="text-base font-semibold" />}
               onClick={() => setDetail({ open: true, expense: item.e })}
             />
           ) : (
@@ -369,7 +369,7 @@ function GroupLedger({ me, group }: { me: Me; group: WithId<Group> }) {
               key={`p-${item.s.id}`}
               title={`${nameOf(item.s.from)} paid ${nameOf(item.s.to)}`}
               subtitle={`${shortDate(item.date)} · ${{ confirmed: 'confirmed', rejected: 'not received', pending: 'waiting for confirmation' }[item.s.status]}`}
-              trailing={<Money sen={item.s.amount} className="text-base font-semibold" />}
+              trailing={<Money currency={group.currency} sen={item.s.amount} className="text-base font-semibold" />}
             />
           ),
         ])}

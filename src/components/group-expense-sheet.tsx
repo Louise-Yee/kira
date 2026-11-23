@@ -75,7 +75,7 @@ function Form({ group, meUid, initial, onSave, onClose }: Omit<Props, 'open'>) {
         }}
       />
       <TextField value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What was it for?" aria-label="Title" maxLength={100} />
-      <AmountInput value={amount} onChange={setAmount} autoFocus={!initial} />
+      <AmountInput currency={group.currency} value={amount} onChange={setAmount} autoFocus={!initial} />
       <DatePicker value={date} onChange={setDate} aria-label="Date" />
 
       <section className="flex flex-col gap-2">
@@ -104,9 +104,9 @@ function Form({ group, meUid, initial, onSave, onClose }: Omit<Props, 'open'>) {
           <div key={uid} className="flex min-h-11 items-center justify-between gap-3">
             <span className="min-w-0 truncate text-base">{nameOf(uid)}</span>
             {mode === 'even' ? (
-              <Money sen={shares[uid] ?? 0} className="text-base font-semibold" />
+              <Money currency={group.currency} sen={shares[uid] ?? 0} className="text-base font-semibold" />
             ) : (
-              <AmountInput size="sm" value={exact[uid] ?? 0} onChange={(sen) => setExact((e) => ({ ...e, [uid]: sen }))} />
+              <AmountInput currency={group.currency} size="sm" value={exact[uid] ?? 0} onChange={(sen) => setExact((e) => ({ ...e, [uid]: sen }))} />
             )}
           </div>
         ))}
@@ -116,7 +116,7 @@ function Form({ group, meUid, initial, onSave, onClose }: Omit<Props, 'open'>) {
             {mode === 'exact' && chosen.length > 0 && left !== 0 && (
               <>
                 {' '}
-                <Money sen={Math.abs(left)} /> {left > 0 ? 'left to assign.' : 'too much.'}
+                <Money currency={group.currency} sen={Math.abs(left)} /> {left > 0 ? 'left to assign.' : 'too much.'}
               </>
             )}
           </p>

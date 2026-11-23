@@ -17,6 +17,8 @@ export type GroupInvitee = { displayName: string; photoURL: string | null; by: s
 /** `groups/{id}`: a set of friends who split bills together. Only members can read it. */
 export type Group = {
   name: string
+  /** Set when the group was created and never changed: every expense, balance and settle-up is in it. Absent means RM. */
+  currency?: string
   ownerUid: string
   memberUids: string[]
   members: Record<string, GroupMember>

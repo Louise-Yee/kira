@@ -41,7 +41,7 @@ export function GroupSettleUp({ group, meUid, transfers, pending, rejected, allS
               title={`${name(s.to)} didn't get your payment`}
               subtitle={
                 <>
-                  <Money sen={s.amount} /> · {shortDate(s.date)} · back in the balances
+                  <Money currency={group.currency} sen={s.amount} /> · {shortDate(s.date)} · back in the balances
                 </>
               }
               takeBack={{ label: 'OK', onClick: () => onDismiss(s) }}
@@ -60,7 +60,7 @@ export function GroupSettleUp({ group, meUid, transfers, pending, rejected, allS
             <div key={`${t.from}-${t.to}`} className="flex min-h-14 items-center gap-3 rounded-2xl bg-card p-3">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-base font-semibold">{line(t.from, t.to, 'pay')}</span>
-                <Money sen={t.amount} className="block text-base text-muted-foreground" />
+                <Money currency={group.currency} sen={t.amount} className="block text-base text-muted-foreground" />
               </span>
               {t.from === meUid && (
                 <PillButton size="pill-sm" onClick={() => onSettle(t)}>
@@ -81,7 +81,7 @@ export function GroupSettleUp({ group, meUid, transfers, pending, rejected, allS
               title={line(s.from, s.to, 'paid')}
               subtitle={
                 <>
-                  <Money sen={s.amount} /> · {shortDate(s.date)}
+                  <Money currency={group.currency} sen={s.amount} /> · {shortDate(s.date)}
                 </>
               }
               onConfirm={s.to === meUid ? () => onConfirm(s) : undefined}

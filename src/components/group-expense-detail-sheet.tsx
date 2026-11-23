@@ -32,14 +32,14 @@ export function GroupExpenseDetailSheet({ open, onClose, group, meUid, expense, 
           <p className="text-base text-muted-foreground">
             {longDate(expense.date)} · paid by {nameOf(expense.paidBy)}
           </p>
-          <Money sen={expense.amount} className="font-heading text-4xl font-extrabold" />
+          <Money currency={group.currency} sen={expense.amount} className="font-heading text-4xl font-extrabold" />
 
           <section className="flex flex-col gap-1">
             <h3 className="text-base font-semibold text-muted-foreground">Split</h3>
             {Object.entries(expense.shares).map(([uid, share]) => (
               <div key={uid} className="flex min-h-11 items-center justify-between gap-3 text-base">
                 <span className="min-w-0 truncate">{nameOf(uid)}</span>
-                <Money sen={share} className="font-semibold" />
+                <Money currency={group.currency} sen={share} className="font-semibold" />
               </div>
             ))}
           </section>
@@ -57,7 +57,7 @@ export function GroupExpenseDetailSheet({ open, onClose, group, meUid, expense, 
                   <span className="min-w-0 truncate">
                     Before {nameOf(v.by)}'s edit on {shortDate(todayISO(new Date(v.at)))}: {v.title}
                   </span>
-                  <Money sen={v.amount} className="shrink-0" />
+                  <Money currency={group.currency} sen={v.amount} className="shrink-0" />
                 </div>
               ))}
             </section>
