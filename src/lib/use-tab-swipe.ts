@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
-import { animate, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
+import { animate, useMotionValue, useReducedMotion } from 'motion/react'
 import { detent } from '@/lib/haptics'
 import { soft } from '@/lib/motion'
 
@@ -48,7 +48,9 @@ export function useTabSwipe(
   const [box, setBox] = useState<PeekBox>({ top: 0, left: 0, width: 0, shift: 0 })
   const reduce = useReducedMotion()
   const span = useRef(1) // the width a swipe moves the page by, from the last gesture
-  const progress = useTransform(x, (v) => -v / span.current)
+  // The drag in tabs. Follows `x` while the finger is down; once a swipe commits it springs to the next tab on its own,
+  // so the nav highlight lands as you let go instead of when the page has finished arriving.
+  const progress = useMotionValue(0)
   const latest = useRef({ canGo, onSwipe })
   useEffect(() => {
     latest.current = { canGo, onSwipe }
@@ -66,6 +68,9 @@ export function useTabSwipe(
     let g: Gesture | null = null
     // A committed swipe is sliding the page out; a new touch waits for it, or it would navigate from a stale tab (#176).
     let committing = false
+    const unfollow = x.on('change', (v) => {
+      if (!committing) progress.set(-v / span.current)
+    })
     const setPeek = (dir: 1 | -1 | 0) => setPeekState({ from: fromRef.current, dir })
     // The page column's width, gutters included: the distance between one tab and the next.
     const width = () => page.current?.closest('main')?.clientWidth ?? innerWidth
@@ -121,6 +126,7 @@ export function useTabSwipe(
       }
       if (reduce) return latest.current.onSwipe(dir)
       committing = true
+      void animate(progress, dir, soft)
       void animate(x, -dir * width(), soft).then(() => {
         committing = false
         latest.current.onSwipe(dir)
@@ -133,12 +139,13 @@ export function useTabSwipe(
     window.addEventListener('touchend', onEnd, { passive: true })
     window.addEventListener('touchcancel', onEnd, { passive: true })
     return () => {
+      unfollow()
       window.removeEventListener('touchstart', onStart)
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
       window.removeEventListener('touchcancel', onEnd)
     }
-  }, [enabled, reduce, x, page])
+  }, [enabled, reduce, x, progress, page])
 
   return { x, peek, box, progress }
 }
