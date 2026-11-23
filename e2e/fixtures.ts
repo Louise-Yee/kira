@@ -148,6 +148,8 @@ export const test = base.extend<Fixtures>({
       await page.goto('/__e2e-blank')
       await page.evaluate(saveSession, session)
       await page.goto(path)
+      // A new account is asked its currency once (after its default settings are written): keep RM.
+      await page.getByRole('button', { name: /^MYR · RM/ }).click()
       // includeHidden: a sheet opened by the address (an invite link) hides the page behind it from the a11y tree.
       await expect(page.getByRole('button', { name: 'People', includeHidden: true })).toBeAttached()
       return user
