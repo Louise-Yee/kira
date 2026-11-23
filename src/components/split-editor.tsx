@@ -377,9 +377,9 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
         <CategoryPicker categories={choices} value={categoryId} onChange={setCategoryId} />
       </Section>
 
-      {problem && <p className="px-1 text-base text-muted-foreground">{problem}</p>}
       <SheetActions
         disabled={!!problem}
+        hint={problem}
         onSave={() => {
           if (problem || !categoryId) return
           success()

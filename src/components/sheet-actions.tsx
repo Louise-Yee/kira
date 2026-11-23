@@ -10,6 +10,8 @@ type Props = {
   label?: string
   onSave: () => void
   disabled?: boolean
+  /** Why the main action is disabled ("Pick a category."), shown above it while `disabled`. */
+  hint?: string | null
   /** Other actions (Cancel, Later, Share link), shown before the main one. */
   extras?: readonly Extra[]
   /** Shows a trash button. Pass `deleteLabel` for screen readers. */
@@ -20,7 +22,7 @@ type Props = {
 }
 
 /** The pinned action row of a sheet: [extras] [main action] [trash]. Lives in the sheet footer, so it never scrolls away. */
-export function SheetActions({ label = 'Save', onSave, disabled, extras, onDelete, deleteLabel = 'Delete', confirmDelete = true }: Props) {
+export function SheetActions({ label = 'Save', onSave, disabled, hint, extras, onDelete, deleteLabel = 'Delete', confirmDelete = true }: Props) {
   const [confirming, setConfirming] = useState(false)
   return (
     <SheetFooter>
@@ -34,26 +36,29 @@ export function SheetActions({ label = 'Save', onSave, disabled, extras, onDelet
           </PillButton>
         </div>
       ) : (
-        <div className="flex gap-2">
-          {extras?.map((x) => (
-            <PillButton key={x.label} variant="secondary" className="flex-1" disabled={x.disabled} onClick={x.onClick}>
-              {x.label}
+        <>
+          {disabled && hint && <p className="px-1 text-base text-muted-foreground">{hint}</p>}
+          <div className="flex gap-2">
+            {extras?.map((x) => (
+              <PillButton key={x.label} variant="secondary" className="flex-1" disabled={x.disabled} onClick={x.onClick}>
+                {x.label}
+              </PillButton>
+            ))}
+            <PillButton className="flex-1" disabled={disabled} onClick={onSave}>
+              {label}
             </PillButton>
-          ))}
-          <PillButton className="flex-1" disabled={disabled} onClick={onSave}>
-            {label}
-          </PillButton>
-          {onDelete && (
-            <PillButton
-              variant="destructive"
-              className="size-14 shrink-0 px-0"
-              aria-label={deleteLabel}
-              onClick={confirmDelete ? () => setConfirming(true) : onDelete}
-            >
-              <Trash2 className="size-5" />
-            </PillButton>
-          )}
-        </div>
+            {onDelete && (
+              <PillButton
+                variant="destructive"
+                className="size-14 shrink-0 px-0"
+                aria-label={deleteLabel}
+                onClick={confirmDelete ? () => setConfirming(true) : onDelete}
+              >
+                <Trash2 className="size-5" />
+              </PillButton>
+            )}
+          </div>
+        </>
       )}
     </SheetFooter>
   )
