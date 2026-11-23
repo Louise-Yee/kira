@@ -88,7 +88,10 @@ export type PublicReceipt = {
 export type SplitDraft = { title: string; date: string; categoryId: string; form: SplitForm } & Partial<Pick<Split, 'currency' | 'rate'>>
 
 export type Settings = {
+  /** The storage currency: every `amount` is RM sen. Never changes (older versions rely on it). */
   currency: 'MYR'
+  /** What totals are shown in and new entries start in. Missing: the setup screen hasn't been answered yet. */
+  displayCurrency?: string
   createdAt: number
   tngQr?: string
   /** Friends can find this account by email. Missing means on. */

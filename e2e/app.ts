@@ -2,8 +2,11 @@ import { expect, type User } from './fixtures.ts'
 
 /** Steps a person takes in the app, in the words a person would use. */
 
-export const tab = (u: User, name: 'Home' | 'Recurring' | 'Split' | 'People' | 'Settings') =>
-  u.page.getByRole('button', { name, exact: true }).click()
+export async function tab(u: User, name: 'Home' | 'Recurring' | 'Split' | 'People' | 'Settings') {
+  await u.page.getByRole('button', { name, exact: true }).click()
+  // The page being left stays (inert) for its exit animation; role queries still see it, so wait until it's gone.
+  await expect(u.page.locator('main [inert]')).toHaveCount(0)
+}
 
 /** The open sheet (dialog) with this title. */
 export const sheet = (u: User, title: string | RegExp) => u.page.getByRole('dialog', { name: title })

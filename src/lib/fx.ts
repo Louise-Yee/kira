@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { todayISO } from '@/lib/date'
+import { addMonths, todayISO } from '@/lib/date'
+import type { RateSeries } from '@/lib/display'
 import { HOME } from '@/lib/money'
 
 // Free ECB rates, no key, CORS open. ~30 currencies; the others 404 and are typed by hand.
@@ -18,7 +19,7 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
-function write(key: string, value: Cached | string[]) {
+function write<T>(key: string, value: T) {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch {
@@ -72,4 +73,54 @@ export const recentCurrencies = (): string[] => read<string[]>(RECENT_KEY, [])
 export function rememberCurrency(currency: string) {
   if (currency === HOME) return
   write(RECENT_KEY, [currency, ...recentCurrencies().filter((c) => c !== currency)].slice(0, 5))
+}
+
+type SeriesCache = Record<string, { rates: RateSeries; at: number }>
+const seriesKey = (currency: string) => `kira:fx-series:${currency}`
+const loadSeries = (currency: string): RateSeries =>
+  currency === HOME ? {} : Object.values(read<SeriesCache>(seriesKey(currency), {})).reduce<RateSeries>((all, m) => ({ ...all, ...m.rates }), {})
+// ponytail: the current month is refetched after 6h; past months are cached for good (ECB rates don't change).
+const STALE_MS = 6 * 3600_000
+
+/**
+ * Daily rates RM -> `currency` (units per 1 RM) covering the months fromYm..toYm, cached on the device by month.
+ * Returns every rate cached so far (instantly), and again once a missing month has been fetched.
+ */
+export function useRateSeries(currency: string, fromYm: string, toYm: string): RateSeries {
+  const [state, setState] = useState(() => ({ currency, series: loadSeries(currency) }))
+  if (state.currency !== currency) setState({ currency, series: loadSeries(currency) })
+
+  useEffect(() => {
+    if (currency === HOME) return
+    const today = todayISO()
+    const current = today.slice(0, 7)
+    const cached = read<SeriesCache>(seriesKey(currency), {})
+    const missing: string[] = []
+    for (let ym = fromYm; ym <= toYm && ym <= current; ym = addMonths(ym, 1)) {
+      const m = cached[ym]
+      if (!m || (ym === current && Date.now() - m.at > STALE_MS)) missing.push(ym)
+    }
+    if (!missing.length) return
+    let live = true
+    // One request from the first missing month to today; a 404 (currency not in ECB) is cached as empty months.
+    void fetch(`${API}/${missing[0]}-01..${today}?base=${HOME}&symbols=${currency}`)
+      .then(async (res) => {
+        if (!res.ok && res.status !== 404) return
+        const body = res.ok ? ((await res.json()) as { rates: Record<string, Record<string, number | undefined>> }) : { rates: {} }
+        const fresh = read<SeriesCache>(seriesKey(currency), {})
+        for (let ym = missing[0]; ym <= current; ym = addMonths(ym, 1)) fresh[ym] = { rates: {}, at: Date.now() }
+        for (const [date, r] of Object.entries(body.rates)) {
+          const rate = r[currency]
+          if (rate) fresh[date.slice(0, 7)].rates[date] = rate
+        }
+        write(seriesKey(currency), fresh)
+        if (live) setState({ currency, series: loadSeries(currency) })
+      })
+      .catch(() => {}) // offline: whatever is cached stands
+    return () => {
+      live = false
+    }
+  }, [currency, fromYm, toYm])
+
+  return state.currency === currency ? state.series : loadSeries(currency)
 }

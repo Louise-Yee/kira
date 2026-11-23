@@ -16,6 +16,7 @@ import { Sheet } from '@/components/sheet'
 import { TextField } from '@/components/text-field'
 import { success, warning } from '@/lib/haptics'
 import { todayISO } from '@/lib/date'
+import { useDisplayCurrency } from '@/lib/display-currency'
 import { useRate } from '@/lib/fx'
 import { HOME } from '@/lib/money'
 import type { Category, Split, SplitDraft, WithId } from '@/lib/db'
@@ -87,7 +88,9 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
   const [date, setDate] = useState(initial?.date ?? todayISO())
   const [form, setForm] = useState<SplitForm>(initial ? formFromSplit(initial) : emptyForm)
   // Every amount on the split is in `currency`; my expense is converted to RM on save.
-  const [currency, setCurrency] = useState(initial?.currency ?? HOME)
+  const display = useDisplayCurrency()
+  // An existing split without a currency is RM; a new one starts in the display currency.
+  const [currency, setCurrency] = useState(initial ? (initial.currency ?? HOME) : display)
   const [manualRate, setManualRate] = useState<number | null>(initial?.rate ?? null)
   const fetched = useRate(currency, date)
   const rate = currency === HOME ? null : (manualRate ?? fetched.rate)

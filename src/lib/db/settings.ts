@@ -22,3 +22,8 @@ export function setPaymentQr(uid: string, dataUrl: string | null) {
 export function setDiscoverable(uid: string, on: boolean) {
   void setDoc(settingsRef(uid), { discoverable: on }, { merge: true }).catch(reportError)
 }
+
+/** The currency totals are shown in and new entries start in (answers the setup screen too). */
+export function setDisplayCurrency(uid: string, currency: string) {
+  void setDoc(settingsRef(uid), { displayCurrency: currency }, { merge: true }).catch(reportError)
+}

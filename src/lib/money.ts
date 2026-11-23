@@ -69,14 +69,17 @@ export function formatMoney(sen: number, currency = HOME, { sign = false }: { si
 export const formatRM = (sen: number, opts?: { sign?: boolean }): string => formatMoney(sen, HOME, opts)
 
 /**
- * `amount` (minor units of `currency`) -> RM sen at `rate` (RM per 1 unit), rounded half up.
+ * `amount` (minor units of `from`) -> minor units of `to` at `rate` (`to` per 1 `from`), rounded half up.
  * The rate is scaled to an integer (8 decimals) so the money maths itself stays integer.
  */
-export function toSen(amount: number, currency: string, rate: number): number {
-  const num = BigInt(amount) * BigInt(Math.round(rate * 1e8)) * 100n
-  const den = 10n ** BigInt(minorDigits(currency)) * 100_000_000n
-  return Number((num + den / 2n) / den)
+export function convert(amount: number, from: string, to: string, rate: number): number {
+  const num = BigInt(Math.abs(amount)) * BigInt(Math.round(rate * 1e8)) * 10n ** BigInt(minorDigits(to))
+  const den = 10n ** BigInt(minorDigits(from)) * 100_000_000n
+  return Math.sign(amount) * Number((num + den / 2n) / den)
 }
+
+/** `amount` (minor units of `currency`) -> RM sen at `rate` (RM per 1 unit). */
+export const toSen = (amount: number, currency: string, rate: number): number => convert(amount, currency, HOME, rate)
 
 /**
  * What gets stored for an amount entered in `currency`: RM sen, plus the original when it is foreign.
@@ -97,6 +100,8 @@ export function parseRate(text: string): number | null {
 /** 0.025923 -> "0.025923", 4.1125 -> "4.1125" (6 significant digits, no trailing zeros). */
 export const formatRate = (rate: number): string => String(Number(rate.toPrecision(6)))
 
-/** How a stored amount was entered, to fill a form: the original when foreign, else the RM sen. */
-export const entered = (x?: { amount: number; original?: Original }): { currency: string; amount: number; rate: number | null } =>
-  x?.original ? { ...x.original } : { currency: HOME, amount: x?.amount ?? 0, rate: null }
+/** How a stored amount was entered, to fill a form: the original when foreign, else the RM sen. A new one starts empty in `start`. */
+export function entered(x?: { amount: number; original?: Original }, start = HOME): { currency: string; amount: number; rate: number | null } {
+  if (!x) return { currency: start, amount: 0, rate: null }
+  return x.original ? { ...x.original } : { currency: HOME, amount: x.amount, rate: null }
+}

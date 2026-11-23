@@ -12,7 +12,8 @@ import { Ascii } from '@/components/ascii'
 import { categoryOrOther } from '@/lib/category-lookup'
 import { coinField, type Field } from '@/lib/coin'
 import { addMonths, dayLabel, monthLabel, monthName } from '@/lib/date'
-import { formatRM } from '@/lib/money'
+import { formatMoney, HOME } from '@/lib/money'
+import type { shownIn } from '@/lib/display'
 import type { Category, Transaction, WithId } from '@/lib/db'
 import { pop, press } from '@/lib/motion'
 import { groupByDay, signed, totals } from '@/lib/month-summary'
@@ -32,16 +33,19 @@ type Props = {
   categories: readonly WithId<Category>[]
   /** Income and expense of the last months for the trend chart; undefined while loading. */
   trend: readonly MonthTotals[] | undefined
+  /** The display currency and each transaction's value in it. */
+  view: ReturnType<typeof shownIn>
   onAdd: () => void
   onEdit: (tx: WithId<Transaction>) => void
 }
 
-export function MonthView({ name, ym, today, onMonthChange, transactions, categories, trend, onAdd, onEdit }: Props) {
+export function MonthView({ name, ym, today, onMonthChange, transactions, categories, trend, view, onAdd, onEdit }: Props) {
   const currentYm = today.slice(0, 7)
-  const { income, expense } = totals(transactions ?? [])
-  const days = groupByDay(transactions ?? [])
+  const { currency, amountOf } = view
+  const { income, expense } = totals(transactions ?? [], amountOf)
+  const days = groupByDay(transactions ?? [], amountOf)
   const byId = new Map(categories.map((c) => [c.id, c]))
-  const breakdown = byCategory(transactions ?? [])
+  const breakdown = byCategory(transactions ?? [], 6, amountOf)
   const showTrend = trend?.some((m) => m.income || m.expense)
   // Index of each day's first row across all groups, for the stagger delay.
   const starts = days.map((_, i) => days.slice(0, i).reduce((n, d) => n + d.items.length, 0))
@@ -82,17 +86,17 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
         {/* screen blend: dark glyphs vanish into the blue, bright ones glow */}
         <Ascii field={heroField} cell={6} floor={0.2} className="absolute inset-0 size-full opacity-50 mix-blend-screen" />
         <p className="relative text-base font-semibold opacity-85">Left in {monthName(ym)}</p>
-        <Money sen={income - expense} countUp className="relative mt-1 block font-heading text-5xl font-extrabold tracking-tight" />
+        <Money sen={income - expense} currency={currency} countUp className="relative mt-1 block font-heading text-5xl font-extrabold tracking-tight" />
       </motion.section>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl bg-card p-4">
           <p className="text-base text-muted-foreground">In</p>
-          <Money sen={income} countUp className="block font-heading text-xl font-bold" />
+          <Money sen={income} currency={currency} countUp className="block font-heading text-xl font-bold" />
         </div>
         <div className="rounded-2xl bg-card p-4">
           <p className="text-base text-muted-foreground">Out</p>
-          <Money sen={expense} countUp className="block font-heading text-xl font-bold" />
+          <Money sen={expense} currency={currency} countUp className="block font-heading text-xl font-bold" />
         </div>
       </div>
 
@@ -100,9 +104,9 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
         // The trend is first (left at lg). Phones keep each card's own height; at lg the category card
         // stretches to the trend's (fixed) height, so it matches even with fewer rows.
         <div className="grid items-start gap-3 lg:grid-cols-2 lg:items-stretch">
-          {trend && showTrend && <TrendBars months={trend} selected={ym} onSelect={onMonthChange} />}
+          {trend && showTrend && <TrendBars months={trend} selected={ym} onSelect={onMonthChange} currency={currency} />}
           {breakdown.total > 0 ? (
-            <CategoryBars breakdown={breakdown} categories={byId} />
+            <CategoryBars breakdown={breakdown} categories={byId} currency={currency} />
           ) : (
             // Keeps the second column occupied at lg; phones just skip it.
             <section className="hidden rounded-2xl bg-card p-4 lg:block">
@@ -121,7 +125,7 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
         <section key={day.date} className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between px-1">
             <h2 className="text-base font-semibold text-muted-foreground">{dayLabel(day.date, today)}</h2>
-            <Money sen={day.net} sign className="text-base font-semibold text-muted-foreground" />
+            <Money sen={day.net} currency={currency} sign className="text-base font-semibold text-muted-foreground" />
           </div>
           {day.items.map((t, ti) => {
             const cat = categoryOrOther(byId, t.categoryId, t.kind)
@@ -136,8 +140,12 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
                 <ListRow
                   icon={<CategoryIcon name={cat?.icon ?? 'other'} color={cat?.color ?? 'cat-1'} tile />}
                   title={t.note || cat?.name || 'Unknown category'}
-                  // A foreign one shows what was paid, with its RM value underneath.
-                  subtitle={[t.note && cat?.name, t.original && formatRM(t.amount)].filter(Boolean).join(' · ') || undefined}
+                  // What was paid, with its value in the display currency underneath when that differs.
+                  subtitle={
+                    [t.note && cat?.name, (t.original?.currency ?? HOME) !== currency && formatMoney(amountOf(t), currency)]
+                      .filter(Boolean)
+                      .join(' · ') || undefined
+                  }
                   trailing={
                     <Money
                       sen={signed({ kind: t.kind, amount: t.original?.amount ?? t.amount })}

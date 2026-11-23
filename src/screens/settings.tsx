@@ -1,5 +1,8 @@
+import { CurrencySheet } from '@/components/currency-select'
+import { useDisplayCurrency } from '@/lib/display-currency'
+import { currencySymbol } from '@/lib/money'
 import { useCallback, useState } from 'react'
-import { ChevronRight, DatabaseBackup, QrCode, Smartphone, Sparkles, type LucideIcon } from 'lucide-react'
+import { Banknote, ChevronRight, DatabaseBackup, QrCode, Smartphone, Sparkles, type LucideIcon } from 'lucide-react'
 import { Capacitor } from '@capacitor/core'
 import {
   categoryInUse,
@@ -7,6 +10,7 @@ import {
   moveAndDeleteCategory,
   saveCategory,
   setDiscoverable,
+  setDisplayCurrency,
   setPaymentQr,
   swapCategoryOrder,
   useCategories,
@@ -61,6 +65,8 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
   const [qrOpen, setQrOpen] = useState(false)
   const [backupOpen, setBackupOpen] = useState(false)
   const [whatsNewOpen, setWhatsNewOpen] = useState(false)
+  const [currencyOpen, setCurrencyOpen] = useState(false)
+  const display = useDisplayCurrency()
   const changes = releasedEntries(APP_VERSION)
   const settings = useSettings(user.uid)
   const isUsed = useCallback((id: string) => categoryInUse(user.uid, id), [user.uid])
@@ -101,6 +107,14 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
         onDelete={(id) => toastUndo('Category deleted', deleteCategory(user.uid, id))}
         onMove={(from, to) => moveAndDeleteCategory(user.uid, from, to)}
       />
+      <ListRow
+        icon={<Tile icon={Banknote} />}
+        title="Currency"
+        subtitle={`${currencySymbol(display)} · totals and new entries`}
+        trailing={<ChevronRight className="size-5 text-muted-foreground" />}
+        onClick={() => setCurrencyOpen(true)}
+      />
+      <CurrencySheet open={currencyOpen} onClose={() => setCurrencyOpen(false)} value={display} onPick={(c) => setDisplayCurrency(user.uid, c)} />
       <ListRow
         icon={<Tile icon={QrCode} />}
         title="Payment QR"

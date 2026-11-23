@@ -1,5 +1,6 @@
 // Pure chart maths (type-only imports) so scripts/check-chart-data.ts can run it under plain node.
 import type { Transaction } from '@/lib/db'
+import type { AmountOf } from './month-summary.ts'
 
 type Tx = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'date'>
 
@@ -14,9 +15,9 @@ export type CategoryBreakdown = {
 }
 
 /** Expense per category, biggest first. Rows past `limit` fold into `others`. Percents are whole numbers that add up to 100. */
-export function byCategory(txs: readonly Tx[], limit = 6): CategoryBreakdown {
+export function byCategory<T extends Tx>(txs: readonly T[], limit = 6, amountOf: AmountOf<T> = (t) => t.amount): CategoryBreakdown {
   const sums = new Map<string, number>()
-  for (const t of txs) if (t.kind === 'expense') sums.set(t.categoryId, (sums.get(t.categoryId) ?? 0) + t.amount)
+  for (const t of txs) if (t.kind === 'expense') sums.set(t.categoryId, (sums.get(t.categoryId) ?? 0) + amountOf(t))
   const total = [...sums.values()].reduce((a, b) => a + b, 0)
   const sorted = [...sums]
     .map(([categoryId, amount]) => ({ categoryId, amount }))
@@ -31,11 +32,11 @@ export function byCategory(txs: readonly Tx[], limit = 6): CategoryBreakdown {
 export type MonthTotals = { ym: string; income: number; expense: number }
 
 /** Income and expense per month, in the order of `yms`. Transactions outside those months are ignored. */
-export function monthlyTotals(txs: readonly Tx[], yms: readonly string[]): MonthTotals[] {
+export function monthlyTotals<T extends Tx>(txs: readonly T[], yms: readonly string[], amountOf: AmountOf<T> = (t) => t.amount): MonthTotals[] {
   const out = new Map<string, MonthTotals>(yms.map((ym) => [ym, { ym, income: 0, expense: 0 }]))
   for (const t of txs) {
     const m = out.get(t.date.slice(0, 7))
-    if (m) m[t.kind] += t.amount
+    if (m) m[t.kind] += amountOf(t)
   }
   return yms.map((ym) => out.get(ym)!)
 }

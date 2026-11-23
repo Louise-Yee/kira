@@ -5,6 +5,7 @@ import { Sheet } from '@/components/sheet'
 import { SheetActions } from '@/components/sheet-actions'
 import { success, warning } from '@/lib/haptics'
 import { todayISO } from '@/lib/date'
+import { useDisplayCurrency } from '@/lib/display-currency'
 import { useRate } from '@/lib/fx'
 import { entered, toHome } from '@/lib/money'
 import { toast } from '@/lib/toast'
@@ -30,9 +31,10 @@ export function TransactionSheet({ open, onClose, initial, ...rest }: Props) {
 }
 
 function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'open'>) {
+  const display = useDisplayCurrency()
   const [entry, setEntry] = useState<Entry>({
     kind: initial?.kind ?? 'expense',
-    ...entered(initial),
+    ...entered(initial, display),
     categoryId: initial?.categoryId ?? null,
     note: initial?.note ?? '',
   })
