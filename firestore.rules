@@ -108,8 +108,10 @@ service cloud.firestore {
       // Members, and friends invited into it (so they can see what they're joining).
       allow read: if request.auth != null && (isMember() || isInvited());
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['name', 'ownerUid', 'memberUids', 'members', 'inviteId', 'inviteExpiresAt', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['name', 'currency', 'ownerUid', 'memberUids', 'members', 'inviteId', 'inviteExpiresAt', 'createdAt', 'updatedAt'])
         && nameOk()
+        // Set once here; no update rule lets anyone change it.
+        && (!('currency' in request.resource.data) || request.resource.data.currency.matches('^[A-Z]{3}$'))
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.memberUids == [request.auth.uid]
         && request.resource.data.members.keys().hasOnly([request.auth.uid]);

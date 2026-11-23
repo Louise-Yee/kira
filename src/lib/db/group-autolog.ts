@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { deleteDoc, doc, getDocFromServer, setDoc, updateDoc } from 'firebase/firestore'
 import { addDays, todayISO } from '@/lib/date'
+import { fetchRate } from '@/lib/fx'
+import { HOME, toHome } from '@/lib/money'
 import { logTxId, planSync, type GroupLog, type Synced } from '@/lib/group-autolog'
 import { col, listen, liveDocs, reportError, save } from './core'
 import { recentExpensesQuery } from './group-expenses'
@@ -77,11 +79,16 @@ function writeSynced(uid: string, gid: string, synced: Synced) {
  * edit updates its amount and date, a delete (or taking me out of it) removes it. Runs while the app is open, from
  * the day auto-log was turned on, and only writes what changed (it remembers what it wrote on this device).
  * Each transaction is written on its own: one that I deleted by hand just fails quietly and doesn't block the rest.
+ * A group in another currency logs RM at the rate on the expense's date, with the original; when no rate can be had
+ * (offline with nothing cached, or a currency the rate API lacks) that expense waits for the next snapshot.
  */
 export function useGroupAutoLog(uid: string, groups: readonly WithId<Group>[] | undefined, logs: readonly (GroupLog & { id: string })[] | undefined) {
-  const active = (logs ?? []).filter((l) => l.enabled && groups?.some((g) => g.id === l.id))
+  const active = (logs ?? []).flatMap((l) => {
+    const group = l.enabled ? groups?.find((g) => g.id === l.id) : undefined
+    return group ? [{ ...l, currency: group.currency ?? HOME }] : []
+  })
   // A stable key, so the listeners only restart when something about them changed.
-  const key = JSON.stringify(active.map((l) => [l.id, l.categoryId, l.from]))
+  const key = JSON.stringify(active.map((l) => [l.id, l.categoryId, l.from, l.currency]))
   useEffect(() => {
     const stops = active.map((log) => {
       const gid = log.id
@@ -94,16 +101,24 @@ export function useGroupAutoLog(uid: string, groups: readonly WithId<Group>[] | 
           if (snap.metadata.fromCache) return
           // A deleted expense counts as removed, so its auto-logged transaction goes too.
           const expenses = liveDocs(snap).map((e) => ({ id: e.id, date: e.date, title: e.title, shares: e.shares, updatedAt: e.updatedAt }))
-          const plan = planSync(uid, expenses, readSynced(uid, gid), since)
+          const synced = readSynced(uid, gid)
+          const plan = planSync(uid, expenses, synced, since)
           if (!plan.upserts.length && !plan.removals.length) return
           const now = Date.now()
           const ref = (expenseId: string) => doc(col(uid, 'transactions'), logTxId(gid, expenseId))
+          const noRate = new Set<string>()
           const writes = [
-            ...plan.upserts.map((u) =>
-              u.isNew
+            ...plan.upserts.map(async (u) => {
+              const money = log.currency === HOME ? { amount: u.amount } : toHome(u.amount, log.currency, await fetchRate(log.currency, u.date))
+              if (!money) {
+                noRate.add(u.expenseId)
+                return
+              }
+              // updateDoc leaves a stale `original` in place only if the currency changed, which a group never does.
+              return u.isNew
                 ? setDoc(ref(u.expenseId), {
                     kind: 'expense',
-                    amount: u.amount,
+                    ...money,
                     categoryId: log.categoryId,
                     date: u.date,
                     note: u.title,
@@ -112,14 +127,20 @@ export function useGroupAutoLog(uid: string, groups: readonly WithId<Group>[] | 
                     createdAt: now,
                     updatedAt: now,
                   })
-                : updateDoc(ref(u.expenseId), { amount: u.amount, date: u.date, updatedAt: now }),
-            ),
+                : updateDoc(ref(u.expenseId), { ...money, date: u.date, updatedAt: now })
+            }),
             ...plan.removals.map((id) => deleteDoc(ref(id))),
           ]
           // Remember it once the writes are through, whether or not each one worked (see above).
           void Promise.allSettled(writes).then((results) => {
             for (const r of results) if (r.status === 'rejected') reportError(r.reason instanceof Error ? r.reason : new Error('auto-log write failed'))
-            writeSynced(uid, gid, plan.next)
+            // One that had no rate isn't remembered as written, so the next snapshot tries it again.
+            const next = { ...plan.next }
+            for (const id of noRate) {
+              if (synced[id]) next[id] = synced[id]
+              else delete next[id]
+            }
+            writeSynced(uid, gid, next)
           })
         },
       )

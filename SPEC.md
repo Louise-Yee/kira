@@ -123,6 +123,10 @@ users/{uid}
   updating, RM preselected); changed in Settings. Stored data is never converted: a transaction paid in the display
   currency counts its exact amount, any other one its RM amount at the RM→display rate on its own date (ECB daily
   series, cached on the device by month), so past months never change. With no rate known, totals stay in RM.
+- **Group currency** (`groups/{id}.currency`, absent = RM): picked when the group is created (starts as the creator's
+  display currency) and never changed. Expenses, balances and settle-ups are in it. My auto-logged share is RM at the
+  rate on the expense's date, with `original`; with no rate to be had it waits and is retried. Older app versions
+  would show such a group as RM, so its release bumps `minVersion`.
 
 ## 6. Design direction
 Inspired by Wise's *qualities*. We don't copy its green, its font or its layouts.

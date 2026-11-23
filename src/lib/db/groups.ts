@@ -3,6 +3,7 @@ import { arrayRemove, arrayUnion, collection, deleteField, doc, getDoc, query, u
 import type { FirebaseError } from 'firebase/app'
 import { db } from '@/lib/firebase'
 import { INVITE_MS, cleanGroupName, type Group, type Invite } from '@/lib/groups'
+import { HOME } from '@/lib/money'
 import { converter, deletion, reportError } from './core'
 import type { Me } from './friends'
 import type { WithId } from './types'
@@ -81,7 +82,8 @@ export function useInvite(token: string) {
 }
 
 /** Create a group with its first invite link. Returns the new group id at once, before the write reaches the server. */
-export function createGroup(me: Me, name: string): string {
+/** Create a group in `currency`, fixed for good (RM leaves the field out, like groups made before currencies). */
+export function createGroup(me: Me, name: string, currency: string): string {
   const now = Date.now()
   const clean = cleanGroupName(name)
   const gid = doc(groups).id
@@ -89,6 +91,7 @@ export function createGroup(me: Me, name: string): string {
   const batch = writeBatch(db)
   batch.set(groupRef(gid), {
     name: clean,
+    ...(currency !== HOME ? { currency } : {}),
     ownerUid: me.uid,
     memberUids: [me.uid],
     members: { [me.uid]: { displayName: nameOf(me), photoURL: me.photoURL, joinedAt: now } },

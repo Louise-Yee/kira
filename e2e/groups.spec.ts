@@ -252,3 +252,11 @@ test('an invite can be declined, or cancelled by whoever sent it', async ({ sign
   await expect(bob.page.getByRole('heading', { name: 'Group invites' })).toBeHidden()
   await expect(alice.page.getByText('1 member', { exact: true })).toBeVisible()
 })
+
+test('a group in another currency keeps its amounts in that currency', async ({ signIn }) => {
+  const alice = await signIn('Alice')
+  await createGroup(alice, 'Singapore trip', { search: 'singapore', code: 'SGD' })
+  await addGroupExpense(alice, 'Chicken rice', '1250')
+  await expect(section(alice, 'Total spent')).toContainText('S$12.50')
+  await expect(section(alice, 'Expenses')).toContainText(/Chicken rice.*S\$12\.50/)
+})

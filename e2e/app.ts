@@ -53,11 +53,19 @@ export async function openGroups(u: User) {
 }
 
 /** Creates a group and leaves its screen open. */
-export async function createGroup(u: User, name: string) {
+/** `currency` (searched by name, then picked by code) when the group shouldn't be in RM. */
+export async function createGroup(u: User, name: string, currency?: { search: string; code: string }) {
   await openGroups(u)
   await u.page.getByRole('button', { name: 'New group' }).first().click()
   const s = sheet(u, 'New group')
   await s.getByLabel('Group name').fill(name)
+  if (currency) {
+    await s.getByRole('button', { name: /^Currency:/ }).click()
+    const picker = sheet(u, 'Currency')
+    await picker.getByLabel('Search currencies').fill(currency.search)
+    await picker.getByRole('button', { name: new RegExp(`^${currency.code} `) }).click()
+    await expect(picker).toBeHidden()
+  }
   await s.getByRole('button', { name: 'Create' }).click()
   await expect(u.page.getByRole('heading', { name, level: 1 })).toBeVisible()
 }
