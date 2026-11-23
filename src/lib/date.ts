@@ -62,13 +62,13 @@ export function longDate(iso: string): string {
 
 const WEEKDAYS =['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-/** "Today", "Yesterday", else "Mon, 10 Nov". `today` is passed in so this stays pure. */
-export function dayLabel(iso: string, today: string): string {
+/** "Today", "Yesterday", else "Mon, 10 Nov" ("10 Nov" with `weekday: false`, for tight rows). `today` is passed in so this stays pure. */
+export function dayLabel(iso: string, today: string, { weekday = true }: { weekday?: boolean } = {}): string {
   if (iso === today) return 'Today'
   const [y, m, d] = iso.split('-').map(Number)
   const [ty, tm, td] = today.split('-').map(Number)
   if (iso === todayISO(new Date(ty, tm - 1, td - 1))) return 'Yesterday'
-  return `${WEEKDAYS[new Date(y, m - 1, d).getDay()]}, ${shortDate(iso)}`
+  return weekday ? `${WEEKDAYS[new Date(y, m - 1, d).getDay()]}, ${shortDate(iso)}` : shortDate(iso)
 }
 
 /** "2026-11-17" -> local Date (for libraries that want one, e.g. the calendar). */

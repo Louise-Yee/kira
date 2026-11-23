@@ -131,7 +131,7 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
                         {s.people.length}
                       </span>
                     </span>
-                    {dayLabel(s.date, today)}
+                    {dayLabel(s.date, today, { weekday: false })}
                   </span>
                 }
                 trailing={

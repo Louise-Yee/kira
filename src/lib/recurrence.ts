@@ -45,9 +45,11 @@ export function dueIndices(rule: RecurrenceRule, fromIndex: number, today: strin
 export const nextDate = (rule: RecurrenceRule, fromIndex: number): string | null =>
   withinEnd(rule, fromIndex) ? occurrenceDate(rule, fromIndex) : null
 
-/** "Every month", "Every 3 weeks". */
+const ONCE: Record<Freq, string> = { day: 'Daily', week: 'Weekly', month: 'Monthly', year: 'Yearly' }
+
+/** "Monthly", "Every 3 weeks": short, so a list row has room for the next date. */
 export const describeFrequency = (freq: Freq, interval: number): string =>
-  interval === 1 ? `Every ${freq}` : `Every ${interval} ${freq}s`
+  interval === 1 ? ONCE[freq] : `Every ${interval} ${freq}s`
 
 /** Changing any of these rewrites history, so the old rule must end and a new one start. */
 export const scheduleChanged = (
