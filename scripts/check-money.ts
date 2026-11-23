@@ -41,6 +41,10 @@ assert.deepEqual(
   ['EUR', 'GBP', 'THB', 'KRW', 'IDR', 'VND', 'INR', 'PHP', 'USD', 'SGD', 'AUD', 'HKD', 'TWD', 'JPY', 'CNY', 'MYR'].map(currencySymbol),
   ['€', '£', '฿', '₩', 'Rp', '₫', '₹', '₱', 'US$', 'S$', 'A$', 'HK$', 'NT$', 'JP¥', 'CN¥', 'RM'],
 )
+assert.equal(currencySymbol('ARS'), 'ARS') // not "A$", which is AUD's
+// no two currencies ever get the same label
+const labels = Intl.supportedValuesOf('currency').map(currencySymbol)
+assert.equal(new Set(labels).size, labels.length)
 assert.equal(formatMoney(-1250), '−RM 12.50')
 
 // conversion: integer maths, rounded half up
