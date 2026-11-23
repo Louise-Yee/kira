@@ -40,7 +40,10 @@ export function TabBar<Id extends string>({ tabs, active: current, onChange, sid
   // One step is a tab plus the gap between tabs (gap-0.5 across, gap-1 down the sidebar).
   const offset = useTransform(steps, (n) => `calc(${n * 100}% + ${n * (vertical ? 4 : 2)}px)`)
   return (
-    <nav
+    <>
+      {/* Blurs content under the system navigation bar, so it doesn't show through it. Phones and tablets only. */}
+      <div aria-hidden className="pointer-events-none fixed inset-x-0 bottom-0 z-10 h-(--inset-bottom) bg-background/60 backdrop-blur-xl lg:hidden" />
+      <nav
       className={cn(
         // Floating glass pill, centered above the safe area.
         'fixed inset-x-0 bottom-[max(1rem,var(--inset-bottom))] z-10 mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-0.5 rounded-full border border-glass-edge bg-glass p-1 shadow-lg backdrop-blur-xl backdrop-saturate-150',
@@ -84,6 +87,7 @@ export function TabBar<Id extends string>({ tabs, active: current, onChange, sid
           </motion.button>
         )
       })}
-    </nav>
+      </nav>
+    </>
   )
 }
