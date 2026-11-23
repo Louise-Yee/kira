@@ -34,11 +34,18 @@ export async function scanReceipt(file: File, onProgress: (p: number) => void): 
   const { createWorker } = await import('tesseract.js')
   let stage = 'starting'
   // workerBlobURL off: the Android WebView doesn't serve a blob worker's importScripts, so load the worker file directly.
+  // cacheMethod none: the worker's IndexedDB cache stalled at "loading language traineddata" in the Android WebView,
+  // and the data is bundled with the app anyway, so a cache buys nothing.
+  const langPath = `${import.meta.env.BASE_URL}tessdata`
+  stage = 'checking language data'
+  const check = await fetch(`${langPath}/eng.traineddata.gz`, { method: 'HEAD' })
+  if (!check.ok) throw new Error(`Couldn't find the reader's language data (${check.status}).`)
   const starting = createWorker('eng', 1, {
     workerBlobURL: false,
+    cacheMethod: 'none',
+    langPath,
     workerPath,
     corePath,
-    langPath: `${import.meta.env.BASE_URL}tessdata`,
     logger: (m) => {
       stage = m.status
       if (m.status === 'recognizing text') onProgress(m.progress)
