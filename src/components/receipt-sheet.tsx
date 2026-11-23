@@ -23,7 +23,7 @@ type Props = {
 /** Preview a split's receipt image and share it: everyone's, or one person's (so others' items stay private). */
 export function ReceiptSheet({ open, onClose, split, qr, onCreateLink }: Props) {
   return (
-    <Sheet open={open} onClose={onClose} title="Receipt" tall>
+    <Sheet open={open} onClose={onClose} title="Receipt" size="full">
       {/* Mounted only while open; `split` stays set while the sheet slides out. */}
       {split && <Body split={split} qr={qr} onCreateLink={onCreateLink} />}
     </Sheet>

@@ -28,7 +28,7 @@ const CONTACT_LOOKUPS = 300
 /** Find people on kira by typing an email or reading the phone's contacts, and ask them to be friends. */
 export function AddFriendSheet({ open, onClose, me, friendships }: Props) {
   return (
-    <Sheet open={open} onClose={onClose} title="Add friends" tall>
+    <Sheet open={open} onClose={onClose} title="Add friends" size="full">
       {/* Mounted only while open, so a new visit starts with an empty search. */}
       <Body onClose={onClose} me={me} friendships={friendships} />
     </Sheet>

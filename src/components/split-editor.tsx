@@ -69,7 +69,7 @@ export function SplitEditor({ open, onClose, initial, ...rest }: Props) {
       open={open}
       onClose={onClose}
       title={initial ? 'Edit split' : 'New split'}
-      tall
+      size="full"
     >
       {/* Mounted only while open, so the form starts fresh each time. */}
       <Form initial={initial} onClose={onClose} {...rest} />

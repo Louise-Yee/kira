@@ -13,8 +13,8 @@ type Props = {
   onClose: () => void
   title: string
   children: ReactNode
-  /** Fill most of the screen height on phones (long forms) instead of shrinking to the content. */
-  tall?: boolean
+  /** `fit` (default) shrinks to the content, up to 60% of the screen height on phones. `full` fills most of it, for long or changing forms so the sheet doesn't jump. */
+  size?: 'fit' | 'full'
   /** A control at the right of the title row (e.g. a share button), reachable without scrolling. */
   action?: ReactNode
 }
@@ -34,7 +34,7 @@ const CLOSE_DISTANCE = 120
 const CLOSE_VELOCITY = 500
 
 /** Bottom sheet on phones (drag the handle down to close); centered dialog at lg. */
-export function Sheet({ open, onClose, title, children, tall, action }: Props) {
+export function Sheet({ open, onClose, title, children, size = 'fit', action }: Props) {
   const lg = useMediaQuery('(min-width: 1024px)')
   const touch = useTouch()
   const controls = useDragControls()
@@ -93,7 +93,7 @@ export function Sheet({ open, onClose, title, children, tall, action }: Props) {
                     onClose()
                   }
                 }}
-                className={cn('fixed inset-x-0 bottom-0 z-30 flex max-h-[90dvh] flex-col rounded-t-3xl bg-card pb-[max(1rem,var(--inset-bottom))] outline-none lg:inset-auto lg:top-1/2 lg:left-1/2 lg:w-md lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-3xl lg:pb-6', tall && 'h-[92dvh] lg:h-auto lg:max-h-[90dvh] lg:w-xl')}
+                className={cn('fixed inset-x-0 bottom-0 z-30 flex max-h-[60dvh] flex-col rounded-t-3xl bg-card pb-[max(1rem,var(--inset-bottom))] outline-none lg:inset-auto lg:top-1/2 lg:left-1/2 lg:w-md lg:-translate-x-1/2 lg:-translate-y-1/2 lg:max-h-[90dvh] lg:rounded-3xl lg:pb-6', size === 'full' && 'h-[92dvh] max-h-[92dvh] lg:h-auto lg:w-xl')}
               >
                 <div
                   onPointerDown={(e) => controls.start(e)}

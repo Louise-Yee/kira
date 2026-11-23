@@ -31,7 +31,7 @@ const modes = [
 
 export function GroupExpenseSheet({ open, onClose, initial, ...rest }: Props) {
   return (
-    <Sheet open={open} onClose={onClose} title={initial ? 'Edit expense' : 'Add expense'} tall>
+    <Sheet open={open} onClose={onClose} title={initial ? 'Edit expense' : 'Add expense'} size="full">
       {/* Mounted only while open, so the form starts fresh each time. */}
       <Form initial={initial} onClose={onClose} {...rest} />
     </Sheet>
