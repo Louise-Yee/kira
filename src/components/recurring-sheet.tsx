@@ -53,7 +53,7 @@ const stateOptions = [
 
 export function RecurringSheet({ open, onClose, initial, ...rest }: Props) {
   return (
-    <Sheet open={open} onClose={onClose} title={initial ? 'Edit recurring' : 'New recurring'}>
+    <Sheet open={open} onClose={onClose} title={initial ? 'Edit recurring' : 'New recurring'} size="full">
       {/* Mounted only while open, so the form starts fresh each time. */}
       <Form initial={initial} onClose={onClose} {...rest} />
     </Sheet>

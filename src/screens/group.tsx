@@ -154,7 +154,7 @@ export function GroupScreen({ me, group, log, categories, friends, onBack }: Pro
         </div>
       </Sheet>
 
-      <Sheet open={settings} onClose={() => setSettings(false)} title="Group settings" tall>
+      <Sheet open={settings} onClose={() => setSettings(false)} title="Group settings" size="full">
         <GroupSettings me={me} group={group} log={log} categories={categories} onGone={onBack} />
       </Sheet>
     </div>

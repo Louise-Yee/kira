@@ -36,7 +36,7 @@ type View = { t: 'list' } | { t: 'form'; cat?: WithId<Category> } | { t: 'delete
 /** Manage categories in a sheet: the list (reorder, edit) and the add/edit/delete screens replace it in place. */
 export function CategoriesManager({ open, onClose, ...rest }: Props) {
   return (
-    <Sheet open={open} onClose={onClose} title="Categories">
+    <Sheet open={open} onClose={onClose} title="Categories" size="full">
       {/* Mounted only while open, so it always starts on the list. */}
       <Body {...rest} />
     </Sheet>

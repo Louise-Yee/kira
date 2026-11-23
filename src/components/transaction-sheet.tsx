@@ -20,7 +20,7 @@ type Props = {
 
 export function TransactionSheet({ open, onClose, initial, ...rest }: Props) {
   return (
-    <Sheet open={open} onClose={onClose} title={initial ? 'Edit transaction' : 'New transaction'}>
+    <Sheet open={open} onClose={onClose} title={initial ? 'Edit transaction' : 'New transaction'} size="full">
       {/* Mounted only while open, so the form starts fresh each time. */}
       <Form initial={initial} onClose={onClose} {...rest} />
     </Sheet>
