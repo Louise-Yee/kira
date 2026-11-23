@@ -43,15 +43,17 @@ let narrowCounts: Map<string, number> | null = null
  */
 export function currencySymbol(currency: string): string {
   if (currency === HOME) return 'RM'
+  // en-MY writes SGD as a code; S$ is how it's written next door. (Deriving it from the code's first letter made
+  // ARS "A$", the same as AUD.)
+  if (currency === 'SGD') return 'S$'
   if (!narrowCounts) {
     narrowCounts = new Map()
     for (const c of Intl.supportedValuesOf('currency')) narrowCounts.set(narrow(c), (narrowCounts.get(narrow(c)) ?? 0) + 1)
   }
   const n = narrow(currency)
   if (narrowCounts.get(n) === 1) return n
-  const local = symbolPart('en-MY', currency, 'symbol')
-  // en-MY still gives a code for some shared ones (SGD): put the code's first letter in front, as S$ is written.
-  return /^[A-Z]{3}$/.test(local) ? `${currency[0]}${n}` : local
+  // The Malaysian form (US$ A$ JP¥ CN¥), which is the code itself when it has no unambiguous one (ARS).
+  return symbolPart('en-MY', currency, 'symbol')
 }
 
 /** Integer minor units -> "RM 1,234.50" / "JP¥3,000" / "CHF 5.00". Negatives always get "−" (U+2212); `sign` adds "+" for positives. */
