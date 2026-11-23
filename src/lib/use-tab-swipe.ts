@@ -64,6 +64,8 @@ export function useTabSwipe(
     if (!enabled) return
     type Gesture = { x: number; y: number; t: number; axis: 'x' | 'y' | null; dx: number; armed: boolean }
     let g: Gesture | null = null
+    // A committed swipe is sliding the page out; a new touch waits for it, or it would navigate from a stale tab (#176).
+    let committing = false
     const setPeek = (dir: 1 | -1 | 0) => setPeekState({ from: fromRef.current, dir })
     // The page column's width, gutters included: the distance between one tab and the next.
     const width = () => page.current?.closest('main')?.clientWidth ?? innerWidth
@@ -71,7 +73,7 @@ export function useTabSwipe(
     const onStart = (e: TouchEvent) => {
       const t = e.touches[0]
       g = null
-      if (e.touches.length !== 1 || t.clientX < EDGE_PX || t.clientX > innerWidth - EDGE_PX) return
+      if (committing || e.touches.length !== 1 || t.clientX < EDGE_PX || t.clientX > innerWidth - EDGE_PX) return
       if (document.querySelector('[role="dialog"]') || ownsSwipe(e.target instanceof Element ? e.target : null)) return
       x.stop()
       g = { x: t.clientX, y: t.clientY, t: e.timeStamp, axis: null, dx: 0, armed: false }
@@ -111,11 +113,18 @@ export function useTabSwipe(
       const dir = dx < 0 ? 1 : -1
       const commit = latest.current.canGo(dir) && (Math.abs(dx) > width() * COMMIT || (quick && Math.abs(dx) > MIN_PX))
       if (!commit) {
-        void animate(x, 0, soft).then(() => setPeek(0))
+        // Not if a new gesture has taken over meanwhile: it owns the peek.
+        void animate(x, 0, soft).then(() => {
+          if (!g) setPeek(0)
+        })
         return
       }
       if (reduce) return latest.current.onSwipe(dir)
-      void animate(x, -dir * width(), soft).then(() => latest.current.onSwipe(dir))
+      committing = true
+      void animate(x, -dir * width(), soft).then(() => {
+        committing = false
+        latest.current.onSwipe(dir)
+      })
     }
 
     window.addEventListener('touchstart', onStart, { passive: true })
