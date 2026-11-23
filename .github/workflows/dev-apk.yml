@@ -1,0 +1,82 @@
+name: Dev APK
+
+# Builds "kira dev" (app.kira.dev), which installs next to the live app, from any branch. Run it by hand:
+# Actions -> Dev APK -> Run workflow -> pick a branch. It publishes a pre-release, so the live app's
+# "latest release" update check never sees it.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch to build (main is merged in, so the Android setup is always current)
+        default: main
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_SENDER_ID: ${{ secrets.VITE_FIREBASE_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      VITE_APP_ENV: dev
+      APP_ID: app.kira.dev
+      APP_LABEL: kira dev
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Merge main into the branch
+        run: |
+          git config user.name "dev-apk"
+          git config user.email "dev-apk@users.noreply.github.com"
+          git merge origin/main --no-edit
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Write google-services.json and the keystore
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/kira-release.jks"
+      - name: Name the build
+        id: name
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          echo "tag=dev-${{ github.run_number }}-$SHA" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")-dev.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+      - name: Build the signed APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/kira-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_NAME: ${{ steps.name.outputs.version }}
+          # Always rising, so a newer dev build installs over an older one.
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
+      - name: Publish the pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.name.outputs.tag }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk "kira-dev-$TAG.apk"
+          gh release create "$TAG" "kira-dev-$TAG.apk" --prerelease --target "$GITHUB_SHA" \
+            --title "kira dev $TAG (${{ inputs.ref }})" --notes "Dev build of \`${{ inputs.ref }}\`. Not for everyday use."

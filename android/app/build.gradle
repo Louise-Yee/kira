@@ -4,7 +4,9 @@ android {
     namespace = "app.kira"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "app.kira"
+        // The dev APK (dev-apk.yml) sets APP_ID=app.kira.dev so it installs next to the live app.
+        applicationId System.getenv('APP_ID') ?: "app.kira"
+        manifestPlaceholders = [appLabel: System.getenv('APP_LABEL') ?: "kira"]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // CI sets these from package.json's version (see .github/workflows/deploy.yml).

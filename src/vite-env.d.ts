@@ -10,4 +10,6 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_APP_ID: string
   /** 'true' only in e2e runs: use the local Firebase emulators. */
   readonly VITE_USE_EMULATOR?: string
+  /** 'dev' only in the dev APK (see dev-apk.yml): no update check, labelled "kira dev". */
+  readonly VITE_APP_ENV?: string
 }
