@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { animate, motion, useMotionValue, useReducedMotion, useTransform, type MotionValue } from 'motion/react'
 import type { LucideIcon } from 'lucide-react'
 import { select } from '@/lib/haptics'
@@ -20,17 +20,6 @@ type Props<Id extends string> = {
   cut?: boolean
 }
 
-/** An icon-only tab in the phone pill, in px: as wide as fits between these (44px is the touch target). The active tab grows by its label. */
-const MIN_BASE = 44
-const MAX_BASE = 56
-/** What the pill spends besides tabs: 1rem screen margin each side, p-1, the 1px border. */
-const PILL_CHROME = 32 + 8 + 2
-/** Gap between tabs (gap-0.5), in px. */
-const GAP = 2
-
-/** How much of tab `i`'s label shows at highlight position `pos`: 1 on it, 0 a tab away, in between mid-swipe. */
-const reveal = (i: number, pos: number) => Math.max(0, 1 - Math.abs(pos - i))
-
 export function TabBar<Id extends string>({ tabs, active: current, onChange, side, drag, cut }: Props<Id>) {
   const vertical = useMediaQuery('(min-width: 1024px)') && side
   const reduce = useReducedMotion()
@@ -49,41 +38,7 @@ export function TabBar<Id extends string>({ tabs, active: current, onChange, sid
   const fallback = useMotionValue(0)
   const steps = useTransform(() => shift.get() + (drag ?? fallback).get())
   // One step is a tab plus the gap between tabs (gap-0.5 across, gap-1 down the sidebar).
-  const offset = useTransform(steps, (n) => `calc(${n * 100}% + ${n * 4}px)`)
-  // Phone pill: the active tab shows its label beside the icon. Tab widths, labels and the highlight all follow one
-  // position (a whole tab when still, fractional mid-swipe), so the pill keeps its width and the label morphs across.
-  const pos = useTransform(() => Math.min(tabs.length - 1, Math.max(0, index + steps.get())))
-  const labels = useRef<(HTMLSpanElement | null)[]>([])
-  const [grow, setGrow] = useState<number[]>([])
-  const [base, setBase] = useState(MAX_BASE)
-  const names = tabs.map((t) => t.label).join()
-  useLayoutEffect(() => {
-    const measure = () => {
-      const widths = labels.current.map((el) => el?.offsetWidth ?? 0)
-      setGrow(widths)
-      // The icon-only tabs share what's left once the longest label fits, so the pill never outgrows the screen.
-      const room = window.innerWidth - PILL_CHROME - GAP * (tabs.length - 1) - Math.max(0, ...widths)
-      setBase(Math.min(MAX_BASE, Math.max(MIN_BASE, Math.floor(room / tabs.length))))
-    }
-    measure()
-    // Measured again once the web font is in (the fallback font has different widths) and when the screen turns.
-    void document.fonts.ready.then(measure)
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-    // vertical: the labels only exist (to measure) in the pill.
-  }, [names, tabs.length, vertical])
-  const widthAt = (i: number, p: number) => base + (grow[i] ?? 0) * reveal(i, p)
-  const highlightX = useTransform(pos, (p) => {
-    const k = Math.floor(p)
-    let x = 0
-    for (let j = 0; j < k; j++) x += widthAt(j, p) + GAP
-    return x + (p - k) * (widthAt(k, p) + GAP)
-  })
-  const highlightW = useTransform(pos, (p) => {
-    const k = Math.floor(p)
-    const t = p - k
-    return k + 1 < tabs.length ? widthAt(k, p) * (1 - t) + widthAt(k + 1, p) * t : widthAt(k, p)
-  })
+  const offset = useTransform(steps, (n) => `calc(${n * 100}% + ${n * (vertical ? 4 : 2)}px)`)
   return (
     <>
       {/* Blurs content under the system navigation bar, so it doesn't show through it. Phones and tablets only. */}
@@ -97,94 +52,42 @@ export function TabBar<Id extends string>({ tabs, active: current, onChange, sid
           'lg:sticky lg:inset-x-auto lg:top-6 lg:bottom-auto lg:mx-0 lg:h-fit lg:w-56 lg:max-w-none lg:flex-col lg:items-stretch lg:gap-1 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none lg:backdrop-saturate-100',
       )}
     >
-      {!vertical && (
-        <motion.span
-          aria-hidden
-          style={{ x: highlightX, width: highlightW }}
-          className="absolute top-1 bottom-1 left-1 rounded-full bg-foreground/10"
-        >
-          <span className="absolute bottom-1.5 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-foreground" />
-        </motion.span>
-      )}
-      {tabs.map((t, i) => (
-        <Tab
-          key={t.id}
-          tab={t}
-          i={i}
-          active={current === t.id}
-          vertical={vertical}
-          side={side}
-          pos={pos}
-          base={base}
-          grow={grow[i] ?? 0}
-          offset={offset}
-          labelRef={(el) => {
-            labels.current[i] = el
-          }}
-          onClick={() => {
-            if (current !== t.id) select()
-            onChange(t.id)
-          }}
-        />
-      ))}
+      {tabs.map((t) => {
+        const active = current === t.id
+        return (
+          <motion.button
+            key={t.id}
+            whileTap={press}
+            onClick={() => {
+              if (!active) select()
+              onChange(t.id)
+            }}
+            aria-label={t.label}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'relative flex h-14 w-[4.5rem] min-w-0 items-center justify-center rounded-full text-base font-semibold',
+              active ? 'text-foreground' : 'text-muted-foreground',
+              side && 'lg:h-12 lg:w-auto lg:justify-start lg:rounded-2xl lg:px-4',
+            )}
+          >
+            {active && (
+              <motion.span
+                style={vertical ? { y: offset } : { x: offset }}
+                // Behind every tab's icon, whichever tab it is passing over.
+                className={cn('absolute inset-0 -z-10 rounded-full bg-foreground/10', side && 'lg:rounded-2xl')}
+              >
+                <span className={cn('absolute bottom-1.5 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-foreground', side && 'lg:hidden')} />
+              </motion.span>
+            )}
+            <span className="relative">
+              <t.icon className="size-6 shrink-0 lg:size-5" />
+              {!!t.badge && <span className="absolute -top-0.5 -right-1 size-3 rounded-full bg-destructive" aria-label={`${t.badge} new`} />}
+            </span>
+            <span className={cn('relative hidden', side && 'lg:block lg:pl-3')}>{t.label}</span>
+          </motion.button>
+        )
+      })}
       </nav>
     </>
-  )
-}
-
-type TabProps = {
-  tab: TabItem<string>
-  i: number
-  active: boolean
-  vertical: boolean
-  side: boolean
-  /** The highlight's position, in tabs. */
-  pos: MotionValue<number>
-  /** The icon-only width, in px. */
-  base: number
-  /** The label's width (with its gap): how much this tab grows when active. */
-  grow: number
-  /** The sidebar highlight's shift from the active tab. */
-  offset: MotionValue<string>
-  labelRef: (el: HTMLSpanElement | null) => void
-  onClick: () => void
-}
-
-function Tab({ tab: t, i, active, vertical, side, pos, base, grow, offset, labelRef, onClick }: TabProps) {
-  const width = useTransform(pos, (p) => base + grow * reveal(i, p))
-  const labelWidth = useTransform(pos, (p) => grow * reveal(i, p))
-  const labelOpacity = useTransform(pos, (p) => reveal(i, p))
-  return (
-    <motion.button
-      whileTap={press}
-      onClick={onClick}
-      aria-label={t.label}
-      aria-current={active ? 'page' : undefined}
-      // 'auto' rather than no style: motion keeps an inline width it set until told otherwise (phone -> sidebar on resize).
-      style={{ width: vertical ? 'auto' : width }}
-      className={cn(
-        'relative flex h-14 min-w-0 shrink-0 items-center justify-center rounded-full text-base font-semibold',
-        active ? 'text-foreground' : 'text-muted-foreground',
-        side && 'lg:h-12 lg:w-auto lg:justify-start lg:rounded-2xl lg:px-4',
-      )}
-    >
-      {vertical && active && (
-        // Behind every tab's icon, whichever tab it is passing over.
-        <motion.span style={{ y: offset }} className="absolute inset-0 -z-10 rounded-2xl bg-foreground/10" />
-      )}
-      <span className="relative">
-        <t.icon className="size-6 shrink-0 lg:size-5" />
-        {!!t.badge && <span className="absolute -top-0.5 -right-1 size-3 rounded-full bg-destructive" aria-label={`${t.badge} new`} />}
-      </span>
-      {vertical ? (
-        <span className="relative pl-3">{t.label}</span>
-      ) : (
-        <motion.span aria-hidden style={{ width: labelWidth, opacity: labelOpacity }} className="overflow-hidden">
-          <span ref={labelRef} className="block w-max pl-2 whitespace-nowrap">
-            {t.label}
-          </span>
-        </motion.span>
-      )}
-    </motion.button>
   )
 }
