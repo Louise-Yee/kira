@@ -8,11 +8,13 @@ import { CategoryPicker } from '@/components/category-picker'
 import { Money } from '@/components/money'
 import { SheetActions } from '@/components/sheet-actions'
 import { PillButton } from '@/components/pill-button'
+import { ScanReceiptButton } from '@/components/scan-receipt-button'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
 import { TextField } from '@/components/text-field'
 import { success, warning } from '@/lib/haptics'
 import { todayISO } from '@/lib/date'
+import { scannedTotal, type ScannedReceipt } from '@/lib/receipt-parse'
 import type { Category, Split, SplitDraft, WithId } from '@/lib/db'
 import {
   addPerson,
@@ -117,6 +119,16 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
       ),
     }))
 
+  // A scan replaces the items (each shared by everyone until people are tapped on) and sets the receipt total.
+  const applyScan = (r: ScannedReceipt) => {
+    const total = scannedTotal(r)
+    patch((f) => ({
+      mode: 'itemized',
+      items: r.items.map((i) => ({ name: i.name, amount: i.amount, people: f.people.map((_, p) => p) })),
+      ...(total === null ? {} : { charges: { type: 'total', value: total } }),
+    }))
+  }
+
   const name = newName.trim()
   const taken = (n: string) => form.people.some((p) => p.toLowerCase() === n.toLowerCase())
   const nameTaken = taken(name)
@@ -207,6 +219,7 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
 
       {form.mode === 'itemized' && (
         <Section title="Items">
+          <ScanReceiptButton onScanned={applyScan} />
           {form.items.map((item, i) => (
             <div key={i} className="flex flex-col gap-2 rounded-2xl bg-secondary p-3">
               <div className="flex items-center gap-2">
