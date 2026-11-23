@@ -2,7 +2,7 @@ import { DatePicker } from '@/components/date-picker'
 import { Avatar } from '@/components/avatar'
 import type { FriendName } from '@/lib/friends'
 import { useState } from 'react'
-import { Trash2, X } from 'lucide-react'
+import { Share2, Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
 import { CategoryChips } from '@/components/category-chips'
 import { CurrencySelect } from '@/components/currency-select'
@@ -46,6 +46,8 @@ type Props = {
   initial?: WithId<Split>
   onSave: (draft: SplitDraft) => void
   onDelete?: () => void
+  /** Shows a share button in the title row of an existing split (opens its receipt over the editor). */
+  onShare?: () => void
 }
 
 const modeOptions = [
@@ -69,13 +71,21 @@ const emptyForm: SplitForm = {
   charges: { type: 'percent', value: 600 },
 }
 
-export function SplitEditor({ open, onClose, initial, ...rest }: Props) {
+export function SplitEditor({ open, onClose, initial, onShare, ...rest }: Props) {
   return (
     <Sheet
       open={open}
       onClose={onClose}
       title={initial ? 'Edit split' : 'New split'}
       size="full"
+      action={
+        initial &&
+        onShare && (
+          <PillButton variant="secondary" size="pill-sm" className="w-11 px-0" aria-label={`Share ${initial.title}`} onClick={onShare}>
+            <Share2 className="size-5" />
+          </PillButton>
+        )
+      }
     >
       {/* Mounted only while open, so the form starts fresh each time. */}
       <Form initial={initial} onClose={onClose} {...rest} />
