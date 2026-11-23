@@ -122,6 +122,12 @@ bad(['transactions', 2, 'original', 'currency'], 'usd', /transactions\[2\] \(id 
 bad(['transactions', 2, 'original', 'rate'], 0, /rate must be a number above 0/)
 bad(['recurring', 1, 'original', 'amount'], 9.99, /recurring\[1\] \(id r2\): amount/)
 bad(['splits', 1, 'rate'], undefined, /splits\[1\] \(id s2\): rate/)
+bad(['settings', 'displayCurrency'], 'sgd', /displayCurrency must be a 3-letter currency code/)
+
+// the display currency survives a backup
+const withDisplay = validateBackup(mutated(['settings', 'displayCurrency'], 'SGD'))
+assert.ok(withDisplay.ok)
+assert.equal(withDisplay.backup.settings?.displayCurrency, 'SGD')
 assert.ok(!validateBackup('nope').ok)
 assert.ok(!validateBackup([]).ok)
 

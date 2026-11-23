@@ -8,6 +8,7 @@ import { SheetActions } from '@/components/sheet-actions'
 import { TextField } from '@/components/text-field'
 import { error, success, warning } from '@/lib/haptics'
 import { shortDate, todayISO } from '@/lib/date'
+import { useDisplayCurrency } from '@/lib/display-currency'
 import { useRate } from '@/lib/fx'
 import { entered, toHome } from '@/lib/money'
 import type { Category, Recurring, RecurringDraft, WithId } from '@/lib/db'
@@ -69,9 +70,10 @@ const initialPreset = (r?: Recurring): Preset =>
   !r ? 'month' : r.interval === 1 && r.freq !== 'day' ? r.freq : 'custom'
 
 function Form({ initial, categories, onSave, countTransactions, onDelete, onClose }: Omit<Props, 'open'>) {
+  const display = useDisplayCurrency()
   const [entry, setEntry] = useState<Entry>({
     kind: initial?.kind ?? 'expense',
-    ...entered(initial),
+    ...entered(initial, display),
     categoryId: initial?.categoryId ?? null,
     note: initial?.note ?? '',
   })

@@ -42,7 +42,7 @@ A document without `original` (or, for a split, without `currency`) is RM.
 
 ```
 users/{uid}
-  settings/main:      { currency: 'MYR', theme, createdAt }
+  settings/main:      { currency: 'MYR', displayCurrency?, theme, createdAt }
   categories/{id}:    { name, kind: 'expense'|'income', color, icon, order, archived }
   transactions/{id}:  { kind, amount, original?, categoryId, date: 'YYYY-MM-DD', note,
                         recurringId?, occurrence?, splitId?, createdAt, updatedAt }
@@ -118,6 +118,11 @@ users/{uid}
 - A recurring rule converts each payment at the latest known rate when it posts (fetched, else cached, else the rule's).
 - A split keeps every amount in its currency (receipts show that currency); my expense from it is RM at the split's rate.
 - Old app versions read foreign splits as RM, so the release that ships this bumps `minVersion`.
+- **Display currency** (`settings.displayCurrency`): what totals, charts, category bars and the widget are shown in,
+  and what new entries start in. Asked once on a setup screen (new accounts after sign-in, existing ones after
+  updating, RM preselected); changed in Settings. Stored data is never converted: a transaction paid in the display
+  currency counts its exact amount, any other one its RM amount at the RM→display rate on its own date (ECB daily
+  series, cached on the device by month), so past months never change. With no rate known, totals stay in RM.
 
 ## 6. Design direction
 Inspired by Wise's *qualities*. We don't copy its green, its font or its layouts.

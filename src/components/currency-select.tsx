@@ -31,22 +31,29 @@ export function CurrencySelect({ value, onChange, className }: Props) {
         {currencySymbol(value)}
         <ChevronDown className="size-4 text-muted-foreground" aria-hidden />
       </motion.button>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Currency" size="full">
-        {/* Mounted only while open, so the search starts empty each time. */}
-        <Picker
-          value={value}
-          onPick={(c) => {
-            rememberCurrency(c)
-            onChange(c)
-            setOpen(false)
-          }}
-        />
-      </Sheet>
+      <CurrencySheet open={open} onClose={() => setOpen(false)} value={value} onPick={onChange} />
     </>
   )
 }
 
-function Picker({ value, onPick }: { value: string; onPick: (currency: string) => void }) {
+/** The currency list in a sheet; picking one closes it. */
+export function CurrencySheet({ open, onClose, value, onPick }: { open: boolean; onClose: () => void; value: string; onPick: (currency: string) => void }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="Currency" size="full">
+      {/* Mounted only while open, so the search starts empty each time. */}
+      <CurrencyList
+        value={value}
+        onPick={(c) => {
+          onPick(c)
+          onClose()
+        }}
+      />
+    </Sheet>
+  )
+}
+
+/** Search plus RM, recent and all currencies. Remembers the pick as recent. */
+export function CurrencyList({ value, onPick }: { value: string; onPick: (currency: string) => void }) {
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
   const row = (c: string) => (
@@ -55,7 +62,10 @@ function Picker({ value, onPick }: { value: string; onPick: (currency: string) =
       title={currencySymbol(c) === c ? c : `${c} · ${currencySymbol(c)}`}
       subtitle={nameOf(c)}
       trailing={c === value ? <Check className="size-5 text-primary" aria-label="Selected" /> : undefined}
-      onClick={() => onPick(c)}
+      onClick={() => {
+        rememberCurrency(c)
+        onPick(c)
+      }}
     />
   )
   const recent = recentCurrencies()

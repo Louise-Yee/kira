@@ -1,10 +1,13 @@
+import { DisplayCurrency } from '@/lib/display-currency'
+import { HOME } from '@/lib/money'
+import { CurrencySetup } from '@/screens/currency-setup'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useMatch, useNavigate } from 'react-router'
 import { AnimatePresence, MotionConfig, motion, type Variants } from 'motion/react'
 import { House, ReceiptText, Repeat, Settings, Users } from 'lucide-react'
 import { useUser, type AppUser } from '@/lib/firebase'
 import { useAppLock, type AppLock } from '@/lib/app-lock'
-import { useCategories, useClientInfo, useDefaultGroupLogs, useDirectoryPublisher, useFriendships, useGroupAutoLog, useGroupInvites, useGroupLogs, useGroups, usePendingForMe } from '@/lib/db'
+import { setDisplayCurrency, useCategories, useClientInfo, useDefaultGroupLogs, useDirectoryPublisher, useFriendships, useGroupAutoLog, useGroupInvites, useGroupLogs, useGroups, usePendingForMe, useSettings } from '@/lib/db'
 import { splitFriendships } from '@/lib/friends'
 import { todayISO } from '@/lib/date'
 import { coinBurst } from '@/lib/haptics'
@@ -105,6 +108,7 @@ const page: Variants = {
 }
 
 function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
+  const settings = useSettings(user.uid)
   const { pathname, search } = useLocation()
   const joinToken = useMatch('/join/:token')?.params.token
   const navigate = useNavigate()
@@ -201,9 +205,12 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
     }
   }
 
+  // Asked once, before anything else: the currency totals are shown in (settings load fast, from the cache).
+  if (settings && !settings.displayCurrency) return <CurrencySetup onPick={(c) => setDisplayCurrency(user.uid, c)} />
   if (!current && !joinToken) return <Navigate to={{ pathname: '/', search }} replace />
 
   return (
+    <DisplayCurrency value={settings?.displayCurrency ?? HOME}>
     <div className={cn('mx-auto min-h-dvh max-w-5xl lg:flex lg:gap-8 lg:p-6', navPos === 'right' && 'lg:flex-row-reverse')}>
       <Toaster />
       <TabBar tabs={tabs} active={tab} onChange={go} side={side} drag={swipe.progress} cut={slide.cut} />
@@ -260,5 +267,6 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
       {/* Once after an update, and never on top of the update sheet. */}
       <WhatsNewSheet open={whatsNew.open && !update.open} onClose={whatsNew.close} entries={whatsNew.entries} />
     </div>
+    </DisplayCurrency>
   )
 }

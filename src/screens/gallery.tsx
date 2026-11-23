@@ -29,6 +29,8 @@ import type { Category, Group, GroupLog, Split, Transaction, TransactionDraft, W
 import { categoryIconNames } from '@/lib/category-icons'
 import { CategoriesManager } from '@/screens/categories/manager'
 import { MonthView } from '@/screens/month-view'
+import { shownIn } from '@/lib/display'
+import { HOME } from '@/lib/money'
 
 const cats = [
   { id: 'food', name: 'Food', icon: 'food', color: 'cat-1' },
@@ -90,6 +92,7 @@ function MonthDemo() {
         transactions={demoTx.filter((x) => x.date.startsWith(ym))}
         categories={defaultCategories}
         trend={monthlyTotals(demoTx, demoMonths)}
+        view={shownIn(HOME, {})}
         onAdd={() => setAdds((n) => n + 1)}
         onEdit={(x) => setEdited(x.id)}
       />

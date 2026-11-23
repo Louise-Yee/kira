@@ -53,6 +53,6 @@ export {
 } from './groups'
 export { acceptFriendRequest, removeFriendship, sendFriendRequest, useFriendships, type Me } from './friends'
 export type { Group, Invite } from '@/lib/groups'
-export { setDiscoverable, setPaymentQr, useSettings } from './settings'
+export { setDiscoverable, setDisplayCurrency, setPaymentQr, useSettings } from './settings'
 export { createShare, deleteSplit, saveSplit, SPLITS_PAGE, useOlderSplits, useRecentSplits } from './splits'
 export { useClientInfo } from './client'

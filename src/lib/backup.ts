@@ -218,6 +218,7 @@ function parseSplit(o: Rec): Split {
 function parseSettings(o: Rec): Settings {
   return {
     currency: oneOf(o, 'currency', ['MYR'] as const),
+    ...(has(o, 'displayCurrency') ? { displayCurrency: currencyCode(o, 'displayCurrency') } : {}),
     createdAt: int(o, 'createdAt'),
     ...(has(o, 'tngQr') ? { tngQr: str(o, 'tngQr') } : {}),
   }

@@ -10,10 +10,12 @@ type Props = {
   breakdown: CategoryBreakdown
   /** Name, icon and colour token per category id. Unknown ids fall back to "Other". */
   categories: ReadonlyMap<string, { name: string; icon: string; color: string }>
+  /** What the amounts are in; RM when absent. */
+  currency?: string
 }
 
 /** Spending by category: bars sized against the biggest row, which grow in with a spring. */
-export function CategoryBars({ breakdown, categories }: Props) {
+export function CategoryBars({ breakdown, categories, currency }: Props) {
   const reduce = useReducedMotion()
   const { rows, others } = breakdown
   const biggest = rows[0]?.amount ?? 0
@@ -34,7 +36,7 @@ export function CategoryBars({ breakdown, categories }: Props) {
             <div className="flex items-center gap-2">
               <CategoryIcon name={it.icon} color={it.color || undefined} />
               <span className="min-w-0 flex-1 truncate text-base font-semibold">{it.name}</span>
-              <Money sen={it.amount} className="text-base font-semibold" />
+              <Money sen={it.amount} currency={currency} className="text-base font-semibold" />
               <span className="w-12 text-right text-base text-muted-foreground tabular-nums">{it.percent}%</span>
             </div>
             <div className="mt-1.5 h-2.5 rounded-full bg-secondary">

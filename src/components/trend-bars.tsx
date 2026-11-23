@@ -2,18 +2,20 @@ import { motion, useReducedMotion } from 'motion/react'
 import { monthLabel, monthName } from '@/lib/date'
 import type { MonthTotals } from '@/lib/chart-data'
 import { glide, press } from '@/lib/motion'
-import { formatRM } from '@/lib/money'
+import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
 type Props = {
   months: readonly MonthTotals[]
+  /** What the totals are in; RM when absent. */
+  currency?: string
   /** The month the screen is showing, "YYYY-MM". */
   selected: string
   onSelect: (ym: string) => void
 }
 
 /** Income vs expense for the last months as grouped bars; tap a month to open it. */
-export function TrendBars({ months, selected, onSelect }: Props) {
+export function TrendBars({ months, selected, onSelect, currency }: Props) {
   const reduce = useReducedMotion()
   const top = Math.max(1, ...months.flatMap((m) => [m.income, m.expense]))
   // A tiny but non-zero amount still gets a visible sliver.
@@ -39,7 +41,7 @@ export function TrendBars({ months, selected, onSelect }: Props) {
               whileTap={press}
               onClick={() => onSelect(m.ym)}
               aria-pressed={active}
-              aria-label={`${monthLabel(m.ym)}: in ${formatRM(m.income)}, out ${formatRM(m.expense)}`}
+              aria-label={`${monthLabel(m.ym)}: in ${formatMoney(m.income, currency)}, out ${formatMoney(m.expense, currency)}`}
               className={cn('flex min-h-11 flex-1 flex-col items-center gap-1 rounded-xl p-1', active && 'bg-secondary')}
             >
               <span className="flex h-36 w-full items-end justify-center gap-1 py-3">

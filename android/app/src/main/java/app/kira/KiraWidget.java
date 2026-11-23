@@ -54,9 +54,9 @@ public class KiraWidget extends AppWidgetProvider {
             JSONObject s = new JSONObject(raw);
             if (!thisMonth.equals(s.getString("ym"))) throw new IllegalStateException("stale");
             views.setTextViewText(R.id.widget_label, s.getString("label"));
-            setNumber(context, views, R.id.widget_left, rm(s.getLong("left")), 32, 190, 44, 0xFFFFFFFF);
-            setNumber(context, views, R.id.widget_in, rm(s.getLong("income")), 16, 110, 22, 0xFFF2F2F2);
-            setNumber(context, views, R.id.widget_out, rm(s.getLong("expense")), 16, 110, 22, 0xFFF2F2F2);
+            setNumber(context, views, R.id.widget_left, s.optString("leftText", rm(s.getLong("left"))), 32, 190, 44, 0xFFFFFFFF);
+            setNumber(context, views, R.id.widget_in, s.optString("incomeText", rm(s.getLong("income"))), 16, 110, 22, 0xFFF2F2F2);
+            setNumber(context, views, R.id.widget_out, s.optString("expenseText", rm(s.getLong("expense"))), 16, 110, 22, 0xFFF2F2F2);
             views.setViewVisibility(R.id.widget_totals, View.VISIBLE);
         } catch (Exception e) {
             // Never opened yet, or the stored month is over: don't show last month's numbers.

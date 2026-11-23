@@ -3,6 +3,9 @@ import { toastUndo } from '@/lib/toast'
 import { deleteTransaction, saveTransaction, useCategories, useMonth, useMonths, type Transaction, type WithId } from '@/lib/db'
 import { monthlyTotals } from '@/lib/chart-data'
 import { inTrendWindow, trendMonths } from '@/lib/date'
+import { shownIn } from '@/lib/display'
+import { useDisplayCurrency } from '@/lib/display-currency'
+import { useRateSeries } from '@/lib/fx'
 import type { AppUser } from '@/lib/firebase'
 import { totals } from '@/lib/month-summary'
 import { usePushWidget } from '@/lib/widget'
@@ -20,6 +23,9 @@ export function Home({ user, today, ym, onYm, addRequest }: { user: AppUser; tod
   const inWindow = inTrendWindow(ym, currentYm)
   const olderTx = useMonth(user.uid, ym, !inWindow)
   const transactions = inWindow ? windowTx?.filter((t) => t.date.startsWith(ym)) : olderTx
+  // Totals in the display currency, each transaction at the rate on its own date.
+  const display = useDisplayCurrency()
+  const view = shownIn(display, useRateSeries(display, ym < yms[0] ? ym : yms[0], currentYm))
   // `open` and `tx` are separate so the sheet keeps its title while it slides out.
   const [sheet, setSheet] = useState<{ open: boolean; tx?: WithId<Transaction> }>({ open: false })
 
@@ -29,8 +35,8 @@ export function Home({ user, today, ym, onYm, addRequest }: { user: AppUser; tod
     setSeenRequest(addRequest)
     setSheet({ open: true })
   }
-  const thisMonth = windowTx && totals(windowTx.filter((t) => t.date.startsWith(currentYm)))
-  usePushWidget(currentYm, thisMonth?.income, thisMonth?.expense)
+  const thisMonthTx = windowTx?.filter((t) => t.date.startsWith(currentYm))
+  usePushWidget(currentYm, thisMonthTx && totals(thisMonthTx), thisMonthTx && totals(thisMonthTx, view.amountOf), view.currency)
 
   return (
     <>
@@ -41,7 +47,8 @@ export function Home({ user, today, ym, onYm, addRequest }: { user: AppUser; tod
         onMonthChange={onYm}
         transactions={transactions}
         categories={categories}
-        trend={windowTx && monthlyTotals(windowTx, yms)}
+        trend={windowTx && monthlyTotals(windowTx, yms, view.amountOf)}
+        view={view}
         onAdd={() => setSheet({ open: true })}
         onEdit={(tx) => setSheet({ open: true, tx })}
       />

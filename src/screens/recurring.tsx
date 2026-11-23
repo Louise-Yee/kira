@@ -9,8 +9,11 @@ import { Money } from '@/components/money'
 import { PageHeader } from '@/components/page-header'
 import { RecurringSheet } from '@/components/recurring-sheet'
 import { categoryOrOther } from '@/lib/category-lookup'
-import { shortDate } from '@/lib/date'
-import { formatRM } from '@/lib/money'
+import { shortDate, todayISO } from '@/lib/date'
+import { shownIn } from '@/lib/display'
+import { useDisplayCurrency } from '@/lib/display-currency'
+import { useRateSeries } from '@/lib/fx'
+import { formatMoney, HOME } from '@/lib/money'
 import {
   countRecurringTransactions,
   deleteRecurring,
@@ -30,6 +33,10 @@ export function RecurringScreen({ user }: { user: AppUser }) {
   const rules = useRecurring(user.uid)
   const categories = useCategories(user.uid) ?? []
   const byId = new Map(categories.map((c) => [c.id, c]))
+  // Each payment converts when it posts, so a rule's value in the display currency is an estimate at today's rate.
+  const [today] = useState(todayISO)
+  const display = useDisplayCurrency()
+  const { currency, amountOf } = shownIn(display, useRateSeries(display, today.slice(0, 7), today.slice(0, 7)))
   // `open` and `rule` are separate so the sheet keeps its title while it slides out.
   const [sheet, setSheet] = useState<{ open: boolean; rule?: WithId<Recurring> }>({ open: false })
   const open = (rule?: WithId<Recurring>) => setSheet({ open: true, rule })
@@ -46,7 +53,13 @@ export function RecurringScreen({ user }: { user: AppUser }) {
         key={r.id}
         icon={<CategoryIcon name={cat?.icon ?? 'other'} color={cat?.color ?? 'cat-1'} tile />}
         title={r.note || cat?.name || 'Unknown category'}
-        subtitle={[r.original && `≈ ${formatRM(r.amount)}`, describeFrequency(r.freq, r.interval), status].filter(Boolean).join(' · ')}
+        subtitle={[
+          (r.original?.currency ?? HOME) !== currency && `≈ ${formatMoney(amountOf({ amount: r.amount, original: r.original, date: today }), currency)}`,
+          describeFrequency(r.freq, r.interval),
+          status,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
         trailing={
           <Money
             sen={signed({ kind: r.kind, amount: r.original?.amount ?? r.amount })}
