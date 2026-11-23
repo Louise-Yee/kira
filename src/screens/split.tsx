@@ -112,6 +112,7 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
               )}
             <SwipeRow
               label="Share"
+              hintKey={i === 0 ? 'kira.hint.swipe-share' : undefined}
               onSwipe={() => setReceipt({ open: true, split: s })}
             >
               <ListRow
