@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ScanLine } from 'lucide-react'
+import { Camera, ImageIcon } from 'lucide-react'
 import { PillButton } from '@/components/pill-button'
 import { error as errorHaptic, success } from '@/lib/haptics'
 import type { ScannedReceipt } from '@/lib/receipt-parse'
@@ -9,11 +9,13 @@ type Props = {
   onScanned: (receipt: ScannedReceipt) => void
 }
 
-/** "Scan receipt": pick or take a photo, read it on the device, hand the result to the form. The photo is never kept. */
+/** "Take photo" / "Choose photo": the camera or the gallery, read it on the device, hand the result to the form. The photo is never kept. */
 export function ScanReceiptButton({ onScanned }: Props) {
-  const input = useRef<HTMLInputElement>(null)
+  const camera = useRef<HTMLInputElement>(null)
+  const gallery = useRef<HTMLInputElement>(null)
   const [progress, setProgress] = useState<number | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const busy = progress !== null
 
   const pick = async (file: File | undefined) => {
     if (!file) return
@@ -37,17 +39,24 @@ export function ScanReceiptButton({ onScanned }: Props) {
     } finally {
       setProgress(null)
       // Lets the same photo be picked again.
-      if (input.current) input.current.value = ''
+      for (const input of [camera.current, gallery.current]) if (input) input.value = ''
     }
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <input ref={input} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
-      <PillButton variant="secondary" size="pill-sm" disabled={progress !== null} onClick={() => input.current?.click()}>
-        <ScanLine aria-hidden />
-        {progress === null ? 'Scan receipt' : `Reading… ${Math.round(progress * 100)}%`}
-      </PillButton>
+      <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={(e) => pick(e.target.files?.[0])} />
+      <input ref={gallery} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
+      <div className="flex gap-2">
+        <PillButton variant="secondary" size="pill-sm" className="flex-1" disabled={busy} onClick={() => camera.current?.click()}>
+          <Camera aria-hidden />
+          {progress === null ? 'Take photo' : `Reading… ${Math.round(progress * 100)}%`}
+        </PillButton>
+        <PillButton variant="secondary" size="pill-sm" className="flex-1" disabled={busy} onClick={() => gallery.current?.click()}>
+          <ImageIcon aria-hidden />
+          Choose photo
+        </PillButton>
+      </div>
       {message && <p className="px-1 text-base text-muted-foreground">{message}</p>}
     </div>
   )
