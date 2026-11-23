@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
-import { animate, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
+import { animate, useMotionValue, useReducedMotion } from 'motion/react'
 import { detent } from '@/lib/haptics'
 import { soft } from '@/lib/motion'
 
@@ -48,7 +48,9 @@ export function useTabSwipe(
   const [box, setBox] = useState<PeekBox>({ top: 0, left: 0, width: 0, shift: 0 })
   const reduce = useReducedMotion()
   const span = useRef(1) // the width a swipe moves the page by, from the last gesture
-  const progress = useTransform(x, (v) => -v / span.current)
+  // The drag in tabs. Follows `x` while the finger is down; once a swipe commits it springs to the next tab on its own,
+  // so the nav highlight lands as you let go instead of when the page has finished arriving.
+  const progress = useMotionValue(0)
   const latest = useRef({ canGo, onSwipe })
   useEffect(() => {
     latest.current = { canGo, onSwipe }
@@ -62,8 +64,22 @@ export function useTabSwipe(
 
   useEffect(() => {
     if (!enabled) return
-    type Gesture = { x: number; y: number; t: number; axis: 'x' | 'y' | null; dx: number; armed: boolean }
+    type Gesture = { x: number; y: number; t: number; axis: 'x' | 'y' | null; dx: number; armed: boolean; base: number }
     let g: Gesture | null = null
+    // The direction of a committed swipe whose page is still sliding out (0: none). A touch that lands meanwhile takes
+    // the page from where it is and decides again, instead of the page jumping back to the tab it left (#176).
+    let committing: 1 | -1 | 0 = 0
+    let commitId = 0 // a stopped slide's late callback must not finish a newer one
+    const finish = () => {
+      if (!committing) return
+      const dir = committing
+      committing = 0
+      progress.jump(dir)
+      latest.current.onSwipe(dir)
+    }
+    const unfollow = x.on('change', (v) => {
+      if (!committing) progress.set(-v / span.current)
+    })
     const setPeek = (dir: 1 | -1 | 0) => setPeekState({ from: fromRef.current, dir })
     // The page column's width, gutters included: the distance between one tab and the next.
     const width = () => page.current?.closest('main')?.clientWidth ?? innerWidth
@@ -74,7 +90,13 @@ export function useTabSwipe(
       if (e.touches.length !== 1 || t.clientX < EDGE_PX || t.clientX > innerWidth - EDGE_PX) return
       if (document.querySelector('[role="dialog"]') || ownsSwipe(e.target instanceof Element ? e.target : null)) return
       x.stop()
-      g = { x: t.clientX, y: t.clientY, t: e.timeStamp, axis: null, dx: 0, armed: false }
+      if (committing) {
+        committing = 0
+        commitId++
+        progress.stop()
+      }
+      // Where the page was caught (not 0 mid-slide): the drag carries on from there.
+      g = { x: t.clientX, y: t.clientY, t: e.timeStamp, axis: null, dx: 0, armed: false, base: x.get() }
     }
 
     const onMove = (e: TouchEvent) => {
@@ -92,30 +114,42 @@ export function useTabSwipe(
       }
       if (g.axis !== 'x' || reduce) return
       e.preventDefault() // a sideways swipe doesn't also scroll the page
-      const dir = dx < 0 ? 1 : -1
+      const total = g.base + dx
+      const dir = total < 0 ? 1 : -1
       const open = latest.current.canGo(dir)
       setPeek(open ? dir : 0)
-      x.set(open ? dx : dx * RESIST)
+      x.set(open ? total : total * RESIST)
       // A tick as it crosses the point where letting go switches, so you feel it first.
-      const past = open && Math.abs(dx) > width() * COMMIT
+      const past = open && Math.abs(total) > width() * COMMIT
       if (past && !g.armed) detent()
       g.armed = past
     }
 
     const onEnd = (e: TouchEvent) => {
       if (!g) return
-      const { dx, axis } = g
+      const { dx, axis, base } = g
       const quick = e.timeStamp - g.t < MAX_MS
       g = null
-      if (axis !== 'x') return
-      const dir = dx < 0 ? 1 : -1
-      const commit = latest.current.canGo(dir) && (Math.abs(dx) > width() * COMMIT || (quick && Math.abs(dx) > MIN_PX))
+      // A scroll or tap ends the gesture, unless it caught a page mid-slide: that one still has to land somewhere.
+      if (axis !== 'x' && !base) return
+      const total = base + (axis === 'x' ? dx : 0)
+      const flick = axis === 'x' && quick && Math.abs(dx) > MIN_PX ? (dx < 0 ? 1 : -1) : 0
+      const dir = flick || (total < 0 ? 1 : -1)
+      const commit = latest.current.canGo(dir) && (!!flick || Math.abs(total) > width() * COMMIT)
       if (!commit) {
-        void animate(x, 0, soft).then(() => setPeek(0))
+        // Not if a new gesture has taken over meanwhile: it owns the peek.
+        void animate(x, 0, soft).then(() => {
+          if (!g) setPeek(0)
+        })
         return
       }
       if (reduce) return latest.current.onSwipe(dir)
-      void animate(x, -dir * width(), soft).then(() => latest.current.onSwipe(dir))
+      committing = dir
+      const id = ++commitId
+      void animate(progress, dir, soft)
+      void animate(x, -dir * width(), soft).then(() => {
+        if (id === commitId) finish()
+      })
     }
 
     window.addEventListener('touchstart', onStart, { passive: true })
@@ -124,12 +158,13 @@ export function useTabSwipe(
     window.addEventListener('touchend', onEnd, { passive: true })
     window.addEventListener('touchcancel', onEnd, { passive: true })
     return () => {
+      unfollow()
       window.removeEventListener('touchstart', onStart)
       window.removeEventListener('touchmove', onMove)
       window.removeEventListener('touchend', onEnd)
       window.removeEventListener('touchcancel', onEnd)
     }
-  }, [enabled, reduce, x, page])
+  }, [enabled, reduce, x, progress, page])
 
   return { x, peek, box, progress }
 }
