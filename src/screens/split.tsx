@@ -137,6 +137,7 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
                 trailing={
                   <Money
                     sen={s.shares[0].total}
+                    currency={s.currency}
                     className="text-base font-semibold"
                   />
                 }

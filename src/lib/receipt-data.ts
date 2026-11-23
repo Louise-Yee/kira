@@ -12,6 +12,8 @@ export type Receipt = {
   /** "Tax & service 16%", or "" when there is no charge. */
   chargeLabel: string
   everyone: boolean
+  /** ISO code of every amount; absent means RM. */
+  currency?: string
 }
 
 type SplitLike = {
@@ -22,6 +24,7 @@ type SplitLike = {
   items: SplitItem[]
   charges: Charge
   shares: Share[]
+  currency?: string
 }
 
 const rowLabel = (mode: SplitMode, item: SplitItem, index: number): string => {
@@ -59,5 +62,7 @@ export function buildReceipt(split: SplitLike, only?: number): Receipt {
     total: people.reduce((n, p) => n + p.total, 0),
     chargeLabel,
     everyone,
+    // Left out for RM: Firestore rejects undefined.
+    ...(split.currency ? { currency: split.currency } : {}),
   }
 }

@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react'
 import { AmountInput } from '@/components/amount-input'
 import { CategoryPicker } from '@/components/category-picker'
+import { RateField } from '@/components/rate-field'
 import { Segmented } from '@/components/segmented'
 import { TextField } from '@/components/text-field'
 import type { Category, Kind, WithId } from '@/lib/db'
+import { HOME } from '@/lib/money'
 
-export type Entry = { kind: Kind; amount: number; categoryId: string | null; note: string }
+/** `amount` is in minor units of `currency`; `rate` is the one typed by hand (null uses the fetched one). */
+export type Entry = { kind: Kind; amount: number; currency: string; rate: number | null; categoryId: string | null; note: string }
 
 type Props = {
   value: Entry
@@ -14,6 +17,8 @@ type Props = {
   /** An archived category stays pickable when it is the one already in use. */
   keepCategoryId?: string
   autoFocus?: boolean
+  /** The rate for `value.currency`, from `useRate`. */
+  fetched: { rate: number | null; loading: boolean }
   /** Rendered between the category and the note (the transaction's date). */
   children?: ReactNode
 }
@@ -24,7 +29,7 @@ const kindOptions = [
 ] as const satisfies readonly { value: Kind; label: string }[]
 
 /** The fields a transaction and a recurring rule share: kind, amount, category, note. */
-export function EntryFields({ value, onChange, categories, keepCategoryId, autoFocus, children }: Props) {
+export function EntryFields({ value, onChange, categories, keepCategoryId, autoFocus, fetched, children }: Props) {
   const choices = categories.filter((c) => c.kind === value.kind && (!c.archived || c.id === keepCategoryId))
   return (
     <>
@@ -40,7 +45,23 @@ export function EntryFields({ value, onChange, categories, keepCategoryId, autoF
           })
         }
       />
-      <AmountInput value={value.amount} onChange={(amount) => onChange({ ...value, amount })} autoFocus={autoFocus} />
+      <AmountInput
+        value={value.amount}
+        onChange={(amount) => onChange({ ...value, amount })}
+        currency={value.currency}
+        onCurrency={(currency) => onChange({ ...value, currency, rate: null })}
+        autoFocus={autoFocus}
+      />
+      {value.currency !== HOME && (
+        <RateField
+          key={value.currency}
+          currency={value.currency}
+          value={value.rate}
+          onChange={(rate) => onChange({ ...value, rate })}
+          fetched={fetched}
+          amount={value.amount}
+        />
+      )}
       <CategoryPicker categories={choices} value={value.categoryId} onChange={(categoryId) => onChange({ ...value, categoryId })} />
       {children}
       <TextField

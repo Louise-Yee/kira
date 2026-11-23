@@ -40,7 +40,8 @@ export function useBackClose(open: boolean, onClose: () => void) {
     // pops its own entry.
     const id = Math.random()
     const onPop = () => {
-      if (skip > 0) return
+      // Our entry is still the current one: the pop closed a sheet stacked on top of this one, not this one.
+      if (skip > 0 || history.state?.sheet === id) return
       close.current()
     }
     const start = () => {

@@ -5,6 +5,8 @@ import { Sheet } from '@/components/sheet'
 import { SheetActions } from '@/components/sheet-actions'
 import { success, warning } from '@/lib/haptics'
 import { todayISO } from '@/lib/date'
+import { useRate } from '@/lib/fx'
+import { entered, toHome } from '@/lib/money'
 import { toast } from '@/lib/toast'
 import type { Category, Transaction, TransactionDraft, WithId } from '@/lib/db'
 
@@ -30,16 +32,18 @@ export function TransactionSheet({ open, onClose, initial, ...rest }: Props) {
 function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'open'>) {
   const [entry, setEntry] = useState<Entry>({
     kind: initial?.kind ?? 'expense',
-    amount: initial?.amount ?? 0,
+    ...entered(initial),
     categoryId: initial?.categoryId ?? null,
     note: initial?.note ?? '',
   })
   const [date, setDate] = useState(initial?.date ?? todayISO())
+  const fetched = useRate(entry.currency, date)
+  const money = toHome(entry.amount, entry.currency, entry.rate ?? fetched.rate)
 
-  // null until the form can be saved (amount entered, category picked, date set).
+  // null until the form can be saved (amount entered, a rate for a foreign one, category picked, date set).
   const draft: TransactionDraft | null =
-    entry.amount > 0 && entry.categoryId && date
-      ? { kind: entry.kind, amount: entry.amount, categoryId: entry.categoryId, date, note: entry.note.trim() }
+    money && money.amount > 0 && entry.categoryId && date
+      ? { kind: entry.kind, ...money, categoryId: entry.categoryId, date, note: entry.note.trim() }
       : null
   const badge = initial?.recurringId ? 'Recurring' : initial?.splitId ? 'Split' : initial?.groupId ? 'Group' : null
 
@@ -72,7 +76,7 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
           {badge}
         </span>
       )}
-      <EntryFields value={entry} onChange={setEntry} categories={categories} keepCategoryId={initial?.categoryId} autoFocus>
+      <EntryFields value={entry} onChange={setEntry} categories={categories} keepCategoryId={initial?.categoryId} fetched={fetched} autoFocus>
         <DatePicker value={date} onChange={setDate} aria-label="Date" />
       </EntryFields>
     </div>

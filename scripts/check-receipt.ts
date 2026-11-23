@@ -54,4 +54,8 @@ assert.equal(exact.chargeLabel, '')
 assert.deepEqual(exact.people[1].rows, [{ label: 'Amount', amount: 500 }])
 assert.deepEqual(exact.people[0].rows, []) // someone with nothing to pay still appears, with no rows
 
+// A foreign split's receipt carries its currency; an RM one leaves the field out (Firestore rejects undefined)
+assert.equal(buildReceipt({ ...split, currency: 'JPY' }, 1).currency, 'JPY')
+assert.equal('currency' in all, false)
+
 console.log('check-receipt: ok')

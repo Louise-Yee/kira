@@ -69,7 +69,9 @@ export function Sheet({ open, onClose, title, children, size = 'fit', action }: 
               // On touch screens nothing is focused, so the keyboard doesn't push the sheet around.
               onOpenAutoFocus={(e) => {
                 if (touch) return e.preventDefault()
-                const el = document.querySelector<HTMLElement>('[data-autofocus]')
+                // Only inside this sheet: a sheet opened over another must not focus a field in the one below.
+                const root = e.target instanceof Element ? e.target : document
+                const el = root.querySelector<HTMLElement>('[data-autofocus]')
                 if (el) {
                   e.preventDefault()
                   el.focus()

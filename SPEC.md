@@ -10,7 +10,7 @@ Status: DRAFT v1. **[OPEN-#]** marks decisions that are still open.
 - Split-bill receipts that people without an account can view as an image.
 
 ## 2. Non-goals (v1)
-- Multi-currency (MYR only; the data model keeps a `currency` field for later)
+- Changing the home currency (always MYR; other currencies are entered per transaction, see 5.8 Multi-currency)
 - Budgets, subcategories, receipt photo storage
 - Multi-user features, shared ledgers, public links
 - Bank sync
@@ -36,20 +36,23 @@ Status: DRAFT v1. **[OPEN-#]** marks decisions that are still open.
 - If you have an existing project that was charged, start a **new** project rather than reuse it.
 
 ## 4. Data model
-Money is stored as **integer sen** (`amount: 1250` = RM 12.50), never floats.
+Money is stored as **integer sen** (`amount: 1250` = RM 12.50), never floats. `amount` is always RM; a foreign
+one keeps what was entered in `original: { currency, amount (its minor unit), rate (RM per 1 unit) }`.
+A document without `original` (or, for a split, without `currency`) is RM.
 
 ```
 users/{uid}
   settings/main:      { currency: 'MYR', theme, createdAt }
   categories/{id}:    { name, kind: 'expense'|'income', color, icon, order, archived }
-  transactions/{id}:  { kind, amount, categoryId, date: 'YYYY-MM-DD', note,
+  transactions/{id}:  { kind, amount, original?, categoryId, date: 'YYYY-MM-DD', note,
                         recurringId?, occurrence?, splitId?, createdAt, updatedAt }
-  recurring/{id}:     { kind, amount, categoryId, note,
+  recurring/{id}:     { kind, amount, original?, categoryId, note,
                         freq: 'day'|'week'|'month'|'year', interval: N,
                         startDate, end: { type: 'never'|'date'|'count', value? },
                         paused, createdAt }
   settings/main also: { tngQr?: dataURL (compressed) }
   splits/{id}:        { title, date, mode: 'itemized'|'simple',
+                        currency?, rate?,               // amounts below are in `currency`
                         people: [name],                 // includes "me"
                         items: [{ name?, amount, people: [idx] }],
                         charges: { type: 'percent', value } | { type: 'total', value },
@@ -106,6 +109,15 @@ users/{uid}
 - **Export:** a JSON file with everything (lossless) and a CSV of transactions (readable in a spreadsheet).
 - **Import:** the JSON backup only, merged into your existing data so re-importing doesn't create duplicates.
 - Note: switching phones **doesn't need** import/export; signing in brings everything back. These files are a backup and a way to take your data elsewhere.
+
+### 5.8 Multi-currency
+- A transaction, recurring rule or split can be entered in any ISO currency; RM stays the home currency and every total is RM.
+- The rate (RM per 1 unit) is prefilled from the free ECB rates at api.frankfurter.dev (no key, ~30 currencies) for the
+  transaction's date, and can be typed over. Offline, or for a currency the API lacks, it falls back to the last rate
+  this device saw, else the user types it. The rate is frozen on the document; nothing is re-converted later.
+- A recurring rule converts each payment at the latest known rate when it posts (fetched, else cached, else the rule's).
+- A split keeps every amount in its currency (receipts show that currency); my expense from it is RM at the split's rate.
+- Old app versions read foreign splits as RM, so the release that ships this bumps `minVersion`.
 
 ## 6. Design direction
 Inspired by Wise's *qualities*. We don't copy its green, its font or its layouts.

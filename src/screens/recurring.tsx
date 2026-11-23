@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/page-header'
 import { RecurringSheet } from '@/components/recurring-sheet'
 import { categoryOrOther } from '@/lib/category-lookup'
 import { shortDate } from '@/lib/date'
+import { formatRM } from '@/lib/money'
 import {
   countRecurringTransactions,
   deleteRecurring,
@@ -45,8 +46,15 @@ export function RecurringScreen({ user }: { user: AppUser }) {
         key={r.id}
         icon={<CategoryIcon name={cat?.icon ?? 'other'} color={cat?.color ?? 'cat-1'} tile />}
         title={r.note || cat?.name || 'Unknown category'}
-        subtitle={`${describeFrequency(r.freq, r.interval)} · ${status}`}
-        trailing={<Money sen={signed(r)} sign className="text-base font-semibold" />}
+        subtitle={[r.original && `≈ ${formatRM(r.amount)}`, describeFrequency(r.freq, r.interval), status].filter(Boolean).join(' · ')}
+        trailing={
+          <Money
+            sen={signed({ kind: r.kind, amount: r.original?.amount ?? r.amount })}
+            currency={r.original?.currency}
+            sign
+            className="text-base font-semibold"
+          />
+        }
         onClick={() => open(r)}
       />
     )

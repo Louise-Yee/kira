@@ -21,14 +21,16 @@ const csv = transactionsCsv(
     { ...tx, id: 'b', date: '2026-11-18', categoryId: 'gone', splitId: 's1' },
     { ...tx, id: 'a' },
     { ...tx, id: 'deleted', deletedAt: 5 },
+    { ...tx, id: 'c', date: '2026-11-19', amount: 7777, original: { currency: 'JPY', amount: 3000, rate: 0.025923 } },
   ],
   [cat],
 )
 assert.equal(
   csv,
-  '﻿date,kind,amount,category,note,source\r\n' +
-    '2026-11-17,expense,12.50,"Food, drink","lunch ""x""",manual\r\n' +
-    '2026-11-18,expense,12.50,,"lunch ""x""",split\r\n',
+  '﻿date,kind,amount,category,note,source,original_currency,original_amount,rate\r\n' +
+    '2026-11-17,expense,12.50,"Food, drink","lunch ""x""",manual,,,\r\n' +
+    '2026-11-18,expense,12.50,,"lunch ""x""",split,,,\r\n' +
+    '2026-11-19,expense,77.77,"Food, drink","lunch ""x""",manual,JPY,3000,0.025923\r\n',
 )
 
 // Validator: a good file round-trips through JSON, and a transaction whose category isn't in the file is fine
@@ -40,11 +42,16 @@ const backup: Backup = {
   transactions: [
     { ...tx, id: 'a' },
     { ...tx, id: 'b', categoryId: 'not-in-file', recurringId: 'r1', occurrence: 0 },
+    { ...tx, id: 'c', original: { currency: 'USD', amount: 999, rate: 4.1125 } },
   ],
   recurring: [
     {
       id: 'r1', kind: 'expense', amount: 100, categoryId: 'c1', note: '', freq: 'month', interval: 1,
       startDate: '2026-01-31', end: { type: 'count', value: 3 }, paused: false, posted: 1, createdAt: 1,
+    },
+    {
+      id: 'r2', kind: 'expense', amount: 4108, original: { currency: 'USD', amount: 999, rate: 4.1125 }, categoryId: 'c1',
+      note: '', freq: 'month', interval: 1, startDate: '2026-01-01', end: { type: 'never' }, paused: false, posted: 0, createdAt: 1,
     },
   ],
   splits: [
@@ -53,6 +60,12 @@ const backup: Backup = {
       items: [{ amount: 1000, people: [0, 1] }], charges: { type: 'percent', value: 0 },
       shares: [{ person: 0, subtotal: 500, charge: 0, total: 500 }, { person: 1, subtotal: 500, charge: 0, total: 500 }],
       categoryId: 'c1', expenseTxId: 's1_me', createdAt: 1, updatedAt: 1,
+    },
+    {
+      id: 's2', title: 'Ramen', date: '2026-11-17', mode: 'even', currency: 'JPY', rate: 0.025923, people: ['Me', 'Aiman'],
+      items: [{ amount: 3000, people: [0, 1] }], charges: { type: 'percent', value: 0 },
+      shares: [{ person: 0, subtotal: 1500, charge: 0, total: 1500 }, { person: 1, subtotal: 1500, charge: 0, total: 1500 }],
+      categoryId: 'c1', expenseTxId: 's2_me', createdAt: 1, updatedAt: 1,
     },
   ],
 }
@@ -105,6 +118,10 @@ bad(['transactions', 0, 'id'], 'x/y', /valid document id/)
 bad(['recurring', 0, 'end'], { type: 'count', value: 0 }, /recurring\[0\] \(id r1\): value/)
 bad(['splits', 0, 'shares', 0, 'total'], 'x', /splits\[0\] \(id s1\): total/)
 bad(['splits'], {}, /splits must be a list/)
+bad(['transactions', 2, 'original', 'currency'], 'usd', /transactions\[2\] \(id c\): currency/)
+bad(['transactions', 2, 'original', 'rate'], 0, /rate must be a number above 0/)
+bad(['recurring', 1, 'original', 'amount'], 9.99, /recurring\[1\] \(id r2\): amount/)
+bad(['splits', 1, 'rate'], undefined, /splits\[1\] \(id s2\): rate/)
 assert.ok(!validateBackup('nope').ok)
 assert.ok(!validateBackup([]).ok)
 

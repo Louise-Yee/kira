@@ -20,19 +20,19 @@ export function ReceiptCard({ receipt }: { receipt: Receipt }) {
             {person.rows.map((r, i) => (
               <li key={i} className="flex justify-between gap-3">
                 <span className="text-muted-foreground">{r.label}</span>
-                <Money sen={r.amount} className="font-semibold" />
+                <Money sen={r.amount} currency={receipt.currency} className="font-semibold" />
               </li>
             ))}
             {receipt.chargeLabel && person.charge !== 0 && (
               <li className="flex justify-between gap-3">
                 <span className="text-muted-foreground">{receipt.chargeLabel}</span>
-                <Money sen={person.charge} className="font-semibold" />
+                <Money sen={person.charge} currency={receipt.currency} className="font-semibold" />
               </li>
             )}
           </ul>
           <div className="mt-5 flex items-baseline justify-between gap-3 border-t border-dashed border-muted-foreground/50 pt-5">
             <span className="text-base font-bold">Total</span>
-            <Money sen={person.total} className="font-heading text-4xl font-extrabold text-primary" />
+            <Money sen={person.total} currency={receipt.currency} className="font-heading text-4xl font-extrabold text-primary" />
           </div>
         </article>
         <p className="text-center text-base text-muted-foreground">Split with kira</p>

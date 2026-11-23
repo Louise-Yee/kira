@@ -1,4 +1,5 @@
 import type { ClientInfo } from '@/lib/client-info'
+import type { Original } from '@/lib/money'
 import type { Deletion } from '@/lib/deletion'
 import type { RecurrenceRule } from '@/lib/recurrence'
 import type { Receipt } from '@/lib/receipt-data'
@@ -19,8 +20,10 @@ export type Category = {
 
 export type Transaction = {
   kind: Kind
-  /** Integer sen. */
+  /** Integer sen (the RM value, also for a foreign one). */
   amount: number
+  /** Set when it was entered in another currency. Absent means RM. */
+  original?: Original
   categoryId: string
   /** Local YYYY-MM-DD. */
   date: string
@@ -38,7 +41,7 @@ export type Transaction = {
 } & Deletion
 
 /** A recurring rule. `posted` = how many occurrences already exist (the next index to post). */
-export type Recurring = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'note'> &
+export type Recurring = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'note' | 'original'> &
   RecurrenceRule & { posted: number; createdAt: number } & Deletion
 
 /** What the rule form produces; `posted` and `createdAt` are managed by the db layer. */
@@ -50,6 +53,10 @@ export type Split = {
   /** Local YYYY-MM-DD. */
   date: string
   mode: SplitMode
+  /** Set when the bill is in another currency: every amount on the split is in its minor unit. Absent means RM. */
+  currency?: string
+  /** RM per 1 unit of `currency`, used for my expense. Set with `currency`. */
+  rate?: number
   people: string[]
   /** People who are my friends on kira, by person index (absent on older splits). */
   friends?: Record<string, SplitFriend>
@@ -78,7 +85,7 @@ export type PublicReceipt = {
 } & Deletion
 
 /** What the editor produces; shares, the expense id and timestamps are added on save. */
-export type SplitDraft = { title: string; date: string; categoryId: string; form: SplitForm }
+export type SplitDraft = { title: string; date: string; categoryId: string; form: SplitForm } & Partial<Pick<Split, 'currency' | 'rate'>>
 
 export type Settings = {
   currency: 'MYR'
@@ -97,5 +104,5 @@ export type ClientDoc = ClientInfo & { lastSeen: number }
 export type WithId<T> = T & { id: string }
 
 /** What the add/edit form produces; ids and timestamps are added on save. */
-export type TransactionDraft = Pick<Transaction, 'kind' | 'amount' | 'categoryId' | 'date' | 'note'>
+export type TransactionDraft = Pick<Transaction, 'kind' | 'amount' | 'original' | 'categoryId' | 'date' | 'note'>
 
