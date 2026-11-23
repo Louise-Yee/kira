@@ -108,7 +108,7 @@ export function Sheet({ open, onClose, title, children, size = 'fit', action }: 
                   {action}
                 </div>
                 <div
-                  className="min-h-0 overflow-y-auto overscroll-contain px-5 pt-1"
+                  className="min-h-0 grow overflow-y-auto overscroll-contain px-5 pt-1"
                   // Keep a focused field clear of the on-screen keyboard once the viewport has resized.
                   onFocusCapture={(e) => {
                     const el = e.target
