@@ -91,10 +91,10 @@ The version must be higher than the latest release, or the release job fails. Do
 "kira dev" is a second Android app (`app.kira.dev`) that installs next to the live one and uses the same data, for trying a branch on a phone before it ships. It checks for no updates and says "kira dev" in Settings.
 
 1. Push the branch, then Actions -> **Dev APK** -> Run workflow, type the branch name (`main` is merged in automatically).
-2. When it finishes, open the newest pre-release on the [Releases page](../../releases) named `dev-N-sha` and download its APK.
+2. When it finishes, open the newest release on the [Releases page](../../releases) named `dev-N-sha` (signed in to GitHub on the phone) and download its APK. It is a draft, so only people with write access to the repo can see or download it.
 3. Install it on the phone. Install a newer dev APK over the old one; same signing key, so the sign-in stays.
 
-Pre-releases are never `latest`, so the live app never offers a dev build as an update.
+Drafts and pre-releases are never `latest`, so the live app never offers a dev build as an update.
 
 ## Install on Android
 

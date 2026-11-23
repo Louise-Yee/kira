@@ -2,7 +2,8 @@ name: Dev APK
 
 # Builds "kira dev" (app.kira.dev), which installs next to the live app, from any branch. Run it by hand:
 # Actions -> Dev APK -> Run workflow -> pick a branch. It publishes a pre-release, so the live app's
-# "latest release" update check never sees it.
+# "latest release" update check never sees it. It is a draft, which only people with write access to the repo can see
+# (this repo is public, so a normal release would be downloadable by anyone).
 on:
   workflow_dispatch:
     inputs:
@@ -73,11 +74,11 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease
-      - name: Publish the pre-release
+      - name: Publish the draft pre-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.name.outputs.tag }}
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk "kira-dev-$TAG.apk"
-          gh release create "$TAG" "kira-dev-$TAG.apk" --prerelease --target "$GITHUB_SHA" \
+          gh release create "$TAG" "kira-dev-$TAG.apk" --draft --prerelease --target "$GITHUB_SHA" \
             --title "kira dev $TAG (${{ inputs.ref }})" --notes "Dev build of \`${{ inputs.ref }}\`. Not for everyday use."
