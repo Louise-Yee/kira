@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { animate, useReducedMotion } from 'motion/react'
-import { formatRM } from '@/lib/money'
+import { formatMoney } from '@/lib/money'
 import { cn } from '@/lib/utils'
 
 type Props = {
-  /** Integer sen. */
+  /** Integer sen (minor units of `currency`). */
   sen: number
+  /** ISO code; RM when absent. */
+  currency?: string
   /** Show "+" / "−" in front. */
   sign?: boolean
   /** Animate from the previous value (and from 0 on first show). Off with reduced motion. */
@@ -13,16 +15,16 @@ type Props = {
   className?: string
 }
 
-export function Money({ sen, sign, countUp, className }: Props) {
+export function Money({ sen, currency, sign, countUp, className }: Props) {
   const reduce = useReducedMotion()
   return (
     <span className={cn('tabular-nums', className)}>
-      {countUp && !reduce ? <CountUp sen={sen} sign={sign} /> : formatRM(sen, { sign })}
+      {countUp && !reduce ? <CountUp sen={sen} currency={currency} sign={sign} /> : formatMoney(sen, currency, { sign })}
     </span>
   )
 }
 
-function CountUp({ sen, sign }: { sen: number; sign?: boolean }) {
+function CountUp({ sen, currency, sign }: Pick<Props, 'sen' | 'currency' | 'sign'>) {
   const [shown, setShown] = useState(0)
   const from = useRef(0)
   useEffect(() => {
@@ -37,5 +39,5 @@ function CountUp({ sen, sign }: { sen: number; sign?: boolean }) {
     })
     return () => anim.stop()
   }, [sen])
-  return formatRM(shown, { sign })
+  return formatMoney(shown, currency, { sign })
 }

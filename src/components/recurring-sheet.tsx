@@ -8,6 +8,8 @@ import { SheetActions } from '@/components/sheet-actions'
 import { TextField } from '@/components/text-field'
 import { error, success, warning } from '@/lib/haptics'
 import { shortDate, todayISO } from '@/lib/date'
+import { useRate } from '@/lib/fx'
+import { entered, toHome } from '@/lib/money'
 import type { Category, Recurring, RecurringDraft, WithId } from '@/lib/db'
 import { nextDate, restartFloor, scheduleChanged, type Freq, type RecurrenceEnd } from '@/lib/recurrence'
 
@@ -69,7 +71,7 @@ const initialPreset = (r?: Recurring): Preset =>
 function Form({ initial, categories, onSave, countTransactions, onDelete, onClose }: Omit<Props, 'open'>) {
   const [entry, setEntry] = useState<Entry>({
     kind: initial?.kind ?? 'expense',
-    amount: initial?.amount ?? 0,
+    ...entered(initial),
     categoryId: initial?.categoryId ?? null,
     note: initial?.note ?? '',
   })
@@ -84,6 +86,9 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
   const [endCount, setEndCount] = useState(initial?.end.type === 'count' ? String(initial.end.value) : '')
   const [paused, setPaused] = useState(initial?.paused ?? false)
 
+  // The latest rate: each payment is converted again when it posts, so this one is an estimate.
+  const fetched = useRate(entry.currency)
+  const money = toHome(entry.amount, entry.currency, entry.rate ?? fetched.rate)
   const freq: Freq = preset === 'custom' ? unit : preset
   const n = preset === 'custom' ? wholeNumber(interval) : 1
   const count = wholeNumber(endCount)
@@ -107,10 +112,10 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
           : null
   // null until the form can be saved.
   const draft: RecurringDraft | null =
-    entry.amount > 0 && entry.categoryId && startDate && !tooEarly && n && end
+    money && money.amount > 0 && entry.categoryId && startDate && !tooEarly && n && end
       ? {
           kind: entry.kind,
-          amount: entry.amount,
+          ...money,
           categoryId: entry.categoryId,
           note: entry.note.trim(),
           freq,
@@ -132,7 +137,7 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
 
   return (
     <div className="flex flex-col gap-4 pb-1">
-      <EntryFields value={entry} onChange={setEntry} categories={categories} keepCategoryId={initial?.categoryId} autoFocus={!initial} />
+      <EntryFields value={entry} onChange={setEntry} categories={categories} keepCategoryId={initial?.categoryId} fetched={fetched} autoFocus={!initial} />
 
       <Segmented options={presetOptions} value={preset} onChange={setPreset} />
       {preset === 'custom' && (

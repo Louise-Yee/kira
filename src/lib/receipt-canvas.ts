@@ -1,7 +1,7 @@
 import { drawAscii } from '@/lib/ascii-draw'
 import { haloField, identity, rotateWorld, shadeCoin } from '@/lib/coin3d'
 import { longDate } from '@/lib/date'
-import { formatRM } from '@/lib/money'
+import { formatMoney } from '@/lib/money'
 import type { Receipt } from '@/lib/receipt-data'
 
 export const RECEIPT_WIDTH = 1080
@@ -79,7 +79,7 @@ function wrap(g: CanvasRenderingContext2D, s: string, maxWidth: number, font: st
   return lines
 }
 
-const money = (sen: number) => formatRM(sen, { sign: sen < 0 })
+const money = (sen: number, currency?: string) => formatMoney(sen, currency, { sign: sen < 0 })
 
 const COIN_TILT = rotateWorld(identity(), 1, 0, 0, -0.35)
 
@@ -157,17 +157,17 @@ function drawReceipt(g: CanvasRenderingContext2D, r: Receipt, qr: ImageBitmap | 
     y += 24 + 28 + ROW / 2
     for (const row of p.rows) {
       text(g, row.label, left, y, `500 30px ${SANS}`, pal.muted)
-      text(g, money(row.amount), right, y, `600 30px ${SANS}`, pal.foreground, 'right')
+      text(g, money(row.amount, r.currency), right, y, `600 30px ${SANS}`, pal.foreground, 'right')
       y += ROW
     }
     if (r.chargeLabel && p.charge !== 0) {
       text(g, r.chargeLabel, left, y, `500 30px ${SANS}`, pal.muted)
-      text(g, money(p.charge), right, y, `600 30px ${SANS}`, pal.foreground, 'right')
+      text(g, money(p.charge, r.currency), right, y, `600 30px ${SANS}`, pal.foreground, 'right')
       y += ROW
     }
     y += 8
     text(g, 'Total', left, y + 24, `700 34px ${SANS}`, pal.foreground)
-    text(g, money(p.total), right, y + 24, `800 60px ${HEAD}`, pal.primary, 'right')
+    text(g, money(p.total, r.currency), right, y + 24, `800 60px ${HEAD}`, pal.primary, 'right')
     y += 48 + 24
   }
 
@@ -175,7 +175,7 @@ function drawReceipt(g: CanvasRenderingContext2D, r: Receipt, qr: ImageBitmap | 
     dashed(g, y, pal.muted)
     y += 52
     text(g, 'Bill total', left, y, `700 34px ${SANS}`, pal.muted)
-    text(g, money(r.total), right, y, `800 60px ${HEAD}`, pal.foreground, 'right')
+    text(g, money(r.total, r.currency), right, y, `800 60px ${HEAD}`, pal.foreground, 'right')
     y += 52
   }
 
@@ -207,7 +207,7 @@ const FONTS = [`800 76px "Bricolage Grotesque Variable"`, `500 30px "Inter Varia
 
 /** Render the receipt as a PNG. Waits for the fonts first, or the canvas would silently use a fallback. */
 export async function renderReceipt(receipt: Receipt, qrDataUrl: string | undefined, t = 0): Promise<Blob> {
-  await Promise.all(FONTS.map((f) => document.fonts.load(f, 'RM 0123456789÷+−&%.,')))
+  await Promise.all(FONTS.map((f) => document.fonts.load(f, 'RM ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789÷+−&%.,')))
   const qr = qrDataUrl ? await createImageBitmap(await (await fetch(qrDataUrl)).blob()) : null
   const pal = readPalette()
 

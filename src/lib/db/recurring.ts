@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { doc, getDocsFromServer, limit, query, updateDoc, where, writeBatch, type DocumentReference } from 'firebase/firestore'
+import { deleteField, doc, getDocsFromServer, limit, query, updateDoc, where, writeBatch, type DocumentReference } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { toSen } from '@/lib/money'
 import { occurrenceDate, scheduleChanged } from '@/lib/recurrence'
 import { col, deletion, liveDocs, newId, reportError, restoration, save } from './core'
 import type { Recurring, RecurringDraft, WithId } from './types'
@@ -21,17 +22,20 @@ const CHUNK = 499
 /**
  * Create the transactions for occurrences `indices` (ascending, contiguous from `rule.posted`) and advance `posted`.
  * IDs are `{ruleId}_{n}`, so two devices posting the same occurrence write the same document.
+ * A foreign rule converts at `rate` (the latest known), not the rate saved on the rule.
  * Never awaited: offline, a batch only resolves once the server acks it.
  */
-export function postOccurrences(uid: string, ruleId: string, rule: Recurring, indices: number[]) {
+export function postOccurrences(uid: string, ruleId: string, rule: Recurring, indices: number[], rate?: number) {
   const now = Date.now()
+  const o = rule.original
+  const money = o ? { amount: toSen(o.amount, o.currency, rate ?? o.rate), original: { ...o, rate: rate ?? o.rate } } : { amount: rule.amount }
   for (let i = 0; i < indices.length; i += CHUNK) {
     const part = indices.slice(i, i + CHUNK)
     const batch = writeBatch(db)
     for (const n of part) {
       batch.set(doc(col(uid, 'transactions'), `${ruleId}_${n}`), {
         kind: rule.kind,
-        amount: rule.amount,
+        ...money,
         categoryId: rule.categoryId,
         note: rule.note,
         date: occurrenceDate(rule, n),
@@ -60,7 +64,8 @@ export function saveRecurring(uid: string, draft: RecurringDraft, existing?: Wit
   const ref = doc(col(uid, 'recurring'), existing.id)
   if (!scheduleChanged(existing, draft) || existing.posted === 0) {
     // `posted` is left out on purpose: the poster owns it, and a stale copy here would make it re-post.
-    void updateDoc(ref, draft).catch(reportError)
+    // A rule switched back to RM drops its original (updateDoc keeps fields the draft leaves out).
+    void updateDoc(ref, { ...draft, original: draft.original ?? deleteField() }).catch(reportError)
     return
   }
   const batch = writeBatch(db)

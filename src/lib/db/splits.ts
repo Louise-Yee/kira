@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { collection, doc, limit, orderBy, query, where, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { toHome } from '@/lib/money'
 import { buildReceipt } from '@/lib/receipt-data'
 import { computeForm, resolveItems, type SplitItem } from '@/lib/split'
 import { col, newId, reportError, softDelete } from './core'
@@ -38,6 +39,7 @@ const cleanItem = (item: SplitItem): SplitItem => ({
  * Create (no `existing`) or update a split, and keep my own share in sync as an expense (`{splitId}_me`).
  * One batch, never awaited. Shares are computed here and stored as fixed values.
  * My share of 0 (I'm on no item) creates no expense and removes a previous one.
+ * A foreign split keeps its amounts in that currency; my expense is in RM at the split's rate, with the original.
  */
 export function saveSplit(uid: string, draft: SplitDraft, existing?: WithId<Split>) {
   const id = existing?.id ?? newId(uid, 'splits')
@@ -45,13 +47,15 @@ export function saveSplit(uid: string, draft: SplitDraft, existing?: WithId<Spli
   const createdAt = existing?.createdAt ?? now
   const { form } = draft
   const { shares } = computeForm(form)
-  const mine = shares[0].total
+  const fx = draft.currency && draft.rate ? { currency: draft.currency, rate: draft.rate } : null
+  const mine = (fx ? toHome(shares[0].total, fx.currency, fx.rate) : null) ?? { amount: shares[0].total }
   const txRef = doc(col(uid, 'transactions'), expenseId(id))
 
   const data = {
     title: draft.title,
     date: draft.date,
     mode: form.mode,
+    ...(fx ?? {}),
     people: form.people,
     // Only friends still on the split; absent when there are none (Firestore rejects undefined).
     ...(Object.keys(form.friends ?? {}).length ? { friends: form.friends } : {}),
@@ -75,15 +79,15 @@ export function saveSplit(uid: string, draft: SplitDraft, existing?: WithId<Spli
   batch.set(doc(col(uid, 'splits'), id), {
     ...data,
     categoryId: draft.categoryId,
-    expenseTxId: mine > 0 ? txRef.id : null,
+    expenseTxId: mine.amount > 0 ? txRef.id : null,
     ...(Object.keys(shareIds).length ? { shareIds } : {}),
     createdAt,
     updatedAt: now,
   })
-  if (mine > 0) {
+  if (mine.amount > 0) {
     batch.set(txRef, {
       kind: 'expense',
-      amount: mine,
+      ...mine,
       categoryId: draft.categoryId,
       date: draft.date,
       note: draft.title,

@@ -5,14 +5,19 @@ import { useState } from 'react'
 import { Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
 import { CategoryPicker } from '@/components/category-picker'
+import { CurrencySelect } from '@/components/currency-select'
+import { RateField } from '@/components/rate-field'
 import { Money } from '@/components/money'
 import { SheetActions } from '@/components/sheet-actions'
 import { PillButton } from '@/components/pill-button'
 import { Segmented } from '@/components/segmented'
+import { Section } from '@/components/section'
 import { Sheet } from '@/components/sheet'
 import { TextField } from '@/components/text-field'
 import { success, warning } from '@/lib/haptics'
 import { todayISO } from '@/lib/date'
+import { useRate } from '@/lib/fx'
+import { HOME } from '@/lib/money'
 import type { Category, Split, SplitDraft, WithId } from '@/lib/db'
 import {
   addPerson,
@@ -81,6 +86,11 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial?.date ?? todayISO())
   const [form, setForm] = useState<SplitForm>(initial ? formFromSplit(initial) : emptyForm)
+  // Every amount on the split is in `currency`; my expense is converted to RM on save.
+  const [currency, setCurrency] = useState(initial?.currency ?? HOME)
+  const [manualRate, setManualRate] = useState<number | null>(initial?.rate ?? null)
+  const fetched = useRate(currency, date)
+  const rate = currency === HOME ? null : (manualRate ?? fetched.rate)
   const [percentText, setPercentText] = useState(initial?.charges.type === 'percent' ? formatPercent(initial.charges.value) : '6')
   const [newName, setNewName] = useState('')
   const choices = categories.filter((c) => c.kind === 'expense' && (!c.archived || c.id === initial?.categoryId))
@@ -96,7 +106,8 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
     splitProblem(effective) ??
     (!title.trim() ? 'Add a title.' : null) ??
     (form.mode !== 'exact' && form.charges.type === 'percent' && percent === null ? 'Enter a tax percentage from 0 to 100.' : null) ??
-    (!categoryId ? 'Pick a category for your share.' : null)
+    (!categoryId ? 'Pick a category for your share.' : null) ??
+    (currency !== HOME && !rate ? `Enter the rate for ${currency}.` : null)
 
   // Every update reads the latest form (not the one this render closed over), so two quick taps never lose one.
   const patch = (p: Partial<SplitForm> | ((f: SplitForm) => Partial<SplitForm>)) =>
@@ -134,7 +145,29 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
     <div className="flex flex-col gap-5 pb-1">
       <div className="flex flex-col gap-2">
         <TextField value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (e.g. Dinner at Sushi King)" aria-label="Title" maxLength={60} />
-        <DatePicker value={date} onChange={setDate} aria-label="Date" />
+        <div className="flex gap-2">
+          <CurrencySelect
+            value={currency}
+            onChange={(c) => {
+              setCurrency(c)
+              setManualRate(null)
+            }}
+          />
+          <div className="min-w-0 flex-1">
+            <DatePicker value={date} onChange={setDate} aria-label="Date" />
+          </div>
+        </div>
+        {currency !== HOME && (
+          <RateField
+            key={currency}
+            currency={currency}
+            value={manualRate}
+            onChange={setManualRate}
+            fetched={fetched}
+            amount={result.shares[0].total}
+            amountLabel="My share"
+          />
+        )}
       </div>
 
       <Section title="People">
@@ -227,7 +260,7 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
                   <Trash2 className="size-5" aria-hidden />
                 </button>
               </div>
-              <AmountInput size="sm" value={item.amount} onChange={(amount) => setItem(i, { amount })} />
+              <AmountInput currency={currency} size="sm" value={item.amount} onChange={(amount) => setItem(i, { amount })} />
               <div className="flex flex-wrap gap-2">
                 {form.people.map((p, person) => {
                   const on = item.people.includes(person)
@@ -262,7 +295,7 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
 
       {form.mode === 'even' && (
         <Section title="Total bill, shared equally">
-          <AmountInput size="sm" value={form.evenTotal} onChange={(evenTotal) => patch({ evenTotal })} />
+          <AmountInput currency={currency} size="sm" value={form.evenTotal} onChange={(evenTotal) => patch({ evenTotal })} />
         </Section>
       )}
 
@@ -272,6 +305,7 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
             <div key={p} className="flex items-center gap-3 rounded-2xl bg-secondary p-3">
               <span className="min-w-0 flex-1 truncate text-base font-semibold">{p}</span>
               <AmountInput
+                currency={currency}
                 size="sm"
                 value={form.exact[i]}
                 onChange={(a) => patch((f) => ({ exact: f.exact.map((x, j) => (j === i ? a : x)) }))}
@@ -302,7 +336,7 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
             </div>
           ) : (
             <>
-              <AmountInput size="sm" value={form.charges.value} onChange={(value) => patch({ charges: { type: 'total', value } })} />
+              <AmountInput currency={currency} size="sm" value={form.charges.value} onChange={(value) => patch({ charges: { type: 'total', value } })} />
               <p className="px-1 text-base text-muted-foreground">
                 The total on the receipt. Everyone's share is scaled so the bill adds up exactly.
               </p>
@@ -310,7 +344,7 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
           )}
           <div className="flex items-baseline justify-between px-1 pt-1">
             <span className="text-base text-muted-foreground">Total</span>
-            <Money sen={result.total} className="font-heading text-xl font-bold" />
+            <Money currency={currency} sen={result.total} className="font-heading text-xl font-bold" />
           </div>
         </Section>
       )}
@@ -323,16 +357,16 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
               <span className="min-w-0 flex-1 truncate text-base font-semibold">{p}</span>
               {s.charge !== 0 && (
                 <span className="text-base text-muted-foreground tabular-nums">
-                  <Money sen={s.subtotal} /> + <Money sen={s.charge} />
+                  <Money currency={currency} sen={s.subtotal} /> + <Money currency={currency} sen={s.charge} />
                 </span>
               )}
-              <Money sen={s.total} className="text-base font-semibold" />
+              <Money currency={currency} sen={s.total} className="text-base font-semibold" />
             </div>
           )
         })}
         <div className="flex items-baseline justify-between border-t border-border px-1 pt-2">
           <span className="text-base font-semibold">Total</span>
-          <Money sen={result.total} className="font-heading text-xl font-bold" />
+          <Money currency={currency} sen={result.total} className="font-heading text-xl font-bold" />
         </div>
       </Section>
 
@@ -346,7 +380,7 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
         onSave={() => {
           if (problem || !categoryId) return
           success()
-          onSave({ title: title.trim(), date, categoryId, form: effective })
+          onSave({ title: title.trim(), date, categoryId, form: effective, ...(rate ? { currency, rate } : {}) })
           onClose()
         }}
         onDelete={
@@ -363,14 +397,5 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
         confirmDelete={false}
       />
     </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h3 className="px-1 text-base font-semibold text-muted-foreground">{title}</h3>
-      {children}
-    </section>
   )
 }

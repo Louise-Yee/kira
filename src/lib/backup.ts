@@ -2,7 +2,7 @@
 import type { Category, Recurring, Settings, Split, Transaction, WithId } from './db/types.ts'
 import type { Freq, RecurrenceEnd } from './recurrence.ts'
 import type { Charge, Share, SplitItem, SplitMode } from './split.ts'
-import { senToDecimal } from './money.ts'
+import { minorDigits, senToDecimal, type Original } from './money.ts'
 
 export type Backup = {
   version: 1
@@ -45,11 +45,14 @@ export function transactionsCsv(transactions: readonly Transaction[], categories
         names.get(t.categoryId) ?? '',
         t.note,
         t.recurringId ? 'recurring' : t.splitId ? 'split' : t.groupId ? 'group' : 'manual',
+        t.original?.currency ?? '',
+        t.original ? senToDecimal(t.original.amount, minorDigits(t.original.currency)) : '',
+        t.original ? String(t.original.rate) : '',
       ]
         .map(csvField)
         .join(','),
     )
-  return `${BOM}${['date,kind,amount,category,note,source', ...rows].join('\r\n')}\r\n`
+  return `${BOM}${['date,kind,amount,category,note,source,original_currency,original_amount,rate', ...rows].join('\r\n')}\r\n`
 }
 
 // ---------- Validation ----------
@@ -92,6 +95,20 @@ const date = (o: Rec, k: string): string => {
     : fail(`${k} must be a date (YYYY-MM-DD)`)
 }
 const has = (o: Rec, k: string) => o[k] !== undefined
+const currencyCode = (o: Rec, k: string): string => {
+  const v = str(o, k)
+  return /^[A-Z]{3}$/.test(v) ? v : fail(`${k} must be a 3-letter currency code`)
+}
+const rate = (o: Rec, k: string): number => {
+  const v = o[k]
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : fail(`${k} must be a number above 0`)
+}
+
+function parseOriginal(v: Json | undefined): Original {
+  const o = rec(v, 'original')
+  return { currency: currencyCode(o, 'currency'), amount: int(o, 'amount'), rate: rate(o, 'rate') }
+}
+const originalOf = (o: Rec) => (has(o, 'original') ? { original: parseOriginal(o.original) } : {})
 
 const KINDS = ['expense', 'income'] as const
 
@@ -115,6 +132,7 @@ function parseTransaction(o: Rec): Transaction {
   return {
     kind: oneOf(o, 'kind', KINDS),
     amount: int(o, 'amount'),
+    ...originalOf(o),
     categoryId: str(o, 'categoryId'),
     date: date(o, 'date'),
     note: str(o, 'note'),
@@ -141,6 +159,7 @@ function parseRecurring(o: Rec): Recurring {
   return {
     kind: oneOf(o, 'kind', KINDS),
     amount: int(o, 'amount'),
+    ...originalOf(o),
     categoryId: str(o, 'categoryId'),
     note: str(o, 'note'),
     freq: oneOf<Freq>(o, 'freq', ['day', 'week', 'month', 'year']),
@@ -181,6 +200,8 @@ function parseSplit(o: Rec): Split {
     title: str(o, 'title'),
     date: date(o, 'date'),
     mode: oneOf<SplitMode>(o, 'mode', ['itemized', 'even', 'exact']),
+    // Both or neither: a currency without its rate can't make my expense.
+    ...(has(o, 'currency') || has(o, 'rate') ? { currency: currencyCode(o, 'currency'), rate: rate(o, 'rate') } : {}),
     people,
     items: list(o.items, 'items').map(parseItem),
     charges: parseCharge(o.charges),

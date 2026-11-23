@@ -12,6 +12,7 @@ import { Ascii } from '@/components/ascii'
 import { categoryOrOther } from '@/lib/category-lookup'
 import { coinField, type Field } from '@/lib/coin'
 import { addMonths, dayLabel, monthLabel, monthName } from '@/lib/date'
+import { formatRM } from '@/lib/money'
 import type { Category, Transaction, WithId } from '@/lib/db'
 import { pop, press } from '@/lib/motion'
 import { groupByDay, signed, totals } from '@/lib/month-summary'
@@ -135,8 +136,16 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
                 <ListRow
                   icon={<CategoryIcon name={cat?.icon ?? 'other'} color={cat?.color ?? 'cat-1'} tile />}
                   title={t.note || cat?.name || 'Unknown category'}
-                  subtitle={t.note ? cat?.name : undefined}
-                  trailing={<Money sen={signed(t)} sign className="text-base font-semibold" />}
+                  // A foreign one shows what was paid, with its RM value underneath.
+                  subtitle={[t.note && cat?.name, t.original && formatRM(t.amount)].filter(Boolean).join(' · ') || undefined}
+                  trailing={
+                    <Money
+                      sen={signed({ kind: t.kind, amount: t.original?.amount ?? t.amount })}
+                      currency={t.original?.currency}
+                      sign
+                      className="text-base font-semibold"
+                    />
+                  }
                   onClick={() => onEdit(t)}
                 />
               </motion.div>
