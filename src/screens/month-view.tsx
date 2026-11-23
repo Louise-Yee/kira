@@ -5,6 +5,7 @@ import { CategoryIcon } from '@/components/category-icon'
 import { EmptyState } from '@/components/empty-state'
 import { ListRow } from '@/components/list-row'
 import { Money } from '@/components/money'
+import { PageHeader } from '@/components/page-header'
 import { TrendBars } from '@/components/trend-bars'
 import { byCategory, type MonthTotals } from '@/lib/chart-data'
 import { Ascii } from '@/components/ascii'
@@ -46,8 +47,7 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="font-heading text-3xl font-extrabold tracking-tight">Hi, {name}</h1>
-
+      <PageHeader title={`Hi, ${name}`}>
       <div className="flex items-center justify-between">
         <motion.button
           type="button"
@@ -70,6 +70,7 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
           <ChevronRight className="size-5" />
         </motion.button>
       </div>
+      </PageHeader>
 
       <motion.section
         initial={{ scale: 0.92, opacity: 0 }}

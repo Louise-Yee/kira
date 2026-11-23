@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/empty-state'
 import { GroupNameSheet } from '@/components/group-name-sheet'
 import { ListRow } from '@/components/list-row'
 import { PillButton } from '@/components/pill-button'
+import { PageHeader } from '@/components/page-header'
 import { Segmented } from '@/components/segmented'
 import {
   acceptFriendRequest,
@@ -88,21 +89,25 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-heading text-3xl font-extrabold tracking-tight">People</h1>
-        {/* The same width for both labels, so switching views doesn't shift the header (min: it can still grow with a larger font). */}
-        {segment === 'groups' ? (
-          <PillButton size="pill-sm" className="min-w-40" onClick={() => setCreating(true)}>
-            <Users className="size-5" />
-            New group
-          </PillButton>
-        ) : (
-          <PillButton size="pill-sm" className="min-w-40" onClick={() => setAdding(true)}>
-            <UserPlus className="size-5" />
-            Add friend
-          </PillButton>
-        )}
-      </div>
+      <PageHeader
+        title="People"
+        // The same width for both labels, so switching views doesn't shift the header (min: it can still grow with a larger font).
+        action={
+          segment === 'groups' ? (
+            <PillButton size="pill-sm" className="min-w-40" onClick={() => setCreating(true)}>
+              <Users className="size-5" />
+              New group
+            </PillButton>
+          ) : (
+            <PillButton size="pill-sm" className="min-w-40" onClick={() => setAdding(true)}>
+              <UserPlus className="size-5" />
+              Add friend
+            </PillButton>
+          )
+        }
+      >
+        <Segmented options={segments} value={segment} onChange={setSegment} />
+      </PageHeader>
       {groupInvites.length > 0 && (
         <section className="flex flex-col gap-2">
           <Heading>Group invites</Heading>
@@ -169,8 +174,6 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
           })}
         </section>
       )}
-      <Segmented options={segments} value={segment} onChange={setSegment} />
-
       {segment === 'friends' && (
         <>
           {friendships?.length === 0 && (

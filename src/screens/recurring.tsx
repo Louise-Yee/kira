@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/empty-state'
 import { Fab } from '@/components/fab'
 import { ListRow } from '@/components/list-row'
 import { Money } from '@/components/money'
+import { PageHeader } from '@/components/page-header'
 import { RecurringSheet } from '@/components/recurring-sheet'
 import { categoryOrOther } from '@/lib/category-lookup'
 import { shortDate } from '@/lib/date'
@@ -53,7 +54,7 @@ export function RecurringScreen({ user }: { user: AppUser }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="font-heading text-3xl font-extrabold tracking-tight">Recurring</h1>
+      <PageHeader title="Recurring" />
 
       {rules?.length === 0 && (
         <EmptyState

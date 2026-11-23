@@ -7,6 +7,7 @@ import { Fab } from "@/components/fab";
 import { ListRow } from "@/components/list-row";
 import { Money } from "@/components/money";
 import { ReceiptSheet } from "@/components/receipt-sheet";
+import { PageHeader } from "@/components/page-header";
 import { Segmented } from "@/components/segmented";
 import { SplitEditor } from "@/components/split-editor";
 import { SwipeRow } from "@/components/swipe-row";
@@ -79,18 +80,16 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="font-heading text-3xl font-extrabold tracking-tight">
-        Split
-      </h1>
-
-      <Segmented
-        options={[
-          { value: "recent", label: "Recent" },
-          { value: "history", label: "History" },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
+      <PageHeader title="Split">
+        <Segmented
+          options={[
+            { value: "recent", label: "Recent" },
+            { value: "history", label: "History" },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </PageHeader>
 
       {splits?.length === 0 &&
         (tab === "recent" ? (

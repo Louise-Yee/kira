@@ -65,7 +65,7 @@ export function SettingsScreen({ user, navPos, onNavPos, update, onUpdate, lock 
   const settings = useSettings(user.uid)
   const isUsed = useCallback((id: string) => categoryInUse(user.uid, id), [user.uid])
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 pt-[calc(1.5rem+var(--inset-top))] lg:pt-0">
       <h1 className="font-heading text-3xl font-extrabold tracking-tight">Settings</h1>
       <div className="flex items-center gap-4 rounded-3xl bg-card p-5">
         <Avatar photoURL={user.photoURL} name={user.displayName ?? user.email ?? '?'} />
