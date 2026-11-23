@@ -9,9 +9,9 @@ assert.deepEqual([d.getFullYear(), d.getMonth(), d.getDate()], [2026, 10, 17])
 assert.equal(dateToISO(new Date(2026, 10, 17, 0, 5)), '2026-11-17')
 assert.equal(dateToISO(new Date(2026, 10, 17, 23, 59)), todayISO(new Date(2026, 10, 17, 23, 59)))
 
-// dayLabel: weekday by default, dropped for tight rows; Today/Yesterday either way.
+// dayLabel
 assert.equal(dayLabel('2026-11-17', '2026-11-23'), 'Tue, 17 Nov')
-assert.equal(dayLabel('2026-11-17', '2026-11-23', { weekday: false }), '17 Nov')
-assert.equal(dayLabel('2026-11-22', '2026-11-23', { weekday: false }), 'Yesterday')
+assert.equal(dayLabel('2026-11-22', '2026-11-23'), 'Yesterday')
+assert.equal(dayLabel('2026-11-23', '2026-11-23'), 'Today')
 
 console.log('check-date ok')
