@@ -3,6 +3,7 @@ import { AmountInput } from '@/components/amount-input'
 import { DatePicker } from '@/components/date-picker'
 import { MemberChips, type Person } from '@/components/member-chips'
 import { Money } from '@/components/money'
+import { ScanReceiptButton } from '@/components/scan-receipt-button'
 import { Segmented } from '@/components/segmented'
 import { Sheet } from '@/components/sheet'
 import { SheetActions } from '@/components/sheet-actions'
@@ -12,6 +13,7 @@ import type { Group, WithId } from '@/lib/db'
 import { evenShares, sharesProblem, type ExpenseDraft, type GroupExpense } from '@/lib/group-ledger'
 import { membersOf } from '@/lib/groups'
 import { success } from '@/lib/haptics'
+import { scannedTotal } from '@/lib/receipt-parse'
 
 type Props = {
   open: boolean
@@ -76,6 +78,13 @@ function Form({ group, meUid, initial, onSave, onClose }: Omit<Props, 'open'>) {
       />
       <TextField value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What was it for?" aria-label="Title" maxLength={100} />
       <AmountInput currency={group.currency} value={amount} onChange={setAmount} autoFocus={!initial} />
+      {/* Group expenses have no items, so a scan only fills the bill's total. */}
+      <ScanReceiptButton
+        onScanned={(r) => {
+          const total = scannedTotal(r) ?? r.items.reduce((sum, i) => sum + i.amount, 0)
+          if (total > 0) setAmount(total)
+        }}
+      />
       <DatePicker value={date} onChange={setDate} aria-label="Date" />
 
       <section className="flex flex-col gap-2">

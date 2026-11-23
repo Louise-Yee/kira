@@ -37,6 +37,15 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico}', '**/*latin*.woff2'],
         // Firebase reserves /__/ (auth handler); never serve the SPA shell for it.
         navigateFallbackDenylist: [/^\/__\//],
+        // The OCR engine (~4 MB) and its language data are fetched on the first scan, then kept, not installed with the app.
+        globIgnores: ['**/tesseract-core*', '**/worker.min*'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => /tesseract-core|worker\.min|\/tessdata\//.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'ocr', expiration: { maxEntries: 5 } },
+          },
+        ],
       },
     }),
   ],
