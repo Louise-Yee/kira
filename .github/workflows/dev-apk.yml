@@ -1,15 +1,17 @@
 name: Dev APK
 
-# Builds "kira dev" (app.kira.dev), which installs next to the live app, from any branch. Run it by hand:
-# Actions -> Dev APK -> Run workflow -> pick a branch. It publishes a pre-release, so the live app's
+# Builds "kira dev" (app.kira.dev), which installs next to the live app. Every push to the `dev` branch builds it
+# (main = live, dev = what is being tried on a phone); Actions -> Dev APK -> Run workflow builds any other branch. It publishes a pre-release, so the live app's
 # "latest release" update check never sees it. It is a draft, which only people with write access to the repo can see
 # (this repo is public, so a normal release would be downloadable by anyone).
 on:
+  push:
+    branches: [dev]
   workflow_dispatch:
     inputs:
       ref:
         description: Branch to build (main is merged in, so the Android setup is always current)
-        default: main
+        default: dev
         required: true
 
 permissions:
@@ -29,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
       - name: Merge main into the branch
         run: |
