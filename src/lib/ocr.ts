@@ -38,11 +38,13 @@ export async function scanReceipt(file: File, onProgress: (p: number) => void): 
   // and the data is bundled with the app anyway, so a cache buys nothing.
   const langPath = `${import.meta.env.BASE_URL}tessdata`
   stage = 'checking language data'
-  const check = await fetch(`${langPath}/eng.traineddata.gz`, { method: 'HEAD' })
+  const check = await fetch(`${langPath}/eng.traineddata`, { method: 'HEAD' })
   if (!check.ok) throw new Error(`Couldn't find the reader's language data (${check.status}).`)
   const starting = createWorker('eng', 1, {
     workerBlobURL: false,
     cacheMethod: 'none',
+    // Stored uncompressed: the Android build strips ".gz" from bundled files, so a .gz name 404s in the app.
+    gzip: false,
     langPath,
     workerPath,
     corePath,
