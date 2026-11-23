@@ -49,8 +49,13 @@ export function parseReceipt(text: string): ScannedReceipt {
   return { items, tax, total }
 }
 
-/** The bill's real total: the printed one, else the items plus the tax lines, else unknown. */
+/**
+ * The bill's real total: the printed one, else the items plus the tax lines, else unknown.
+ * With no tax read and 2+ items, a printed total below the items' sum is more likely a misread digit (58 read as 53)
+ * than a discount, so the sum wins.
+ */
 export function scannedTotal({ items, tax, total }: ScannedReceipt): number | null {
-  if (total !== null) return total
-  return tax === null ? null : items.reduce((sum, i) => sum + i.amount, 0) + tax
+  const sum = items.reduce((s, i) => s + i.amount, 0)
+  if (total !== null) return tax === null && items.length >= 2 && total < sum ? sum : total
+  return tax === null ? null : sum + tax
 }
