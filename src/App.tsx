@@ -209,7 +209,7 @@ function Shell({ user, lock }: { user: AppUser; lock: AppLock }) {
       <TabBar tabs={tabs} active={tab} onChange={go} side={side} drag={swipe.progress} cut={slide.cut} />
 
       <FabSlideContext value={hasNoFab(tab) || hasNoFab(from)}>
-      <main className={cn('relative flex-1 overflow-x-clip px-5 pt-[calc(1.5rem+var(--inset-top))] pb-32', side && 'lg:p-0 lg:pb-24')}>
+      <main className={cn('relative flex-1 overflow-x-clip px-5 pb-32', side && 'lg:p-0 lg:pb-24')}>
         {/* Follows the finger during a swipe; the peeking tab sits one column over, so it slides in alongside. */}
         <motion.div className="relative" style={{ x: swipe.x }}>
           <AnimatePresence mode="popLayout" initial={false} custom={slide}>

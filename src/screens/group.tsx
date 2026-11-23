@@ -8,6 +8,7 @@ import { GroupExpenseSheet } from '@/components/group-expense-sheet'
 import { GroupSettleUp } from '@/components/group-settle-up'
 import { ListRow } from '@/components/list-row'
 import { Money } from '@/components/money'
+import { PageHeader } from '@/components/page-header'
 import { PillButton } from '@/components/pill-button'
 import { Sheet } from '@/components/sheet'
 import { TextField } from '@/components/text-field'
@@ -73,7 +74,7 @@ export function GroupScreen({ me, group, log, categories, friends, onBack }: Pro
   )
   if (!group) {
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 pt-[calc(1.5rem+var(--inset-top))] lg:pt-0">
         {back}
         <p className="text-base text-muted-foreground">Joining the group…</p>
       </div>
@@ -83,13 +84,15 @@ export function GroupScreen({ me, group, log, categories, friends, onBack }: Pro
   const count = group.memberUids.length
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
-        {back}
-        <h1 className="min-w-0 flex-1 truncate font-heading text-3xl font-extrabold tracking-tight">{group.name}</h1>
-        <PillButton variant="secondary" size="pill-sm" className="w-11 px-0" aria-label="Group settings" onClick={() => setSettings(true)}>
-          <Settings className="size-5" />
-        </PillButton>
-      </div>
+      <PageHeader
+        title={group.name}
+        leading={back}
+        action={
+          <PillButton variant="secondary" size="pill-sm" className="w-11 px-0" aria-label="Group settings" onClick={() => setSettings(true)}>
+            <Settings className="size-5" />
+          </PillButton>
+        }
+      />
 
       <GroupLedger me={me} group={group} />
 

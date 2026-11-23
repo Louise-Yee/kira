@@ -126,6 +126,67 @@
   --inset-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
 }
 
+/* Sticky page header (<PageHeader>): the title shrinks and a hairline fades in as the page scrolls under it. Driven by the
+   scroll position, so there are no springs here, and it follows the finger even with reduced motion. */
+@keyframes header-shrink {
+  to {
+    padding-top: calc(0.5rem + var(--inset-top));
+    padding-bottom: 0.5rem;
+  }
+}
+@keyframes title-shrink {
+  to {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+}
+@keyframes hairline-in {
+  to {
+    opacity: 1;
+  }
+}
+.page-header {
+  padding-top: calc(1.5rem + var(--inset-top));
+  padding-bottom: 0.75rem;
+}
+.page-title {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+@media (max-width: 1023.98px) {
+  @supports (animation-timeline: scroll()) {
+    .page-header,
+    .page-title,
+    .page-header::after {
+      animation-timeline: scroll(root);
+      animation-fill-mode: both;
+      animation-timing-function: linear;
+      animation-range: 0 3rem;
+    }
+    .page-header {
+      animation-name: header-shrink;
+    }
+    .page-title {
+      animation-name: title-shrink;
+    }
+    .page-header::after {
+      content: '';
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 1px;
+      background: var(--border);
+      opacity: 0;
+      animation-name: hairline-in;
+    }
+  }
+}
+@media (min-width: 1024px) {
+  .page-header {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
