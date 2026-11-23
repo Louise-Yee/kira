@@ -1,10 +1,9 @@
 import type { ReactNode } from 'react'
 import { AmountInput } from '@/components/amount-input'
-import { CategoryPicker } from '@/components/category-picker'
+import { CategoryChips } from '@/components/category-chips'
 import { RateField } from '@/components/rate-field'
-import { Segmented } from '@/components/segmented'
 import { TextField } from '@/components/text-field'
-import type { Category, Kind, WithId } from '@/lib/db'
+import type { Category, WithId } from '@/lib/db'
 import type { Entry } from '@/lib/entry'
 import { HOME } from '@/lib/money'
 
@@ -21,28 +20,11 @@ type Props = {
   children?: ReactNode
 }
 
-const kindOptions = [
-  { value: 'expense', label: 'Expense' },
-  { value: 'income', label: 'Income' },
-] as const satisfies readonly { value: Kind; label: string }[]
-
-/** The fields a transaction and a recurring rule share: kind, amount, category, note. */
+/** The fields a transaction and a recurring rule share: amount, category, note. The category sets the kind (expense or income). */
 export function EntryFields({ value, onChange, categories, keepCategoryId, autoFocus, fetched, children }: Props) {
-  const choices = categories.filter((c) => c.kind === value.kind && (!c.archived || c.id === keepCategoryId))
+  const choices = categories.filter((c) => !c.archived || c.id === keepCategoryId)
   return (
     <>
-      <Segmented
-        options={kindOptions}
-        value={value.kind}
-        onChange={(kind) =>
-          // A category belongs to one kind: drop the pick if it no longer fits.
-          onChange({
-            ...value,
-            kind,
-            categoryId: categories.find((c) => c.id === value.categoryId)?.kind === kind ? value.categoryId : null,
-          })
-        }
-      />
       <AmountInput
         value={value.amount}
         onChange={(amount) => onChange({ ...value, amount })}
@@ -60,7 +42,11 @@ export function EntryFields({ value, onChange, categories, keepCategoryId, autoF
           amount={value.amount}
         />
       )}
-      <CategoryPicker categories={choices} value={value.categoryId} onChange={(categoryId) => onChange({ ...value, categoryId })} />
+      <CategoryChips
+        categories={choices}
+        value={value.categoryId}
+        onChange={(categoryId) => onChange({ ...value, categoryId, kind: choices.find((c) => c.id === categoryId)?.kind ?? value.kind })}
+      />
       {children}
       <TextField
         value={value.note}

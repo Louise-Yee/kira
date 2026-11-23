@@ -4,7 +4,7 @@ import type { FriendName } from '@/lib/friends'
 import { useState } from 'react'
 import { Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
-import { CategoryPicker } from '@/components/category-picker'
+import { CategoryChips } from '@/components/category-chips'
 import { CurrencySelect } from '@/components/currency-select'
 import { RateField } from '@/components/rate-field'
 import { Money } from '@/components/money'
@@ -374,7 +374,7 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
       </Section>
 
       <Section title="Category for my share">
-        <CategoryPicker categories={choices} value={categoryId} onChange={setCategoryId} />
+        <CategoryChips categories={choices} value={categoryId} onChange={setCategoryId} />
       </Section>
 
       <SheetActions
