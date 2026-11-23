@@ -48,6 +48,8 @@
 /* A1: cobalt on neutral grey. `.light` forces these inside a dark page (the paper receipt). */
 :root,
 .light {
+  /* Native parts (scrollbars, date inputs) follow the theme. */
+  color-scheme: light;
   --radius: 1rem;
   --background: #f4f4f4;
   --foreground: #121212;
@@ -88,6 +90,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: #121212;
   --foreground: #f2f2f2;
   --card: #1e1e1e;
