@@ -113,7 +113,10 @@ export async function joinByLink(u: User, link: string, group: string) {
 
 /** Adds an expense on the open group screen, split equally between everyone ticked (all members by default). */
 export async function addGroupExpense(u: User, title: string, digits: string) {
-  await u.page.getByRole('button', { name: 'Add expense' }).click()
+  const add = u.page.getByRole('button', { name: 'Add expense' })
+  // The page that slid out (Home's empty state has an "Add expense" too) is still there for a moment on a slow run.
+  await expect(add).toHaveCount(1)
+  await add.click()
   const s = sheet(u, 'Add expense')
   await s.getByLabel('Title').fill(title)
   await typeAmount(u, digits)
