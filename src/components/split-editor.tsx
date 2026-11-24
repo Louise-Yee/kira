@@ -386,8 +386,22 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onP
                     <span className="min-w-0 flex-1 text-base font-semibold">Receipt total</span>
                     <AmountInput currency={currency} size="sm" value={form.charges.value} onChange={(value) => patch({ charges: { type: 'total', value } })} className="justify-end" />
                   </div>
+                  {result.subtotal > 0 && (
+                    <div className="flex flex-col gap-1 px-1 text-base">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-muted-foreground">Items add up to</span>
+                        <Money currency={currency} sen={result.subtotal} className="font-semibold" />
+                      </div>
+                      {form.charges.value > 0 && (
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-muted-foreground">{result.total >= result.subtotal ? 'Tax and service' : 'Discount'}</span>
+                          <Money currency={currency} sen={result.total - result.subtotal} sign className="font-semibold" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <p className="px-1 text-base text-muted-foreground">
-                    The total on the receipt. Everyone's share is scaled so the bill adds up exactly.
+                    Your items set each person's share. The receipt total adjusts them so the bill adds up exactly.
                   </p>
                 </>
               )}
