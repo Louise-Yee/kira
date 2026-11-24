@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { CircleAlert, Check, Trash2 } from 'lucide-react'
-import { pop, press } from '@/lib/motion'
+import { glide, pop, press } from '@/lib/motion'
 import { currentToast, dismissToast, subscribeToast, type Toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 
@@ -41,7 +41,8 @@ function Pill({ toast }: { toast: Toast }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.8, y: -8 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.8, y: -8 }}
+      // No bounce on the way out: the overshoot drove opacity to 0 in ~100ms, so the exit read as a blink.
+      exit={{ opacity: 0, scale: 0.9, y: -16, transition: glide }}
       transition={pop}
       // Only a toast with a button takes the pointer: a plain one must never block a tap on what's under it.
       className={cn(
