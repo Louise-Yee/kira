@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { CircleAlert, Trash2 } from 'lucide-react'
 import { PillButton } from '@/components/pill-button'
 import { SheetFooter } from '@/components/sheet'
 
@@ -37,7 +37,12 @@ export function SheetActions({ label = 'Save', onSave, disabled, hint, extras, o
         </div>
       ) : (
         <>
-          {disabled && hint && <p className="px-1 text-base text-muted-foreground">{hint}</p>}
+          {disabled && hint && (
+            <p className="flex items-center gap-2 px-1 text-base text-muted-foreground">
+              <CircleAlert className="size-5 shrink-0 text-destructive" aria-hidden />
+              {hint}
+            </p>
+          )}
           <div className="flex gap-2">
             {extras?.map((x) => (
               <PillButton key={x.label} variant="secondary" className="flex-1" disabled={x.disabled} onClick={x.onClick}>
