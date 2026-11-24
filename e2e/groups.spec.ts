@@ -112,7 +112,7 @@ test('auto-log puts my share of a group expense in my own transactions', async (
   await expect(logged(bob)).toBeHidden()
 })
 
-const noGroups = 'Make a group for the people you hang out with'
+const noGroups = 'A group is a running tab'
 
 async function leave(u: User) {
   await (await groupSettings(u)).getByRole('button', { name: 'Leave group' }).click()

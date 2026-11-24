@@ -94,7 +94,7 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
         (tab === "recent" ? (
           <EmptyState
             icon={ReceiptText}
-            text="No splits in the last 30 days. Your own share of a bill lands in your expenses."
+            text="Split one bill you paid, once. For a running tab with friends, make a group in People."
             action={{ label: "New split", onClick: () => open() }}
           />
         ) : (
