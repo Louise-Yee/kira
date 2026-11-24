@@ -366,26 +366,30 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onP
                 onChange={(type) => patch({ charges: type === 'percent' ? { type, value: percent ?? 600 } : { type, value: 0 } })}
               />
               {form.charges.type === 'percent' ? (
-                <div className="flex items-center gap-2">
-                  <TextField
+                <div className="flex items-center gap-3 rounded-2xl bg-secondary p-3">
+                  <span className="min-w-0 flex-1 text-base font-semibold">Tax rate</span>
+                  <input
                     inputMode="decimal"
                     value={percentText}
                     onChange={(e) => setPercentText(e.target.value.replace(/[^\d.]/g, '').slice(0, 6))}
                     aria-label="Tax percentage"
-                    className="w-28 text-center"
+                    className="min-h-11 w-20 bg-transparent text-right font-heading text-2xl font-extrabold tabular-nums outline-none"
                   />
-                  <span className="text-base font-semibold">%</span>
+                  <span className="font-heading text-2xl font-bold text-muted-foreground">%</span>
                 </div>
               ) : (
                 <>
-                  <AmountInput currency={currency} size="sm" value={form.charges.value} onChange={(value) => patch({ charges: { type: 'total', value } })} />
+                  <div className="flex items-center gap-3 rounded-2xl bg-secondary p-3">
+                    <span className="min-w-0 flex-1 text-base font-semibold">Receipt total</span>
+                    <AmountInput currency={currency} size="sm" value={form.charges.value} onChange={(value) => patch({ charges: { type: 'total', value } })} className="justify-end" />
+                  </div>
                   <p className="px-1 text-base text-muted-foreground">
                     The total on the receipt. Everyone's share is scaled so the bill adds up exactly.
                   </p>
                 </>
               )}
-              <div className="flex items-baseline justify-between px-1 pt-1">
-                <span className="text-base text-muted-foreground">Total</span>
+              <div className="flex items-baseline justify-between border-t border-border px-1 pt-2">
+                <span className="text-base font-semibold">Total</span>
                 <Money currency={currency} sen={result.total} className="font-heading text-xl font-bold" />
               </div>
             </Section>
