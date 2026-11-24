@@ -17,7 +17,6 @@ import type { shownIn } from '@/lib/display'
 import type { Category, Transaction, WithId } from '@/lib/db'
 import { pop, press } from '@/lib/motion'
 import { groupByDay, signed, totals } from '@/lib/month-summary'
-import { cn } from '@/lib/utils'
 
 // Coin peeking in from the right edge of the balance card; x scaled for the ~2.5:1 card.
 const heroField: Field = (nx, ny) => coinField((nx - 0.8) * 1.5, ny * 0.6, 0)
@@ -84,11 +83,10 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
         initial={{ scale: 0.92, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={pop}
-        // Spending more than you earned is not a celebration: the bright card goes quiet.
-        className={cn('relative overflow-hidden rounded-3xl p-6', over ? 'bg-card text-foreground' : 'bg-hero text-hero-foreground')}
+        className="relative overflow-hidden rounded-3xl bg-hero p-6 text-hero-foreground"
       >
         {/* screen blend: dark glyphs vanish into the blue, bright ones glow */}
-        {!over && <Ascii field={heroField} cell={6} floor={0.2} className="absolute inset-0 size-full opacity-50 mix-blend-screen" />}
+        <Ascii field={heroField} cell={6} floor={0.2} className="absolute inset-0 size-full opacity-50 mix-blend-screen" />
         <p className="relative text-base font-semibold opacity-85">{over ? `Spent more than earned in ${monthName(ym)}` : `Left in ${monthName(ym)}`}</p>
         <Money sen={income - expense} currency={currency} countUp className="relative mt-1 block font-heading text-5xl font-extrabold tracking-tight" />
       </motion.section>
