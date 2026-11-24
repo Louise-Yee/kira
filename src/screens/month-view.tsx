@@ -17,6 +17,7 @@ import type { shownIn } from '@/lib/display'
 import type { Category, Transaction, WithId } from '@/lib/db'
 import { pop, press } from '@/lib/motion'
 import { groupByDay, signed, totals } from '@/lib/month-summary'
+import { cn } from '@/lib/utils'
 
 // Coin peeking in from the right edge of the balance card; x scaled for the ~2.5:1 card.
 const heroField: Field = (nx, ny) => coinField((nx - 0.8) * 1.5, ny * 0.6, 0)
@@ -46,7 +47,9 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
   const days = groupByDay(transactions ?? [], amountOf)
   const byId = new Map(categories.map((c) => [c.id, c]))
   const breakdown = byCategory(transactions ?? [], 6, amountOf)
-  const showTrend = trend?.some((m) => m.income || m.expense)
+  // One month of data makes five empty bars, so the chart waits for a second.
+  const showTrend = trend && trend.filter((m) => m.income || m.expense).length >= 2
+  const over = expense > income
   // Index of each day's first row across all groups, for the stagger delay.
   const starts = days.map((_, i) => days.slice(0, i).reduce((n, d) => n + d.items.length, 0))
 
@@ -81,11 +84,12 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
         initial={{ scale: 0.92, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={pop}
-        className="relative overflow-hidden rounded-3xl bg-hero p-6 text-hero-foreground"
+        // Spending more than you earned is not a celebration: the bright card goes quiet.
+        className={cn('relative overflow-hidden rounded-3xl p-6', over ? 'bg-card text-foreground' : 'bg-hero text-hero-foreground')}
       >
         {/* screen blend: dark glyphs vanish into the blue, bright ones glow */}
-        <Ascii field={heroField} cell={6} floor={0.2} className="absolute inset-0 size-full opacity-50 mix-blend-screen" />
-        <p className="relative text-base font-semibold opacity-85">Left in {monthName(ym)}</p>
+        {!over && <Ascii field={heroField} cell={6} floor={0.2} className="absolute inset-0 size-full opacity-50 mix-blend-screen" />}
+        <p className="relative text-base font-semibold opacity-85">{over ? `Spent more than earned in ${monthName(ym)}` : `Left in ${monthName(ym)}`}</p>
         <Money sen={income - expense} currency={currency} countUp className="relative mt-1 block font-heading text-5xl font-extrabold tracking-tight" />
       </motion.section>
 
