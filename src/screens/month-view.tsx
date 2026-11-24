@@ -46,8 +46,7 @@ export function MonthView({ name, ym, today, onMonthChange, transactions, catego
   const days = groupByDay(transactions ?? [], amountOf)
   const byId = new Map(categories.map((c) => [c.id, c]))
   const breakdown = byCategory(transactions ?? [], 6, amountOf)
-  // One month of data makes five empty bars, so the chart waits for a second.
-  const showTrend = trend && trend.filter((m) => m.income || m.expense).length >= 2
+  const showTrend = trend?.some((m) => m.income || m.expense)
   const over = expense > income
   // Index of each day's first row across all groups, for the stagger delay.
   const starts = days.map((_, i) => days.slice(0, i).reduce((n, d) => n + d.items.length, 0))
