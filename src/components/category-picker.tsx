@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, ChevronDown, Search } from 'lucide-react'
+import { TextField } from '@/components/text-field'
 import { CategoryIcon } from '@/components/category-icon'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useTouch } from '@/lib/use-media-query'
@@ -48,12 +49,12 @@ export function CategoryPicker({ categories, value, onChange }: Props) {
         className="w-(--radix-popover-trigger-width) gap-2 rounded-3xl p-2">
         <div className="flex h-11 items-center gap-2 rounded-full bg-secondary px-4">
           <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-          <input
+          <TextField
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search"
             aria-label="Search categories"
-            className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+            className="h-full min-w-0 flex-1 rounded-none bg-transparent px-0 focus-visible:ring-0"
           />
         </div>
         <ul className="max-h-60 overflow-y-auto overscroll-contain">

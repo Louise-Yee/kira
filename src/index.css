@@ -190,6 +190,17 @@
   }
 }
 
+/* The caret `TextField` draws: a bar at --caret-x, faded by --caret-a (see use-blink). */
+.text-caret {
+  --caret-a: 1;
+  --caret-x: -9999px;
+  --caret-c: color-mix(in srgb, var(--primary) calc(var(--caret-a) * 100%), transparent);
+  background-image: linear-gradient(var(--caret-c), var(--caret-c));
+  background-repeat: no-repeat;
+  background-size: 2px 1.25em;
+  background-position: calc(var(--caret-x) - 1px) center;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
