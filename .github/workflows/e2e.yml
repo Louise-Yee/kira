@@ -13,7 +13,13 @@ concurrency:
 
 jobs:
   e2e:
+    name: e2e (${{ matrix.project }})
     runs-on: ubuntu-latest
+    # One job per Playwright project, so phone and desktop run side by side (same tests, half the wall time).
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [phone, desktop]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
@@ -32,12 +38,22 @@ jobs:
         with:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ hashFiles('package-lock.json') }}
+      - name: Cache the Playwright browser
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('package-lock.json') }}
+      # Cache hit: the browser is already there, so only the OS packages are needed.
       - run: npx playwright install --with-deps chromium
-      - run: npm run e2e
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+      - run: npx playwright install-deps chromium
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+      - run: npm run e2e -- --project=${{ matrix.project }}
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.project }}
           path: |
             playwright-report
             test-results
