@@ -3,7 +3,7 @@ import { addYears, format, setMonth as withMonth, setYear as withYear } from 'da
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { dateToISO, isoToDate, longDate, todayISO } from '@/lib/date'
+import { dateToISO, dayLabel, isoToDate, longDate, todayISO } from '@/lib/date'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -12,6 +12,8 @@ type Props = {
   onChange: (iso: string) => void
   /** Earliest pickable day, YYYY-MM-DD. */
   min?: string
+  /** A small chip reading "Today" / "Yesterday" / the date, instead of a full-width field. */
+  compact?: boolean
   'aria-label'?: string
   className?: string
 }
@@ -51,7 +53,7 @@ function PickGrid({ title, onTitle, onPrev, onNext, items }: { title: string; on
 }
 
 /** Date field that opens a year -> month -> day calendar popover. Same look as TextField. */
-export function DatePicker({ value, onChange, min, className, 'aria-label': ariaLabel }: Props) {
+export function DatePicker({ value, onChange, min, compact, className, 'aria-label': ariaLabel }: Props) {
   const selected = isoToDate(value)
   const now = isoToDate(todayISO())
   const minDate = min ? isoToDate(min) : undefined
@@ -80,11 +82,12 @@ export function DatePicker({ value, onChange, min, className, 'aria-label': aria
         type="button"
         aria-label={ariaLabel}
         className={cn(
-          'flex h-12 w-full items-center justify-between rounded-2xl bg-secondary px-4 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'flex items-center bg-secondary text-base outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          compact ? 'h-12 shrink-0 gap-2 rounded-full px-4' : 'h-12 w-full justify-between rounded-2xl px-4',
           className,
         )}
       >
-        {longDate(value)}
+        {compact ? dayLabel(value, todayISO()) : longDate(value)}
         <CalendarDays className="size-5 text-muted-foreground" />
       </PopoverTrigger>
       <PopoverContent className="w-auto rounded-3xl p-3">

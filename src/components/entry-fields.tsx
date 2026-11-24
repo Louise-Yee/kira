@@ -16,7 +16,7 @@ type Props = {
   autoFocus?: boolean
   /** The rate for `value.currency`, from `useRate`. */
   fetched: { rate: number | null; loading: boolean }
-  /** Rendered between the category and the note (the transaction's date). */
+  /** Rendered beside the note (the transaction's date chip). */
   children?: ReactNode
 }
 
@@ -47,14 +47,16 @@ export function EntryFields({ value, onChange, categories, keepCategoryId, autoF
         value={value.categoryId}
         onChange={(categoryId) => onChange({ ...value, categoryId, kind: choices.find((c) => c.id === categoryId)?.kind ?? value.kind })}
       />
-      {children}
-      <TextField
-        value={value.note}
-        onChange={(e) => onChange({ ...value, note: e.target.value })}
-        placeholder="Note (optional)"
-        aria-label="Note"
-        maxLength={200}
-      />
+      <div className="flex gap-2">
+        {children}
+        <TextField
+          value={value.note}
+          onChange={(e) => onChange({ ...value, note: e.target.value })}
+          placeholder="Note (optional)"
+          aria-label="Note"
+          maxLength={200}
+        />
+      </div>
     </>
   )
 }
