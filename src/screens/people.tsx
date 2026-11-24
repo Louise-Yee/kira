@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/empty-state'
 import { GroupNameSheet } from '@/components/group-name-sheet'
 import { ListRow } from '@/components/list-row'
 import { PillButton } from '@/components/pill-button'
+import { netOf } from '@/lib/group-ledger'
 import { PageHeader } from '@/components/page-header'
 import { Segmented } from '@/components/segmented'
 import {
@@ -248,15 +249,24 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
           )}
           {!!groups?.length && (
             <section className="flex flex-col gap-2">
-              {groups.map((g) => (
-                <ListRow
-                  key={g.id}
-                  icon={<Avatar name={g.name} className="size-11 text-lg" />}
-                  title={g.name}
-                  subtitle={`${g.memberUids.length} ${g.memberUids.length === 1 ? 'member' : 'members'}`}
-                  onClick={() => setGroupId(g.id)}
-                />
-              ))}
+              {groups.map((g) => {
+                // Positive: the group owes me. Negative: I owe the group.
+                const net = g.totals ? netOf(g.totals, user.uid) : 0
+                return (
+                  <ListRow
+                    key={g.id}
+                    icon={<Avatar name={g.name} className="size-11 text-lg" />}
+                    title={g.name}
+                    subtitle={
+                      net === 0
+                        ? `${g.memberUids.length} ${g.memberUids.length === 1 ? 'member' : 'members'} · Settled`
+                        : `${g.memberUids.length} ${g.memberUids.length === 1 ? 'member' : 'members'} · ${net > 0 ? 'You are owed' : 'You owe'}`
+                    }
+                    trailing={net !== 0 && <Money sen={Math.abs(net)} currency={g.currency} className="text-base font-semibold" />}
+                    onClick={() => setGroupId(g.id)}
+                  />
+                )
+              })}
             </section>
           )}
         </>
