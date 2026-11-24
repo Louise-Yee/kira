@@ -7,6 +7,7 @@ import { Segmented } from '@/components/segmented'
 import { Sheet, SheetFooter } from '@/components/sheet'
 import { SheetActions } from '@/components/sheet-actions'
 import { TextField } from '@/components/text-field'
+import { Toggle } from '@/components/toggle'
 import { error, success, warning } from '@/lib/haptics'
 import { shortDate, todayISO } from '@/lib/date'
 import { useDisplayCurrency } from '@/lib/display-currency'
@@ -47,13 +48,8 @@ const unitOptions = [
 const endOptions = [
   { value: 'never', label: 'Never' },
   { value: 'date', label: 'On date' },
-  { value: 'count', label: 'After N' },
+  { value: 'count', label: 'After' },
 ] as const satisfies readonly { value: RecurrenceEnd['type']; label: string }[]
-
-const stateOptions = [
-  { value: 'active', label: 'Active' },
-  { value: 'paused', label: 'Paused' },
-] as const satisfies readonly { value: 'active' | 'paused'; label: string }[]
 
 export function RecurringSheet({ open, onClose, initial, ...rest }: Props) {
   return (
@@ -180,13 +176,13 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
             inputMode="numeric"
             value={endCount}
             onChange={(e) => setEndCount(e.target.value.replace(/\D/g, '').slice(0, 3))}
-            placeholder="Number of payments"
+            placeholder="How many payments"
             aria-label="Number of payments"
           />
         )}
       </div>
 
-      {initial && <Segmented options={stateOptions} value={paused ? 'paused' : 'active'} onChange={(v) => setPaused(v === 'paused')} />}
+      {initial && <Toggle label="Active" checked={!paused} onChange={(on) => setPaused(!on)} description={paused ? 'Paused: no payments are posted.' : undefined} />}
 
       {preview.length > 0 && (
         <p className="px-1 text-base text-muted-foreground">
@@ -196,8 +192,7 @@ function Form({ initial, categories, onSave, countTransactions, onDelete, onClos
       )}
       {initial && (
         <p className="px-1 text-base text-muted-foreground">
-          Amount, category, note, end and pause apply to future payments. Changing the repeat or start date starts a
-          new rule from the next payment date or later; payments already posted stay as they are.
+          Changes apply to future payments. Payments already posted stay as they are.
         </p>
       )}
 
