@@ -23,7 +23,17 @@ export function RateField({ currency, value, onChange, fetched, amount, amountLa
   const [text, setText] = useState(value ? formatRate(value) : '')
   const rate = value ?? fetched.rate
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
+      {/* The amount in RM is the second headline number, right under the amount typed above. */}
+      {rate ? (
+        <p className="text-center font-heading text-2xl font-bold tabular-nums">
+          {amountLabel && <span className="mr-2 text-base font-semibold text-muted-foreground">{amountLabel}</span>}≈ {formatRM(toSen(amount, currency, rate))}
+        </p>
+      ) : (
+        <p className="px-1 text-base text-muted-foreground">
+          {fetched.loading ? 'Getting the rate…' : `No rate found for ${currency}. Enter it to save.`}
+        </p>
+      )}
       <label className="flex items-center gap-2">
         <span className="shrink-0 text-base font-semibold">1 {currency} = RM</span>
         <TextField
@@ -38,13 +48,6 @@ export function RateField({ currency, value, onChange, fetched, amount, amountLa
           aria-label={`Exchange rate, RM per 1 ${currency}`}
         />
       </label>
-      <p className="px-1 text-base text-muted-foreground">
-        {rate
-          ? `${amountLabel ? `${amountLabel} ` : ''}≈ ${formatRM(toSen(amount, currency, rate))}`
-          : fetched.loading
-            ? 'Getting the rate…'
-            : `No rate found for ${currency}. Enter it to save.`}
-      </p>
     </div>
   )
 }
