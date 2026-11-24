@@ -31,6 +31,7 @@ export function EntryFields({ value, onChange, categories, keepCategoryId, autoF
         currency={value.currency}
         onCurrency={(currency) => onChange({ ...value, currency, rate: null })}
         autoFocus={autoFocus}
+        pad
       />
       {value.currency !== HOME && (
         <RateField

@@ -76,7 +76,7 @@ function Form({ group, meUid, initial, onSave, onClose }: Omit<Props, 'open'>) {
         }}
       />
       <TextField value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What was it for?" aria-label="Title" maxLength={100} />
-      <AmountInput currency={group.currency} value={amount} onChange={setAmount} autoFocus={!initial} />
+      <AmountInput currency={group.currency} value={amount} onChange={setAmount} autoFocus={!initial} pad />
       <DatePicker value={date} onChange={setDate} aria-label="Date" />
 
       <section className="flex flex-col gap-2">

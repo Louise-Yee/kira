@@ -1,6 +1,6 @@
 // Self-check for money + date helpers: node scripts/check-money.ts
 import assert from 'node:assert/strict'
-import { currencySymbol, digitsToSen, entered, formatMoney, formatRate, formatRM, formatSen, minorDigits, parseRate, senToDecimal, toHome, toSen } from '../src/lib/money.ts'
+import { currencySymbol, digitsToSen, pressKey, entered, formatMoney, formatRate, formatRM, formatSen, minorDigits, parseRate, senToDecimal, toHome, toSen } from '../src/lib/money.ts'
 import { addMonths, inTrendWindow, lastMonths, longDate, monthLabel, monthRange, monthsRange, todayISO, trendMonths } from '../src/lib/date.ts'
 
 // digitsToSen
@@ -10,6 +10,15 @@ assert.equal(digitsToSen('123'), 123)
 assert.equal(digitsToSen('RM 12.50'), 1250)
 assert.equal(digitsToSen('1234567890'), 123456789) // 10th digit ignored
 assert.equal(digitsToSen('0000'), 0)
+
+// pressKey: digits fill from the right, back drops one, nine digits is the cap
+assert.equal(pressKey(0, '1'), 1)
+assert.equal(pressKey(1, '2'), 12)
+assert.equal(pressKey(0, '0'), 0)
+assert.equal(pressKey(12, 'back'), 1)
+assert.equal(pressKey(5, 'back'), 0)
+assert.equal(pressKey(0, 'back'), 0)
+assert.equal(pressKey(123456789, '5'), 123456789)
 
 // formatSen / formatRM
 assert.equal(formatSen(123450), '1,234.50')

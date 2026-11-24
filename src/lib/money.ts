@@ -105,3 +105,9 @@ export function entered(x?: { amount: number; original?: Original }, start = HOM
   if (!x) return { currency: start, amount: 0, rate: null }
   return x.original ? { ...x.original } : { currency: HOME, amount: x.amount, rate: null }
 }
+
+export type Key = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'back'
+
+/** One press on the amount keypad: a digit fills in from the right, 'back' drops the last one. */
+export const pressKey = (sen: number, key: Key): number =>
+  key === 'back' ? Math.floor(sen / 10) : digitsToSen(`${sen}${key}`)
