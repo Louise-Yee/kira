@@ -15,6 +15,7 @@ import {
   createShare,
   deleteSplit,
   saveSplit,
+  setPaid,
   useCategories,
   useFriendships,
   useOlderSplits,
@@ -26,6 +27,7 @@ import {
 } from "@/lib/db";
 import type { AppUser } from "@/lib/firebase";
 import { otherUid, splitFriendships } from "@/lib/friends";
+import { owedOn } from "@/lib/split";
 
 export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
   const since = addDays(today, -30);
@@ -69,6 +71,9 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
       (s) => s.id === receipt.split?.id,
     ) ?? receipt.split;
   const open = (split?: WithId<Split>) => setSheet({ open: true, split });
+  // The editor shows the live split, so a tick made a moment ago is seen at once.
+  const editing =
+    [...(recent ?? []), ...(older ?? [])].find((s) => s.id === sheet.split?.id) ?? sheet.split;
 
   // Names from past splits (newest first, without me), offered as one-tap additions.
   const suggestions = [
@@ -134,11 +139,14 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
                   </span>
                 }
                 trailing={
-                  <Money
-                    sen={s.shares[0].total}
-                    currency={s.currency}
-                    className="text-base font-semibold"
-                  />
+                  <span className="flex shrink-0 flex-col items-end">
+                    <Money
+                      sen={s.shares[0].total}
+                      currency={s.currency}
+                      className="text-base font-semibold"
+                    />
+                    <Owed split={s} />
+                  </span>
                 }
                 onClick={() => open(s)}
               />
@@ -155,8 +163,9 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
         categories={categories}
         suggestions={suggestions}
         friends={friends}
-        initial={sheet.split}
-        onSave={(draft) => saveSplit(user.uid, draft, sheet.split)}
+        initial={editing}
+        onSave={(draft) => saveSplit(user.uid, draft, editing)}
+        onPaid={(person, paid) => editing && setPaid(user.uid, editing, person, paid)}
         onDelete={() => sheet.split && toastUndo('Split deleted', deleteSplit(user.uid, sheet.split))}
         onShare={() => sheet.split && setReceipt({ open: true, split: sheet.split })}
       />
@@ -168,5 +177,18 @@ export function SplitScreen({ user, today }: { user: AppUser; today: string }) {
         onCreateLink={(split, person) => createShare(user.uid, split, person)}
       />
     </div>
+  );
+}
+
+/** What the others still owe on a split, or "Settled" once everyone has paid back. Nothing when nobody owes. */
+function Owed({ split }: { split: WithId<Split> }) {
+  const { owed, people } = owedOn(split);
+  if (people === 0) return null;
+  return owed === 0 ? (
+    <span className="text-base text-muted-foreground">Settled</span>
+  ) : (
+    <span className="text-base text-muted-foreground">
+      <Money sen={owed} currency={split.currency} /> owed
+    </span>
   );
 }

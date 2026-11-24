@@ -2,7 +2,7 @@ import { DatePicker } from '@/components/date-picker'
 import { Avatar } from '@/components/avatar'
 import type { FriendName } from '@/lib/friends'
 import { useRef, useState } from 'react'
-import { Share2, Trash2, X } from 'lucide-react'
+import { Check, Share2, Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
 import { CategoryChips } from '@/components/category-chips'
 import { CurrencySelect } from '@/components/currency-select'
@@ -48,6 +48,8 @@ type Props = {
   onDelete?: () => void
   /** Shows a share button in the title row of an existing split (opens its receipt over the editor). */
   onShare?: () => void
+  /** Ticks a person as paid back (or not) on an existing split; saved at once, not with the form. */
+  onPaid?: (person: number, paid: boolean) => void
 }
 
 const modeOptions = [
@@ -96,7 +98,7 @@ export function SplitEditor({ open, onClose, initial, onShare, ...rest }: Props)
   )
 }
 
-function Form({ initial, categories, suggestions, friends, onSave, onDelete, onClose }: Omit<Props, 'open'>) {
+function Form({ initial, categories, suggestions, friends, onSave, onDelete, onPaid, onClose }: Omit<Props, 'open'>) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [date, setDate] = useState(initial?.date ?? todayISO())
   const [form, setForm] = useState<SplitForm>(initial ? formFromSplit(initial) : emptyForm)
@@ -397,8 +399,11 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
           <Section title="Who pays what">
             {form.people.map((p, i) => {
               const s = result.shares[i]
+              // Only for the people the saved split has at this position, who actually owe something.
+              const tickable = !!initial && !!onPaid && i > 0 && s.total > 0 && initial.people[i] === p
+              const paid = !!initial?.paid?.[i]
               return (
-                <div key={p} className="flex items-baseline gap-3 px-1">
+                <div key={p} className={cn('flex gap-3 px-1', tickable ? 'items-center' : 'items-baseline')}>
                   <span className="min-w-0 flex-1 truncate text-base font-semibold">{p}</span>
                   {s.charge !== 0 && (
                     <span className="text-base text-muted-foreground tabular-nums">
@@ -406,6 +411,18 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
                     </span>
                   )}
                   <Money currency={currency} sen={s.total} className="text-base font-semibold" />
+                  {tickable && (
+                    <PillButton
+                      variant={paid ? 'default' : 'secondary'}
+                      size="pill-sm"
+                      aria-pressed={paid}
+                      aria-label={`${p} paid`}
+                      onClick={() => onPaid(i, !paid)}
+                    >
+                      {paid && <Check className="size-5" aria-hidden />}
+                      Paid
+                    </PillButton>
+                  )}
                 </div>
               )
             })}

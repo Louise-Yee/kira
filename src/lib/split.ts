@@ -151,6 +151,13 @@ export function formFromSplit(s: { mode: SplitMode; people: string[]; friends?: 
   }
 }
 
+/** What the others still owe on a saved split: the sum of unpaid shares, and how many people that is. `owed` 0 with `people` > 0 means settled. */
+export function owedOn(split: { shares: readonly Share[]; paid?: Record<string, true> }): { owed: number; people: number; unpaid: number } {
+  const others = split.shares.filter((s) => s.person > 0 && s.total > 0)
+  const unpaid = others.filter((s) => !split.paid?.[s.person])
+  return { owed: unpaid.reduce((n, s) => n + s.total, 0), people: others.length, unpaid: unpaid.length }
+}
+
 /** Why the form can't be saved yet, or null when it can. */
 export function splitProblem(form: SplitForm): string | null {
   if (form.people.length < 2) return 'Add at least one other person.'

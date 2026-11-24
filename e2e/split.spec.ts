@@ -29,4 +29,13 @@ test('pick a friend on a split, and they stay picked when it is reopened', async
   // Still linked to Bob the friend: his chip has his avatar (no photo here, so his initial) before the name.
   await expect(edit.getByRole('button', { name: 'Remove Bob' }).locator('..')).toHaveText('BBob')
   await expect(edit.getByRole('button', { name: /\+ Bob$/ })).toBeHidden()
+
+  // Bob's half is still owed until he is ticked as paid back; then the row says Settled.
+  await alice.page.keyboard.press('Escape')
+  const row = alice.page.getByRole('button', { name: /^Dinner/ })
+  await expect(row).toContainText('RM 15.90 owed') // half of 30.00 plus the default 6% tax
+  await row.click()
+  await edit.getByRole('button', { name: 'Bob paid' }).click()
+  await alice.page.keyboard.press('Escape')
+  await expect(row).toContainText('Settled')
 })
