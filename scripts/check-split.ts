@@ -13,6 +13,7 @@ import {
   parsePercent,
   removePerson,
   resolveItems,
+  owedOn,
   splitItem,
   splitProblem,
   type SplitForm,
@@ -173,5 +174,12 @@ assert.equal(formatPercent(650), '6.5')
 assert.equal(formatPercent(1625), '16.25')
 assert.equal(formatPercent(5), '0.05')
 assert.equal(formatPercent(0), '0')
+
+// owedOn: what the others still owe
+const sh = (person: number, total: number) => ({ person, subtotal: total, charge: 0, total })
+assert.deepEqual(owedOn({ shares: [sh(0, 500), sh(1, 300), sh(2, 200)] }), { owed: 500, people: 2, unpaid: 2 })
+assert.deepEqual(owedOn({ shares: [sh(0, 500), sh(1, 300), sh(2, 200)], paid: { 1: true } }), { owed: 200, people: 2, unpaid: 1 })
+assert.deepEqual(owedOn({ shares: [sh(0, 500), sh(1, 300)], paid: { 1: true } }), { owed: 0, people: 1, unpaid: 0 })
+assert.deepEqual(owedOn({ shares: [sh(0, 500), sh(1, 0)] }), { owed: 0, people: 0, unpaid: 0 }) // nobody owes anything
 
 console.log('check-split: ok')

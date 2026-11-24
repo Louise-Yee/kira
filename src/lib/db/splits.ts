@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { collection, doc, limit, orderBy, query, where, writeBatch } from 'firebase/firestore'
+import { collection, deleteField, doc, limit, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { toHome } from '@/lib/money'
 import { buildReceipt } from '@/lib/receipt-data'
@@ -67,6 +67,11 @@ export function saveSplit(uid: string, draft: SplitDraft, existing?: WithId<Spli
   const batch = writeBatch(db)
   // Receipt links follow the split: refresh each one, but drop it if that position now holds someone else.
   const shareIds: Record<string, string> = {}
+  // Paid ticks follow the person too, and are dropped if that position now holds someone else.
+  const paid: Record<string, true> = {}
+  for (const i of Object.keys(existing?.paid ?? {})) {
+    if (form.people[Number(i)] !== undefined && form.people[Number(i)] === existing?.people[Number(i)]) paid[i] = true
+  }
   for (const [i, shareId] of Object.entries(existing?.shareIds ?? {})) {
     const person = Number(i)
     if (form.people[person] !== undefined && form.people[person] === existing?.people[person]) {
@@ -81,6 +86,7 @@ export function saveSplit(uid: string, draft: SplitDraft, existing?: WithId<Spli
     categoryId: draft.categoryId,
     expenseTxId: mine.amount > 0 ? txRef.id : null,
     ...(Object.keys(shareIds).length ? { shareIds } : {}),
+    ...(Object.keys(paid).length ? { paid } : {}),
     createdAt,
     updatedAt: now,
   })
@@ -99,6 +105,11 @@ export function saveSplit(uid: string, draft: SplitDraft, existing?: WithId<Spli
     batch.delete(txRef)
   }
   void batch.commit().catch(reportError)
+}
+
+/** Tick (or untick) that one person has paid me back. Never awaited, like every write. */
+export function setPaid(uid: string, split: WithId<Split>, person: number, paid: boolean) {
+  void updateDoc(doc(col(uid, 'splits'), split.id), { [`paid.${person}`]: paid ? true : deleteField(), updatedAt: Date.now() }).catch(reportError)
 }
 
 const shareRef = (id: string) => doc(db, 'shares', id)

@@ -70,6 +70,8 @@ export type Split = {
   expenseTxId: string | null
   /** Receipt links by person index: the id of that person's doc in `shares`. */
   shareIds?: Record<string, string>
+  /** People (by index) who have paid me back; absent on older splits. I am always paid (I paid the bill). */
+  paid?: Record<string, true>
   createdAt: number
   updatedAt: number
 } & Deletion
