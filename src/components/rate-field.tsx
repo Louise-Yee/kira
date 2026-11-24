@@ -22,6 +22,8 @@ type Props = {
 export function RateField({ currency, value, onChange, fetched, amount, amountLabel }: Props) {
   const [text, setText] = useState(value ? formatRate(value) : '')
   const rate = value ?? fetched.rate
+  // The rate is a small helper line under the amount; the input only appears when there is no rate to show.
+  const showInput = !rate
   return (
     <div className="flex flex-col gap-2">
       {/* The amount in RM is the second headline number, right under the amount typed above. */}
@@ -34,20 +36,23 @@ export function RateField({ currency, value, onChange, fetched, amount, amountLa
           {fetched.loading ? 'Getting the rate…' : `No rate found for ${currency}. Enter it to save.`}
         </p>
       )}
-      <label className="flex items-center gap-2">
-        <span className="shrink-0 text-base font-semibold">1 {currency} = RM</span>
-        <TextField
-          inputMode="decimal"
-          value={text}
-          onChange={(e) => {
-            const t = e.target.value.replace(/[^\d.]/g, '').slice(0, 16)
-            setText(t)
-            onChange(parseRate(t))
-          }}
-          placeholder={fetched.rate ? formatRate(fetched.rate) : fetched.loading ? 'Getting rate…' : 'Rate'}
-          aria-label={`Exchange rate, RM per 1 ${currency}`}
-        />
-      </label>
+      {rate && <p className="text-center text-base text-muted-foreground">1 {currency} = RM {formatRate(rate)}</p>}
+      {showInput && (
+        <label className="flex items-center gap-2">
+          <span className="shrink-0 text-base font-semibold">1 {currency} = RM</span>
+          <TextField
+            inputMode="decimal"
+            value={text}
+            onChange={(e) => {
+              const t = e.target.value.replace(/[^\d.]/g, '').slice(0, 16)
+              setText(t)
+              onChange(parseRate(t))
+            }}
+            placeholder={fetched.rate ? formatRate(fetched.rate) : fetched.loading ? 'Getting rate…' : 'Rate'}
+            aria-label={`Exchange rate, RM per 1 ${currency}`}
+          />
+        </label>
+      )}
     </div>
   )
 }
