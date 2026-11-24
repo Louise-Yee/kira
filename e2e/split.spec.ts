@@ -17,8 +17,10 @@ test('pick a friend on a split, and they stay picked when it is reopened', async
   await s.getByRole('button', { name: /\+ Bob$/ }).click()
   await expect(s.getByRole('button', { name: 'Remove Bob' })).toBeVisible()
   await expect(s.getByRole('button', { name: /\+ Bob$/ })).toBeHidden()
+  await s.getByRole('button', { name: 'Next' }).click()
   await s.getByRole('button', { name: 'Even', exact: true }).click()
   await typeAmount(alice, '3000')
+  await s.getByRole('button', { name: 'Next' }).click()
   await s.getByRole('button', { name: 'Save' }).click()
   await expect(s).toBeHidden()
 

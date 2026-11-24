@@ -1,7 +1,7 @@
 import { DatePicker } from '@/components/date-picker'
 import { Avatar } from '@/components/avatar'
 import type { FriendName } from '@/lib/friends'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Share2, Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
 import { CategoryChips } from '@/components/category-chips'
@@ -61,6 +61,9 @@ const chargeOptions = [
   { value: 'total', label: 'Receipt total' },
 ] as const satisfies readonly { value: 'percent' | 'total'; label: string }[]
 
+/** A new split is filled in over these steps; editing one shows everything at once. */
+const STEPS = ['Who', 'What', 'Review'] as const
+
 const emptyForm: SplitForm = {
   mode: 'itemized',
   people: ['Me'],
@@ -115,12 +118,25 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
   const percent = parsePercent(percentText)
   const effective: SplitForm = form.charges.type === 'percent' ? { ...form, charges: { type: 'percent', value: percent ?? 0 } } : form
   const result = computeForm(effective)
-  const problem =
-    splitProblem(effective) ??
+  // What is missing on each step: Who (title, people, rate), What (items or amounts, tax), Review (category).
+  const problems = [
     (!title.trim() ? 'Add a title.' : null) ??
-    (form.mode !== 'exact' && form.charges.type === 'percent' && percent === null ? 'Enter a tax percentage from 0 to 100.' : null) ??
-    (!categoryId ? 'Pick a category for your share.' : null) ??
-    (currency !== HOME && !rate ? `Enter the rate for ${currency}.` : null)
+      (form.people.length < 2 ? 'Add at least one other person.' : null) ??
+      (currency !== HOME && !rate ? `Enter the rate for ${currency}.` : null),
+    splitProblem(effective) ??
+      (form.mode !== 'exact' && form.charges.type === 'percent' && percent === null ? 'Enter a tax percentage from 0 to 100.' : null),
+    !categoryId ? 'Pick a category for your share.' : null,
+  ]
+  const problem = problems.find((p) => p !== null) ?? null
+  const stepped = !initial
+  const [step, setStep] = useState(0)
+  const top = useRef<HTMLParagraphElement>(null)
+  const go = (n: number) => {
+    setStep(n)
+    top.current?.scrollIntoView({ block: 'start' })
+  }
+  const show = (n: number) => !stepped || step === n
+  const last = !stepped || step === STEPS.length - 1
 
   // Every update reads the latest form (not the one this render closed over), so two quick taps never lose one.
   const patch = (p: Partial<SplitForm> | ((f: SplitForm) => Partial<SplitForm>)) =>
@@ -156,241 +172,263 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onC
 
   return (
     <div className="flex flex-col gap-5 pb-1">
-      <div className="flex flex-col gap-2">
-        <TextField value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (e.g. Dinner at Sushi King)" aria-label="Title" maxLength={60} />
-        <div className="flex gap-2">
-          <CurrencySelect
-            value={currency}
-            onChange={(c) => {
-              setCurrency(c)
-              setManualRate(null)
-            }}
-          />
-          <div className="min-w-0 flex-1">
-            <DatePicker value={date} onChange={setDate} aria-label="Date" />
-          </div>
-        </div>
-        {currency !== HOME && (
-          <RateField
-            key={currency}
-            currency={currency}
-            value={manualRate}
-            onChange={setManualRate}
-            fetched={fetched}
-            amount={result.shares[0].total}
-            amountLabel="My share"
-          />
-        )}
-      </div>
-
-      <Section title="People">
-        <div className="flex flex-wrap gap-2">
-          {form.people.map((p, i) => (
-            <span key={p} className={cn('flex h-11 items-center gap-2 rounded-full bg-secondary text-base font-semibold', i === 0 ? 'px-4' : form.friends?.[i] ? 'pl-1.5' : 'pl-4')}>
-              {form.friends?.[i] && <Avatar photoURL={form.friends[i].photoURL} name={p} className="size-8 text-sm" />}
-              {p}
-              {i > 0 && (
-                <button
-                  type="button"
-                  aria-label={`Remove ${p}`}
-                  onClick={() => setForm((f) => removePerson(f, i))}
-                  className="flex size-11 items-center justify-center rounded-full text-muted-foreground"
-                >
-                  <X className="size-4" aria-hidden />
-                </button>
-              )}
-            </span>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <TextField
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && name && !nameTaken) add(name)
-            }}
-            placeholder="Add a person"
-            aria-label="Add a person"
-            maxLength={20}
-          />
-          <PillButton size="pill-sm" disabled={!name || nameTaken} onClick={() => add(name)}>
-            Add
-          </PillButton>
-        </div>
-        {friendChoices.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {friendChoices.map((f) => (
-              <button
-                key={f.uid}
-                type="button"
-                onClick={() => add(f.displayName, { uid: f.uid, photoURL: f.photoURL })}
-                className="flex h-11 items-center gap-2 rounded-full border border-dashed border-border pr-4 pl-1.5 text-base text-muted-foreground"
-              >
-                <Avatar photoURL={f.photoURL} name={f.displayName} className="size-8 text-sm" />+ {f.displayName}
-              </button>
-            ))}
-          </div>
-        )}
-        {nameChoices.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {nameChoices
-              .slice(0, 8)
-              .map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => add(s)}
-                  className="h-11 rounded-full border border-dashed border-border px-4 text-base text-muted-foreground"
-                >
-                  + {s}
-                </button>
-              ))}
-          </div>
-        )}
-      </Section>
-
-      <Segmented options={modeOptions} value={form.mode} onChange={(mode) => patch({ mode })} />
-
-      {form.mode === 'itemized' && (
-        <Section title="Items">
-          {form.items.map((item, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded-2xl bg-secondary p-3">
-              <div className="flex items-center gap-2">
-                <TextField
-                  value={item.name ?? ''}
-                  onChange={(e) => setItem(i, { name: e.target.value })}
-                  placeholder="Item (optional)"
-                  aria-label="Item name"
-                  maxLength={40}
-                  className="bg-card"
-                />
-                <button
-                  type="button"
-                  aria-label="Remove item"
-                  onClick={() => patch((f) => ({ items: f.items.filter((_, j) => j !== i) }))}
-                  className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground"
-                >
-                  <Trash2 className="size-5" aria-hidden />
-                </button>
-              </div>
-              <AmountInput currency={currency} size="sm" value={item.amount} onChange={(amount) => setItem(i, { amount })} />
-              <div className="flex flex-wrap gap-2">
-                {form.people.map((p, person) => {
-                  const on = item.people.includes(person)
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => togglePerson(i, person)}
-                      className={cn(
-                        'h-11 rounded-full px-4 text-base font-semibold',
-                        on ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground',
-                      )}
-                    >
-                      {p}
-                    </button>
-                  )
-                })}
+      {stepped && (
+        <p ref={top} className="px-1 text-base text-muted-foreground">
+          Step {step + 1} of {STEPS.length} · {STEPS[step]}
+        </p>
+      )}
+      {show(0) && (
+        <>
+          <div className="flex flex-col gap-2">
+            <TextField value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (e.g. Dinner at Sushi King)" aria-label="Title" maxLength={60} />
+            <div className="flex gap-2">
+              <CurrencySelect
+                value={currency}
+                onChange={(c) => {
+                  setCurrency(c)
+                  setManualRate(null)
+                }}
+              />
+              <div className="min-w-0 flex-1">
+                <DatePicker value={date} onChange={setDate} aria-label="Date" />
               </div>
             </div>
-          ))}
-          <PillButton
-            variant="secondary"
-            size="pill-sm"
-            // A new item starts shared by everyone; tap names to take people off it.
-            onClick={() => patch((f) => ({ items: [...f.items, { amount: 0, people: f.people.map((_, i) => i) }] }))}
-          >
-            Add item
-          </PillButton>
-        </Section>
-      )}
-
-      {form.mode === 'even' && (
-        <Section title="Total bill, shared equally">
-          <AmountInput currency={currency} size="sm" value={form.evenTotal} onChange={(evenTotal) => patch({ evenTotal })} />
-        </Section>
-      )}
-
-      {form.mode === 'exact' && (
-        <Section title="What each person owes">
-          {form.people.map((p, i) => (
-            <div key={p} className="flex items-center gap-3 rounded-2xl bg-secondary p-3">
-              <span className="min-w-0 flex-1 truncate text-base font-semibold">{p}</span>
-              <AmountInput
+            {currency !== HOME && (
+              <RateField
+                key={currency}
                 currency={currency}
-                size="sm"
-                value={form.exact[i]}
-                onChange={(a) => patch((f) => ({ exact: f.exact.map((x, j) => (j === i ? a : x)) }))}
-                className="justify-end"
+                value={manualRate}
+                onChange={setManualRate}
+                fetched={fetched}
+                amount={result.shares[0].total}
+                amountLabel="My share"
               />
-            </div>
-          ))}
-        </Section>
-      )}
-
-      {form.mode !== 'exact' && (
-        <Section title="Tax and service charge">
-          <Segmented
-            options={chargeOptions}
-            value={form.charges.type}
-            onChange={(type) => patch({ charges: type === 'percent' ? { type, value: percent ?? 600 } : { type, value: 0 } })}
-          />
-          {form.charges.type === 'percent' ? (
-            <div className="flex items-center gap-2">
-              <TextField
-                inputMode="decimal"
-                value={percentText}
-                onChange={(e) => setPercentText(e.target.value.replace(/[^\d.]/g, '').slice(0, 6))}
-                aria-label="Tax percentage"
-                className="w-28 text-center"
-              />
-              <span className="text-base font-semibold">%</span>
-            </div>
-          ) : (
-            <>
-              <AmountInput currency={currency} size="sm" value={form.charges.value} onChange={(value) => patch({ charges: { type: 'total', value } })} />
-              <p className="px-1 text-base text-muted-foreground">
-                The total on the receipt. Everyone's share is scaled so the bill adds up exactly.
-              </p>
-            </>
-          )}
-          <div className="flex items-baseline justify-between px-1 pt-1">
-            <span className="text-base text-muted-foreground">Total</span>
-            <Money currency={currency} sen={result.total} className="font-heading text-xl font-bold" />
+            )}
           </div>
-        </Section>
+
+          <Section title="People">
+            <div className="flex flex-wrap gap-2">
+              {form.people.map((p, i) => (
+                <span key={p} className={cn('flex h-11 items-center gap-2 rounded-full bg-secondary text-base font-semibold', i === 0 ? 'px-4' : form.friends?.[i] ? 'pl-1.5' : 'pl-4')}>
+                  {form.friends?.[i] && <Avatar photoURL={form.friends[i].photoURL} name={p} className="size-8 text-sm" />}
+                  {p}
+                  {i > 0 && (
+                    <button
+                      type="button"
+                      aria-label={`Remove ${p}`}
+                      onClick={() => setForm((f) => removePerson(f, i))}
+                      className="flex size-11 items-center justify-center rounded-full text-muted-foreground"
+                    >
+                      <X className="size-4" aria-hidden />
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <TextField
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && name && !nameTaken) add(name)
+                }}
+                placeholder="Add a person"
+                aria-label="Add a person"
+                maxLength={20}
+              />
+              <PillButton size="pill-sm" disabled={!name || nameTaken} onClick={() => add(name)}>
+                Add
+              </PillButton>
+            </div>
+            {friendChoices.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {friendChoices.map((f) => (
+                  <button
+                    key={f.uid}
+                    type="button"
+                    onClick={() => add(f.displayName, { uid: f.uid, photoURL: f.photoURL })}
+                    className="flex h-11 items-center gap-2 rounded-full border border-dashed border-border pr-4 pl-1.5 text-base text-muted-foreground"
+                  >
+                    <Avatar photoURL={f.photoURL} name={f.displayName} className="size-8 text-sm" />+ {f.displayName}
+                  </button>
+                ))}
+              </div>
+            )}
+            {nameChoices.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {nameChoices
+                  .slice(0, 8)
+                  .map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => add(s)}
+                      className="h-11 rounded-full border border-dashed border-border px-4 text-base text-muted-foreground"
+                    >
+                      + {s}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </Section>
+        </>
       )}
 
-      <Section title="Who pays what">
-        {form.people.map((p, i) => {
-          const s = result.shares[i]
-          return (
-            <div key={p} className="flex items-baseline gap-3 px-1">
-              <span className="min-w-0 flex-1 truncate text-base font-semibold">{p}</span>
-              {s.charge !== 0 && (
-                <span className="text-base text-muted-foreground tabular-nums">
-                  <Money currency={currency} sen={s.subtotal} /> + <Money currency={currency} sen={s.charge} />
-                </span>
-              )}
-              <Money currency={currency} sen={s.total} className="text-base font-semibold" />
-            </div>
-          )
-        })}
-        <div className="flex items-baseline justify-between border-t border-border px-1 pt-2">
-          <span className="text-base font-semibold">Total</span>
-          <Money currency={currency} sen={result.total} className="font-heading text-xl font-bold" />
-        </div>
-      </Section>
+      {show(1) && (
+        <>
+          <Segmented options={modeOptions} value={form.mode} onChange={(mode) => patch({ mode })} />
 
-      <Section title="Category for my share">
-        <CategoryChips categories={choices} value={categoryId} onChange={setCategoryId} />
-      </Section>
+          {form.mode === 'itemized' && (
+            <Section title="Items">
+              {form.items.map((item, i) => (
+                <div key={i} className="flex flex-col gap-2 rounded-2xl bg-secondary p-3">
+                  <div className="flex items-center gap-2">
+                    <TextField
+                      value={item.name ?? ''}
+                      onChange={(e) => setItem(i, { name: e.target.value })}
+                      placeholder="Item (optional)"
+                      aria-label="Item name"
+                      maxLength={40}
+                      className="bg-card"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Remove item"
+                      onClick={() => patch((f) => ({ items: f.items.filter((_, j) => j !== i) }))}
+                      className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+                    >
+                      <Trash2 className="size-5" aria-hidden />
+                    </button>
+                  </div>
+                  <AmountInput currency={currency} size="sm" value={item.amount} onChange={(amount) => setItem(i, { amount })} />
+                  <div className="flex flex-wrap gap-2">
+                    {form.people.map((p, person) => {
+                      const on = item.people.includes(person)
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => togglePerson(i, person)}
+                          className={cn(
+                            'h-11 rounded-full px-4 text-base font-semibold',
+                            on ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground',
+                          )}
+                        >
+                          {p}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+              <PillButton
+                variant="secondary"
+                size="pill-sm"
+                // A new item starts shared by everyone; tap names to take people off it.
+                onClick={() => patch((f) => ({ items: [...f.items, { amount: 0, people: f.people.map((_, i) => i) }] }))}
+              >
+                Add item
+              </PillButton>
+            </Section>
+          )}
+
+          {form.mode === 'even' && (
+            <Section title="Total bill, shared equally">
+              <AmountInput currency={currency} size="sm" value={form.evenTotal} onChange={(evenTotal) => patch({ evenTotal })} />
+            </Section>
+          )}
+
+          {form.mode === 'exact' && (
+            <Section title="What each person owes">
+              {form.people.map((p, i) => (
+                <div key={p} className="flex items-center gap-3 rounded-2xl bg-secondary p-3">
+                  <span className="min-w-0 flex-1 truncate text-base font-semibold">{p}</span>
+                  <AmountInput
+                    currency={currency}
+                    size="sm"
+                    value={form.exact[i]}
+                    onChange={(a) => patch((f) => ({ exact: f.exact.map((x, j) => (j === i ? a : x)) }))}
+                    className="justify-end"
+                  />
+                </div>
+              ))}
+            </Section>
+          )}
+
+          {form.mode !== 'exact' && (
+            <Section title="Tax and service charge">
+              <Segmented
+                options={chargeOptions}
+                value={form.charges.type}
+                onChange={(type) => patch({ charges: type === 'percent' ? { type, value: percent ?? 600 } : { type, value: 0 } })}
+              />
+              {form.charges.type === 'percent' ? (
+                <div className="flex items-center gap-2">
+                  <TextField
+                    inputMode="decimal"
+                    value={percentText}
+                    onChange={(e) => setPercentText(e.target.value.replace(/[^\d.]/g, '').slice(0, 6))}
+                    aria-label="Tax percentage"
+                    className="w-28 text-center"
+                  />
+                  <span className="text-base font-semibold">%</span>
+                </div>
+              ) : (
+                <>
+                  <AmountInput currency={currency} size="sm" value={form.charges.value} onChange={(value) => patch({ charges: { type: 'total', value } })} />
+                  <p className="px-1 text-base text-muted-foreground">
+                    The total on the receipt. Everyone's share is scaled so the bill adds up exactly.
+                  </p>
+                </>
+              )}
+              <div className="flex items-baseline justify-between px-1 pt-1">
+                <span className="text-base text-muted-foreground">Total</span>
+                <Money currency={currency} sen={result.total} className="font-heading text-xl font-bold" />
+              </div>
+            </Section>
+          )}
+
+        </>
+      )}
+
+      {show(2) && (
+        <>
+          <Section title="Who pays what">
+            {form.people.map((p, i) => {
+              const s = result.shares[i]
+              return (
+                <div key={p} className="flex items-baseline gap-3 px-1">
+                  <span className="min-w-0 flex-1 truncate text-base font-semibold">{p}</span>
+                  {s.charge !== 0 && (
+                    <span className="text-base text-muted-foreground tabular-nums">
+                      <Money currency={currency} sen={s.subtotal} /> + <Money currency={currency} sen={s.charge} />
+                    </span>
+                  )}
+                  <Money currency={currency} sen={s.total} className="text-base font-semibold" />
+                </div>
+              )
+            })}
+            <div className="flex items-baseline justify-between border-t border-border px-1 pt-2">
+              <span className="text-base font-semibold">Total</span>
+              <Money currency={currency} sen={result.total} className="font-heading text-xl font-bold" />
+            </div>
+          </Section>
+
+          <Section title="Category for my share">
+            <CategoryChips categories={choices} value={categoryId} onChange={setCategoryId} />
+          </Section>
+
+        </>
+      )}
 
       <SheetActions
-        disabled={!!problem}
-        hint={problem}
+        label={last ? 'Save' : 'Next'}
+        extras={stepped && step > 0 ? [{ label: 'Back', onClick: () => go(step - 1) }] : undefined}
+        disabled={last ? !!problem : !!problems[step]}
+        hint={last ? problem : problems[step]}
         onSave={() => {
+          if (!last) return go(step + 1)
           if (problem || !categoryId) return
           success()
           onSave({ title: title.trim(), date, categoryId, form: effective, ...(rate ? { currency, rate } : {}) })
