@@ -55,6 +55,7 @@ export function AmountInput({ value, onChange, currency = HOME, onCurrency, auto
     }, 530)
     return () => window.clearInterval(id)
   }, [focused, reduce, value])
+  const font = cn('font-extrabold tracking-tight tabular-nums', size === 'sm' ? 'text-2xl' : 'text-6xl')
   const text = formatSen(value, minorDigits(currency))
 
   // Typing in the middle makes no sense in this model: keep the caret at the end.
@@ -83,36 +84,41 @@ export function AmountInput({ value, onChange, currency = HOME, onCurrency, auto
             {currencySymbol(currency)}
           </span>
         )}
-        <input
-          ref={ref}
-          value={text}
-          onChange={(e) => onChange(digitsToSen(e.target.value))}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          onSelect={(e) => {
-            const el = e.currentTarget
-            const end = el.value.length
-            if (el.selectionStart !== end || el.selectionEnd !== end) el.setSelectionRange(end, end)
-          }}
-          inputMode={usePad ? 'none' : 'numeric'}
-          autoFocus={focus}
-          data-autofocus={focus || undefined}
-          autoComplete="off"
-          aria-label="Amount"
-          style={{ width: `${text.length}ch` }}
-          className={cn(
-            'min-h-11 min-w-[4ch] bg-transparent caret-transparent font-extrabold tracking-tight tabular-nums outline-none',
-            size === 'sm' ? 'text-2xl' : 'text-6xl',
-            value === 0 ? 'text-muted-foreground' : 'text-foreground',
-          )}
-        />
-        {focused && (
-          <span
-            ref={caret}
-            aria-hidden
-            className={cn('self-center rounded-full bg-primary', size === 'sm' ? 'ml-px h-6 w-0.5' : 'ml-0.5 h-12 w-1')}
+        {/* The hidden mirror sizes the box to the exact text, so the caret sits right at the end of it. */}
+        <span className="relative inline-grid">
+          <span aria-hidden className={cn('invisible col-start-1 row-start-1 whitespace-pre', font)}>
+            {text}
+          </span>
+          <input
+            ref={ref}
+            value={text}
+            onChange={(e) => onChange(digitsToSen(e.target.value))}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onSelect={(e) => {
+              const el = e.currentTarget
+              const end = el.value.length
+              if (el.selectionStart !== end || el.selectionEnd !== end) el.setSelectionRange(end, end)
+            }}
+            inputMode={usePad ? 'none' : 'numeric'}
+            autoFocus={focus}
+            data-autofocus={focus || undefined}
+            autoComplete="off"
+            aria-label="Amount"
+            className={cn(
+              'col-start-1 row-start-1 min-h-11 w-0 min-w-full bg-transparent caret-transparent outline-none',
+              font,
+              value === 0 ? 'text-muted-foreground' : 'text-foreground',
+            )}
           />
-        )}
+          {focused && (
+            <span
+              ref={caret}
+              aria-hidden
+              className={cn('absolute inset-y-0 left-full my-auto ml-px rounded-full bg-primary', size === 'sm' ? 'h-6 w-0.5' : 'h-12 w-1')}
+            />
+          )}
+        </span>
       </div>
       {usePad && <Numpad field={ref} onKey={(k) => onChange((latest.current = pressKey(latest.current, k)))} />}
     </>
