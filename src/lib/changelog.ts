@@ -11,6 +11,31 @@ export type ChangelogEntry = {
 /** Newest first. */
 export const changelog: ChangelogEntry[] = [
   {
+    version: '0.1.3',
+    items: [
+      {
+        title: 'Add an amount with a keypad',
+        text: 'When you add an expense on your phone, a number keypad sits right above Save, so the keyboard no longer pushes the page around.',
+      },
+      {
+        title: 'New splits, one step at a time',
+        text: 'Splitting a bill now goes Who, What, Review. Each step tells you what is still missing before you can move on.',
+      },
+      {
+        title: 'See who still owes you',
+        text: 'Your groups and splits now show what is still owed, or "Settled". On a split, tick "Paid" when someone pays you back.',
+      },
+      {
+        title: 'Clearer foreign amounts',
+        text: 'When you add an expense in another currency, the amount in RM now shows big under the amount you typed.',
+      },
+      {
+        title: 'Smaller touches',
+        text: 'Pick a category with one tap. Settings is sorted into sections. Save always says what is missing. The date is now a small "Today" chip, and recurring payments are simpler to edit.',
+      },
+    ],
+  },
+  {
     version: '0.1.2',
     items: [{ title: 'Small improvements', text: 'A few small fixes to make the app smoother to use.' }],
   },
