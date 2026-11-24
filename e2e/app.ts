@@ -72,8 +72,8 @@ export async function createGroup(u: User, name: string, currency?: { search: st
 
 export async function openGroup(u: User, name: string) {
   await openGroups(u)
-  // A group row reads "<initial> <name> <n> members".
-  await u.page.getByRole('button', { name: new RegExp(` ${name} \\d+ members?$`) }).click()
+  // A group row reads "<initial> <name> <n> members · Settled" (or who owes what).
+  await u.page.getByRole('button', { name: new RegExp(` ${name} \\d+ members?`) }).click()
   await expect(u.page.getByRole('heading', { name, level: 1 })).toBeVisible()
 }
 
