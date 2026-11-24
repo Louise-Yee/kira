@@ -48,13 +48,25 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
     money && money.amount > 0 && entry.categoryId && date
       ? { kind: entry.kind, ...money, categoryId: entry.categoryId, date, note: entry.note.trim() }
       : null
+  // Editing: Save waits until something differs from what is stored.
+  const unchanged =
+    !!initial &&
+    !!draft &&
+    draft.kind === initial.kind &&
+    draft.amount === initial.amount &&
+    draft.categoryId === initial.categoryId &&
+    draft.date === initial.date &&
+    draft.note === initial.note &&
+    draft.original?.currency === initial.original?.currency &&
+    draft.original?.amount === initial.original?.amount &&
+    draft.original?.rate === initial.original?.rate
   const badge = initial?.recurringId ? 'Recurring' : initial?.splitId ? 'Split' : initial?.groupId ? 'Group' : null
 
   return (
     <div className="flex flex-col gap-4 pb-1">
       <SheetActions
-        disabled={!draft}
-        hint={entryProblem(entry, entry.rate ?? fetched.rate) ?? (date ? null : 'Pick a date.')}
+        disabled={!draft || unchanged}
+        hint={entryProblem(entry, entry.rate ?? fetched.rate) ?? (date ? null : 'Pick a date.') ?? (unchanged ? 'Change something to save.' : null)}
         onSave={() => {
           if (!draft) return
           success()
