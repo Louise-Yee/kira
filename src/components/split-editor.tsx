@@ -2,7 +2,7 @@ import { DatePicker } from '@/components/date-picker'
 import { Avatar } from '@/components/avatar'
 import type { FriendName } from '@/lib/friends'
 import { useRef, useState } from 'react'
-import { Check, Share2, Trash2, X } from 'lucide-react'
+import { Check, Plus, Share2, Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/amount-input'
 import { CategoryChips } from '@/components/category-chips'
 import { CurrencySelect } from '@/components/currency-select'
@@ -65,6 +65,9 @@ const chargeOptions = [
 
 /** A new split is filled in over these steps; editing one shows everything at once. */
 const STEPS = ['Who', 'What', 'Review'] as const
+
+/** A one-tap person suggestion: a filled pill with the avatar, so it reads as a button. */
+const SUGGESTION = 'flex h-11 items-center gap-2 rounded-full bg-secondary pr-3 pl-1.5 text-base font-semibold'
 
 const emptyForm: SplitForm = {
   mode: 'itemized',
@@ -248,10 +251,13 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onP
                   <button
                     key={f.uid}
                     type="button"
+                    aria-label={`+ ${f.displayName}`}
                     onClick={() => add(f.displayName, { uid: f.uid, photoURL: f.photoURL })}
-                    className="flex h-11 items-center gap-2 rounded-full border border-dashed border-border pr-4 pl-1.5 text-base text-muted-foreground"
+                    className={SUGGESTION}
                   >
-                    <Avatar photoURL={f.photoURL} name={f.displayName} className="size-8 text-sm" />+ {f.displayName}
+                    <Avatar photoURL={f.photoURL} name={f.displayName} className="size-8 text-sm" />
+                    {f.displayName}
+                    <Plus className="size-4 text-muted-foreground" aria-hidden />
                   </button>
                 ))}
               </div>
@@ -261,13 +267,10 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onP
                 {nameChoices
                   .slice(0, 8)
                   .map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => add(s)}
-                      className="h-11 rounded-full border border-dashed border-border px-4 text-base text-muted-foreground"
-                    >
-                      + {s}
+                    <button key={s} type="button" aria-label={`+ ${s}`} onClick={() => add(s)} className={SUGGESTION}>
+                      <Avatar name={s} className="size-8 text-sm" />
+                      {s}
+                      <Plus className="size-4 text-muted-foreground" aria-hidden />
                     </button>
                   ))}
               </div>
