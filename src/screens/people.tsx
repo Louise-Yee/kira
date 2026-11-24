@@ -243,7 +243,7 @@ export function PeopleScreen({ user, friendships, groups, toConfirm, groupInvite
           {groups?.length === 0 && (
             <EmptyState
               icon={Users}
-              text="Make a group for the people you hang out with, then share the invite link."
+              text="A group is a running tab: add expenses over time, settle up later. For one bill, use Split."
               action={{ label: 'New group', onClick: () => setCreating(true) }}
             />
           )}
