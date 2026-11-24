@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { animate, useReducedMotion } from 'motion/react'
 import { CurrencySelect } from '@/components/currency-select'
 import { Numpad } from '@/components/numpad'
 import { currencySymbol, digitsToSen, formatSen, minorDigits, pressKey, HOME } from '@/lib/money'
-import { pop } from '@/lib/motion'
+import { pop, soft } from '@/lib/motion'
 import { useTouch } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
@@ -31,8 +31,11 @@ type Props = {
 export function AmountInput({ value, onChange, currency = HOME, onCurrency, autoFocus, pad, size = 'lg', className }: Props) {
   const ref = useRef<HTMLInputElement>(null)
   const touch = useTouch()
-  const focus = autoFocus && !touch
   const usePad = !!pad && touch
+  // The keypad never opens the OS keyboard, so touch can focus right away too.
+  const focus = autoFocus && (!touch || usePad)
+  const [focused, setFocused] = useState(false)
+  const caret = useRef<HTMLSpanElement>(null)
   // Quick taps can land before a re-render, so each press builds on the last one, not on a stale `value`.
   const latest = useRef(value)
   useEffect(() => {
@@ -40,6 +43,18 @@ export function AmountInput({ value, onChange, currency = HOME, onCurrency, auto
   }, [value])
   const reduce = useReducedMotion()
   const prev = useRef(value)
+  // Custom caret: blinks while idle, stays solid right after a press; static under reduced motion.
+  useEffect(() => {
+    const el = caret.current
+    if (!el || reduce) return
+    let on = true
+    animate(el, { opacity: 1 }, soft)
+    const id = window.setInterval(() => {
+      on = !on
+      animate(el, { opacity: on ? 1 : 0 }, soft)
+    }, 530)
+    return () => window.clearInterval(id)
+  }, [focused, reduce, value])
   const text = formatSen(value, minorDigits(currency))
 
   // Typing in the middle makes no sense in this model: keep the caret at the end.
@@ -72,6 +87,8 @@ export function AmountInput({ value, onChange, currency = HOME, onCurrency, auto
           ref={ref}
           value={text}
           onChange={(e) => onChange(digitsToSen(e.target.value))}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           onSelect={(e) => {
             const el = e.currentTarget
             const end = el.value.length
@@ -84,11 +101,18 @@ export function AmountInput({ value, onChange, currency = HOME, onCurrency, auto
           aria-label="Amount"
           style={{ width: `${text.length}ch` }}
           className={cn(
-            'min-h-11 min-w-[4ch] bg-transparent font-extrabold tracking-tight tabular-nums outline-none',
+            'min-h-11 min-w-[4ch] bg-transparent caret-transparent font-extrabold tracking-tight tabular-nums outline-none',
             size === 'sm' ? 'text-2xl' : 'text-6xl',
             value === 0 ? 'text-muted-foreground' : 'text-foreground',
           )}
         />
+        {focused && (
+          <span
+            ref={caret}
+            aria-hidden
+            className={cn('self-center rounded-full bg-primary', size === 'sm' ? 'ml-px h-6 w-0.5' : 'ml-0.5 h-12 w-1')}
+          />
+        )}
       </div>
       {usePad && <Numpad field={ref} onKey={(k) => onChange((latest.current = pressKey(latest.current, k)))} />}
     </>

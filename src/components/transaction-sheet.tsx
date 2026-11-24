@@ -92,7 +92,7 @@ function Form({ initial, categories, onSave, onDelete, onClose }: Omit<Props, 'o
           {badge}
         </span>
       )}
-      <EntryFields value={entry} onChange={setEntry} categories={categories} keepCategoryId={initial?.categoryId} fetched={fetched} autoFocus>
+      <EntryFields value={entry} onChange={setEntry} categories={categories} keepCategoryId={initial?.categoryId} fetched={fetched} autoFocus={!initial}>
         <DatePicker compact value={date} onChange={setDate} aria-label="Date" />
       </EntryFields>
     </div>
