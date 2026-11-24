@@ -371,12 +371,12 @@ function Form({ initial, categories, suggestions, friends, onSave, onDelete, onP
               {form.charges.type === 'percent' ? (
                 <div className="flex items-center gap-3 rounded-2xl bg-secondary p-3">
                   <span className="min-w-0 flex-1 text-base font-semibold">Tax rate</span>
-                  <input
+                  <TextField
                     inputMode="decimal"
                     value={percentText}
                     onChange={(e) => setPercentText(e.target.value.replace(/[^\d.]/g, '').slice(0, 6))}
                     aria-label="Tax percentage"
-                    className="min-h-11 w-20 bg-transparent text-right font-heading text-2xl font-extrabold tabular-nums outline-none"
+                    className="h-auto min-h-11 w-20 rounded-none bg-transparent px-0 text-right font-heading text-2xl font-extrabold tabular-nums focus-visible:ring-0"
                   />
                   <span className="font-heading text-2xl font-bold text-muted-foreground">%</span>
                 </div>

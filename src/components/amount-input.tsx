@@ -3,7 +3,8 @@ import { animate, useReducedMotion } from 'motion/react'
 import { CurrencySelect } from '@/components/currency-select'
 import { Numpad } from '@/components/numpad'
 import { currencySymbol, digitsToSen, formatSen, minorDigits, pressKey, HOME } from '@/lib/money'
-import { pop, soft } from '@/lib/motion'
+import { pop } from '@/lib/motion'
+import { useBlink } from '@/lib/use-blink'
 import { useTouch } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
@@ -43,18 +44,9 @@ export function AmountInput({ value, onChange, currency = HOME, onCurrency, auto
   }, [value])
   const reduce = useReducedMotion()
   const prev = useRef(value)
-  // Custom caret: blinks while idle, stays solid right after a press; static under reduced motion.
-  useEffect(() => {
-    const el = caret.current
-    if (!el || reduce) return
-    let on = true
-    animate(el, { opacity: 1 }, soft)
-    const id = window.setInterval(() => {
-      on = !on
-      animate(el, { opacity: on ? 1 : 0 }, soft)
-    }, 530)
-    return () => window.clearInterval(id)
-  }, [focused, reduce, value])
+  // Custom caret: solid right after a press, then blinks.
+  const { restart, stop } = useBlink(caret, 'opacity')
+  useEffect(() => (focused ? restart() : stop()), [focused, value, restart, stop])
   const font = cn('font-extrabold tracking-tight tabular-nums', size === 'sm' ? 'text-2xl' : 'text-6xl')
   const text = formatSen(value, minorDigits(currency))
 
