@@ -24,6 +24,10 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           printf '%s' "$SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
           fb="npx -y firebase-tools@15.36.0 --project expenses-tracker-285fb"
-          for id in $($fb hosting:channel:list --json | jq -r '.result.channels[].name | split("/") | last' | grep "^$PREFIX" || true); do
+          # Print the raw list so a failure (permissions, CLI output change) is visible, and let it fail the job.
+          $fb hosting:channel:list --json > "$RUNNER_TEMP/channels.json"
+          cat "$RUNNER_TEMP/channels.json"
+          jq -r '.result.channels[].name | split("/") | last' "$RUNNER_TEMP/channels.json" > "$RUNNER_TEMP/ids.txt"
+          for id in $(grep "^$PREFIX" "$RUNNER_TEMP/ids.txt" || true); do
             $fb hosting:channel:delete "$id" --force
           done
